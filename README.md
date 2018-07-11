@@ -29,11 +29,24 @@ To build use CMake minimum required 3.5.1 : https://github.com/Kitware/CMake
 
 ### Prerequisite
 - OpenCV 3.4.1: https://github.com/opencv
+- PCL 1.8.1.99: https://github.com/PointCloudLibrary/pcl
 - ROS Kinetic: http://wiki.ros.org/kinetic/Installation/Ubuntu
+- OpenMVG:https://github.com/openMVG/openMVG
+- PMVS: https://github.com/pmoulon/CMVS-PMVS
 
 ### How to make
-* Download the src code: git@github.com:danielTobon43/perc_robotic_system3d.git and Unpack .zip
+* Download the src code and Unpack .zip
 * Copy the package to ROS workspace/src
+* Compile openMVG as: openMVG_Build
+* Copy the openMVG_Build folder to same level directory of package and replace "SfM_SequentialPipeline.py" in openMVG/openMVG_Build/software/SfM/ eg:
+ 
+  /catkin_ws/src/iTree3DMap/...
+  			   /src
+			   /include
+			   /openMVG_Build   --> in this directory find "SfM_SequentialPipeline.py" and replace with the repository
+			   /programs ...
+        
+* If pmvs2 binary file is not working, compile cmvs-pmvs and copy the pmvs2 bin to /programs folder of the package 
 * Compile with catkin
 
 	*cd ~/catkin_ws
