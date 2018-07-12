@@ -36,31 +36,33 @@ Images dataset: https://drive.google.com/drive/folders/1-JVw5yQG1W8lTxsDRouK0nL8
 - PMVS: https://github.com/pmoulon/CMVS-PMVS
 
 ### How to make
+This project depends of openMVG and Pmvs2.
 * Download the src code and Unpack .zip
 * Copy the package to ROS workspace/src
 * Compile openMVG as: openMVG_Build
-* Copy the openMVG_Build folder to same level directory of package and replace "SfM_SequentialPipeline.py" in openMVG/openMVG_Build/software/SfM/ eg:
- 
-  /catkin_ws/src/iTree3DMap/...
-  			   /src
-			   /include
-			   /openMVG_Build   --> in this directory find "SfM_SequentialPipeline.py" and replace with the repository
-			   /programs ...
-        
-* If pmvs2 binary file is not working, compile cmvs-pmvs and copy the pmvs2 bin to /programs folder of the package 
-* Compile with catkin
+* Copy the openMVG_Build folder to same level directory of package eg:
+ 	iTree3DMap - src 
+		   - include
+		   - programs
+		   - openMVG
+		   
+* replace the "SfM_SequentialPipeline.py" in openMVG/openMVG_Build/software/SfM/ for "SfM_SequentialPipeline.py" of repository   
+* If pmvs2 binary file is not working, compile cmvs-pmvs and replace the pmvs2 bin to /programs folder of the package 
 
-	*cd ~/catkin_ws
-	*catkin_make
+Compile with catkin:
+
+	cd ~/catkin_ws
+	catkin_make
  	 
 ### Test
 	cd ~/catkin_ws
 	source devel/setup.bash
-	roscore
-	rosrun perc_robotic_system3d perc_robotic_system3d		
+	roscore  --> optional
+	rosrun itree_3dmap itree_3dmap		
 
 *Note:*
-If OpenCV are not install. just compiled. pleas set the path to the current build directory in CMakeList.txt file.
+If OpenCV are not install. just compiled. please set the path to the current build directory in CMakeList.txt file.
+(equal to pcl 1.8.1) <--
 
 
 
