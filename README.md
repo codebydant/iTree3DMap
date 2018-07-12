@@ -54,7 +54,7 @@ catkin_ws/src:
 
 Compile with catkin:
 
-     cd ~/catkin_ws
+    cd ~/catkin_ws
 	catkin_make
  	 
 ### Test
