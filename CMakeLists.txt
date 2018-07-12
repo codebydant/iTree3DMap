@@ -41,7 +41,7 @@ set(CMAKE_MODULE_PATH ${PCL_DIR}/../cmake/Modules)
 #set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 
 # set turn off the output rule messages of cmake
-set_property(GLOBAL PROPERTY RULE_MESSAGES OFF)
+#set_property(GLOBAL PROPERTY RULE_MESSAGES OFF)
 
 ##############################################################################
 # PACKAGES
@@ -60,8 +60,22 @@ else()
     message(FATAL_ERROR "    ERROR: catkin ${catkin_VERSION} not found")
 endif()
 
+message("***********************")
+message("Eigen3 PACKAGE")
+message("***********************")
+
 find_package(Eigen3 REQUIRED)
+
+message("***********************")
+message("Boost PACKAGE")
+message("***********************")
+
 find_package(Boost REQUIRED)
+
+message("***********************")
+message("PCL PACKAGE")
+message("***********************")
+
 find_package(PCL 1.8 PATHS ${PCL_DIR})
 if(PCL_FOUND)
     message(STATUS "PCL status:")
@@ -90,33 +104,6 @@ if(OpenCV_FOUND)
 else()
     message(FATAL_ERROR "    ERROR: OpenCV ${OpenCV_VERSION} not found")
 endif()
-
-# Use the package PkgConfig to detect GTK+ headers/library files
-FIND_PACKAGE(PkgConfig REQUIRED)
-PKG_CHECK_MODULES(GTK REQUIRED gtk+-3.0)
-
-# Setup CMake to use GTK+, tell the compiler where to look for headers
-# and to the linker where to look for libraries
-INCLUDE_DIRECTORIES(${GTK_INCLUDE_DIRS})
-LINK_DIRECTORIES(${GTK_LIBRARY_DIRS})
-
-# Add other flags to the compiler
-ADD_DEFINITIONS(${GTK_CFLAGS_OTHER})
-
-#message("***********************")
-#message("PCL PACKAGE")
-#message("***********************")
-
-#find_package(PCL 1.8.1 REQUIRED PATHS ${PCL_DIR})
-#if(PCL_FOUND)
- #   message(STATUS "PCL library status:")
- #   message(STATUS "    version: ${PCL_VERSION}")
-#else()
- #   message(FATAL_ERROR "    ERROR: PCL not found")
-#endif()
-
-## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -206,7 +193,7 @@ ADD_DEFINITIONS(${GTK_CFLAGS_OTHER})
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES ${PROJECT_NAME}
-  CATKIN_DEPENDS pcl_conversions pcl_msgs pcl_ros roscpp sensor_msgs std_msgs
+  CATKIN_DEPENDS roscpp sensor_msgs std_msgs
 #  DEPENDS eigen boost openMVG pmvs2
 )
 
@@ -297,8 +284,7 @@ target_link_libraries(${PROJECT_NAME}
                       ${PCL_LIBRARIES}
                       ${catkin_LIBRARIES}
                       ${Boost_LIBRARIES}
-                      ${Eigen3_LIBRARIES}
-                      ${GTK_LIBRARIES}
+                      ${Eigen3_LIBRARIES}                      
 )
 
 #############
