@@ -1,6 +1,6 @@
 # 3D Mapping of individual tree with OpenMVG-PMVS2
 
-*Note:* This is not a complete and robust SfM pipeline implementation. The purpose of this project is to do a 3D reconstruction of a  individual tree using open Multiple View Geometry (openMVG) and get dendrometry estimation (trunk diamater DBH, crop height, total height, volume crop) of individual tree. 
+*Note:* This is not a complete and robust SfM pipeline implementation. The purpose of this project is to do a 3D reconstruction of a  individual tree using open Multiple View Geometry (openMVG) and get dendrometry estimation (trunk diamater DBH, crop height, total height, volume crop). 
 
 ----------------------
 ## Example
