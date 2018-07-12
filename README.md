@@ -41,7 +41,10 @@ This project depends of openMVG and Pmvs2.
 * Copy the package to ROS workspace/src
 * Compile openMVG as: openMVG_Build
 * Copy the openMVG_Build folder to same level directory of package eg:
- 	iTree3DMap - src 
+
+catkin_ws/src:
+  	
+	iTree3DMap - src 
 		   - include
 		   - programs
 		   - openMVG
@@ -51,7 +54,7 @@ This project depends of openMVG and Pmvs2.
 
 Compile with catkin:
 
-        cd ~/catkin_ws
+     cd ~/catkin_ws
 	catkin_make
  	 
 ### Test
