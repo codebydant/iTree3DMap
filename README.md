@@ -18,7 +18,9 @@ To build use CMake minimum required 3.5.1 : https://github.com/Kitware/CMake
 
 ### Datasets
 
-Images dataset: https://drive.google.com/drive/folders/1-JVw5yQG1W8lTxsDRouK0nL871xBpY02?usp=sharing
+Images dataset in Google Drive:
+Tree1: 
+Tree2: https://drive.google.com/open?id=1cfyo7yNCAj6ij9Ckbk7f92GoLDuKME5h
 
 ### Prerequisite
 
