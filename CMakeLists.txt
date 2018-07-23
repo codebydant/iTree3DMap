@@ -97,12 +97,12 @@ message("***********************")
 message("OpenCV PACKAGE")
 message("***********************")
 
-find_package(OpenCV 3.4.1 REQUIRED PATHS ${OPENCV_DIR})
+find_package(OpenCV 3.4.0 REQUIRED PATHS ${OPENCV_DIR})
 if(OpenCV_FOUND)
-    message(STATUS "OpenCV status:")
-    message(STATUS "    version: ${OpenCV_VERSION}")
+   message(STATUS "OpenCV status:")
+   message(STATUS "    version: ${OpenCV_VERSION}")
 else()
-    message(FATAL_ERROR "    ERROR: OpenCV ${OpenCV_VERSION} not found")
+   message(FATAL_ERROR "    ERROR: OpenCV ${OpenCV_VERSION} not found")
 endif()
 
 ## Uncomment this if the package has a setup.py. This macro ensures
