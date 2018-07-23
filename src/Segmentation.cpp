@@ -1,5 +1,4 @@
 ﻿#include "include/Segmentation.h"
-#include <pcl/common/time.h>
 
 void Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
                                pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_segmented){
@@ -11,37 +10,17 @@ void Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   if(cloud->size() <= 0){
      std::cout << "Cloud reading failed. no data points found" << std::endl;
      std::exit(-1);
-  }     
-
-  /*OUTLIER FILTER*/
-  std::cout << "Removing outliers points..." << std::endl;
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB>());
-  /*
-  pcl::RadiusOutlierRemoval<pcl::PointXYZRGB> outrem;
-  outrem.setInputCloud(cloud);
-  outrem.setRadiusSearch(10);
-  outrem.setMinNeighborsInRadius(10);
-  outrem.filter(*cloud_filtered);
-  */
-  pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
-  sor.setInputCloud (cloud);
-  sor.setMeanK (50);
-  sor.setStddevMulThresh (1.0);
-  sor.filter (*cloud_filtered);
-  std::cout << "Outliers points --> [FILTER]." << std::endl;
-
-  /*GROUND SEGMENTATION*/
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ground_remove (new pcl::PointCloud<pcl::PointXYZRGB>());
-  groundModelSegmentation(cloud_filtered,cloud_ground_remove,false);
-
-  /*TREE SEGMENTATION*/
-  std::cout << "Tree cloud segmentation with color base growing..." << std::endl;
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr tree_segmented (new pcl::PointCloud<pcl::PointXYZRGB>());
-  color_based_growing_segmentation(cloud_ground_remove,tree_segmented,true);
+  }
 
   /*CONVERT XYZRGB TO XYZ*/
-  //pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ground_xyz (new pcl::PointCloud<pcl::PointXYZRGB>());
-  //pcl::copyPointCloud(*cloud_ground_remove,*cloud_ground_xyz);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_xyz (new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::copyPointCloud(*cloud,*cloud_xyz);
+
+  /*TRUNK SEGMENTATION*/
+  std::cout << "Trunk cloud segmentation with cylinder segmentation plane..." << std::endl;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_trunk (new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_without_trunk (new pcl::PointCloud<pcl::PointXYZ>());
+  trunkSegmentation(cloud_xyz,cloud_without_trunk,cloud_trunk,true);
 
   std::cout << "Segmentation proccess --> [OK]" << std::endl;
   std::cout << "Saving segmentation 3d mapping file with prefix --> MAP3D_segmented.pcd" << std::endl;
@@ -53,7 +32,9 @@ void Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   prefix2 += "/";
   prefix2 += "MAP3D_segmented.pcd";
   */
-  //pcl::io::savePCDFileBinary("best_tree_segmented.pcd", *cloud_ground_xyz);
+  //pcl::io::savePCDFileBinary("cloud_without_trunk.pcd", *cloud_without_trunk);
+  pcl::io::savePCDFileBinary("cloud_trunk.pcd", *cloud_trunk);
+  pcl::copyPointCloud(*cloud_trunk,*cloud_segmented);
 
 }
 
@@ -68,7 +49,7 @@ void Segmentation::groundModelSegmentation(const pcl::PointCloud<pcl::PointXYZRG
 
   std::cout << "Preparing options for segmentation..." << std::endl;
   int maxIterations = 1000;
-  double distanceThresh = 0.2;
+  double distanceThresh = 0.1;
   bool optimizeCoeff = true;
   int modelType = pcl::SACMODEL_PLANE;
   int methodType = pcl::SAC_RANSAC;
@@ -99,7 +80,7 @@ void Segmentation::groundModelSegmentation(const pcl::PointCloud<pcl::PointXYZRG
   size_t tam;
   size_t temp;
   // While 30% of the original cloud is still there
-  while(cloud->points.size() > 0.1 * nr_points){
+  while(cloud->points.size() > 0.3 * nr_points){
 
     tam = temp;
     temp = cloud->points.size();
@@ -107,7 +88,7 @@ void Segmentation::groundModelSegmentation(const pcl::PointCloud<pcl::PointXYZRG
 
     // Segment the largest planar component from the remaining cloud
     seg.setInputCloud(cloud);
-    pcl::ScopeTime scopeTime("Test loop");
+
     seg.segment(*inliers, *coefficients);
 
     if(inliers->indices.size() == 0){
@@ -135,7 +116,7 @@ void Segmentation::groundModelSegmentation(const pcl::PointCloud<pcl::PointXYZRG
     viewer.setPosition(0,0);
     viewer.setSize(640,480);
     viewer.setBackgroundColor(0.05, 0.05, 0.05, 0);
-    viewer.addCoordinateSystem(1.0, "ucs", 0);
+    viewer.addCoordinateSystem();
     viewer.setCameraPosition(0,0,1,0,0,0);
     pcl::PointXYZ p1, p2, p3;
     p1.getArray3fMap() << 1, 0, 0;
@@ -156,8 +137,10 @@ void Segmentation::groundModelSegmentation(const pcl::PointCloud<pcl::PointXYZRG
   }
 }
 
+
 void Segmentation::based_growing_segmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
-                                              pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_normal_segmented){
+                                              pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_normal_segmented,
+                                              bool show){
 
   pcl::search::Search<pcl::PointXYZ>::Ptr tree =
   boost::shared_ptr<pcl::search::Search<pcl::PointXYZ> > (new pcl::search::KdTree<pcl::PointXYZ>);
@@ -177,17 +160,17 @@ void Segmentation::based_growing_segmentation(const pcl::PointCloud<pcl::PointXY
   pass.filter(*indices);
 
   pcl::RegionGrowing<pcl::PointXYZ, pcl::Normal> reg;
-  reg.setMinClusterSize(50);
+  reg.setMinClusterSize(600);
   reg.setMaxClusterSize(1000000);
   reg.setSearchMethod(tree);
-  reg.setNumberOfNeighbours(30);
+  reg.setNumberOfNeighbours(3);
   reg.setInputCloud(cloud);
   //reg.setIndices (indices);
   reg.setInputNormals(normals);
   reg.setSmoothnessThreshold(3.0 / 180.0 * M_PI);
   reg.setCurvatureThreshold(1.0);
 
-  std::vector <pcl::PointIndices> clusters;
+  std::vector<pcl::PointIndices> clusters;
   reg.extract(clusters);
 
   std::cout << "Number of clusters is equal to " << clusters.size () << std::endl;
@@ -196,6 +179,7 @@ void Segmentation::based_growing_segmentation(const pcl::PointCloud<pcl::PointXY
   std::endl << "cloud that belong to the first cluster:" << std::endl;
 
   int counter = 0;
+  /*
   while(counter < clusters[0].indices.size()){
 
     std::cout << clusters[0].indices[counter] << ", ";
@@ -206,8 +190,35 @@ void Segmentation::based_growing_segmentation(const pcl::PointCloud<pcl::PointXY
   }
 
   std::cout << std::endl;
-
+*/
   cloud_normal_segmented = reg.getColoredCloud ();
+
+  if(show){
+
+    pcl::visualization::PCLVisualizer viewer = pcl::visualization::PCLVisualizer("Tree cloud segmented",true);
+
+    viewer.setPosition(640,0);
+    viewer.setSize(640,480);
+    viewer.setBackgroundColor(0.05, 0.05, 0.05, 0); // Setting background to a dark grey
+    viewer.addCoordinateSystem();
+    viewer.setCameraPosition(0,0,1,0,0,0);
+    pcl::PointXYZ p1, p2, p3;
+    p1.getArray3fMap() << 1, 0, 0;
+    p2.getArray3fMap() << 0, 1, 0;
+    p3.getArray3fMap() << 0,0.1,1;
+
+    viewer.addText3D("x", p1, 0.2, 1, 0, 0, "x_");
+    viewer.addText3D("y", p2, 0.2, 0, 1, 0, "y_");
+    viewer.addText3D ("z", p3, 0.2, 0, 0, 1, "z_");
+    viewer.addPointCloud(cloud_normal_segmented,"tree_cloud");
+    viewer.resetCamera();
+
+    std::cout << "Press [q] to continue segmentation process!" << std::endl;
+
+    while(!viewer.wasStopped ()) {
+           viewer.spin();
+    }
+  }
 }
 
 void Segmentation::color_based_growing_segmentation(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
@@ -220,10 +231,10 @@ void Segmentation::color_based_growing_segmentation(const pcl::PointCloud<pcl::P
   std::cout << "Preparing options for segmentation..." << std::endl;
   int minClusters = 600;
   int maxClusters = 1000000;
-  int numberNeighbours = 100;
+  int numberNeighbours = 3;
   int pointColorThresh = 6;
   int regioncolorThresh = 5;
-  double distanceThresh = 30.0;
+  double distanceThresh = 10.0;
 
   std::cout << "OPTIONS:\n"
             << "Input cloud:" << cloud->size() << "\n"
@@ -244,6 +255,7 @@ void Segmentation::color_based_growing_segmentation(const pcl::PointCloud<pcl::P
 
   //reg.setInputNormals (normals);
   reg.setNumberOfNeighbours(numberNeighbours);
+  reg.setNumberOfRegionNeighbours(3);
   reg.setMinClusterSize(minClusters); // It means that after the segmentation is done all clusters that have less points
   reg.setMaxClusterSize(maxClusters);// then was set as minimum(or have more than maximum) will be discarded.
 
@@ -270,7 +282,7 @@ void Segmentation::color_based_growing_segmentation(const pcl::PointCloud<pcl::P
     viewer.setPosition(640,0);
     viewer.setSize(640,480);
     viewer.setBackgroundColor(0.05, 0.05, 0.05, 0); // Setting background to a dark grey
-    viewer.addCoordinateSystem(1.0, "ucs", 0);
+    viewer.addCoordinateSystem();
     viewer.setCameraPosition(0,0,1,0,0,0);
     pcl::PointXYZ p1, p2, p3;
     p1.getArray3fMap() << 1, 0, 0;
@@ -292,7 +304,8 @@ void Segmentation::color_based_growing_segmentation(const pcl::PointCloud<pcl::P
 }
 
 void Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
-                                     pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_trunk){
+                                     pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_without_trunk,
+                                     pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_trunk,bool show){
 
   pcl::PassThrough<pcl::PointXYZ> pass;
   pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
@@ -302,23 +315,24 @@ void Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   pcl::ExtractIndices<pcl::Normal> extract_normals;
   pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ> ());
 
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
+ // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
   pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>);
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered2 (new pcl::PointCloud<pcl::PointXYZ>);
   pcl::PointCloud<pcl::Normal>::Ptr cloud_normals2 (new pcl::PointCloud<pcl::Normal>);
   pcl::ModelCoefficients::Ptr coefficients_plane (new pcl::ModelCoefficients), coefficients_cylinder (new pcl::ModelCoefficients);
   pcl::PointIndices::Ptr inliers_plane (new pcl::PointIndices), inliers_cylinder (new pcl::PointIndices);
 
+  /*
   //Build a passthrough filter to remove spurious NaNs
   pass.setInputCloud(cloud);
   pass.setFilterFieldName("z");
   pass.setFilterLimits(0.0, 20.0);
   pass.filter(*cloud_filtered);
   std::cout << "PointCloud after filtering has: " << cloud_filtered->points.size () << " data points." << std::endl;
-
+*/
   // Estimate point normals
   ne.setSearchMethod(tree);
-  ne.setInputCloud(cloud_filtered);
+  ne.setInputCloud(cloud);
   ne.setKSearch(50);
   ne.compute(*cloud_normals);
 
@@ -327,9 +341,9 @@ void Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   seg.setModelType(pcl::SACMODEL_NORMAL_PLANE);
   seg.setNormalDistanceWeight(0.1);
   seg.setMethodType(pcl::SAC_RANSAC);
-  seg.setMaxIterations(100);
-  seg.setDistanceThreshold(0.03);
-  seg.setInputCloud(cloud_filtered);
+  seg.setMaxIterations(500);
+  seg.setDistanceThreshold(0.05);
+  seg.setInputCloud(cloud);
   seg.setInputNormals(cloud_normals);
 
   // Obtain the plane inliers and coefficients
@@ -337,7 +351,7 @@ void Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   std::cout << "Plane coefficients: " << *coefficients_plane << std::endl;
 
   // Extract the planar inliers from the input cloud
-  extract.setInputCloud(cloud_filtered);
+  extract.setInputCloud(cloud);
   extract.setIndices(inliers_plane);
   extract.setNegative(false);
 
@@ -353,10 +367,10 @@ void Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   seg.setOptimizeCoefficients(true);
   seg.setModelType(pcl::SACMODEL_CYLINDER);
   seg.setMethodType(pcl::SAC_RANSAC);
-  seg.setNormalDistanceWeight(0.1);
+  seg.setNormalDistanceWeight(0.01);
   seg.setMaxIterations(10000);
   seg.setDistanceThreshold(0.05);
-  seg.setRadiusLimits(0, 0.1);
+  seg.setRadiusLimits(0, 0.5);
   seg.setInputCloud(cloud_filtered2);
   seg.setInputNormals(cloud_normals2);
 
@@ -368,4 +382,37 @@ void Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   extract.setIndices(inliers_cylinder);
   extract.setNegative(false);
   extract.filter(*cloud_trunk);
+  /*
+  extract.setInputCloud(cloud_filtered2);
+  extract.setIndices(inliers_cylinder);
+  extract.setNegative(true);
+  extract.filter(*cloud_without_trunk);
+*/
+  if(show){
+
+    pcl::visualization::PCLVisualizer viewer = pcl::visualization::PCLVisualizer("Trunk cloud segmented",true);
+
+    viewer.setPosition(640,0);
+    viewer.setSize(640,480);
+    viewer.setBackgroundColor(0.05, 0.05, 0.05, 0); // Setting background to a dark grey
+    viewer.addCoordinateSystem();
+    viewer.setCameraPosition(0,0,1,0,0,0);
+    pcl::PointXYZ p1, p2, p3;
+    p1.getArray3fMap() << 1, 0, 0;
+    p2.getArray3fMap() << 0, 1, 0;
+    p3.getArray3fMap() << 0,0.1,1;
+
+    viewer.addText3D("x", p1, 0.2, 1, 0, 0, "x_");
+    viewer.addText3D("y", p2, 0.2, 0, 1, 0, "y_");
+    viewer.addText3D ("z", p3, 0.2, 0, 0, 1, "z_");
+    viewer.addPointCloud(cloud_trunk,"trunk_cloud");
+    viewer.resetCamera();
+
+    std::cout << "Press [q] to continue segmentation process!" << std::endl;
+
+    while(!viewer.wasStopped ()) {
+           viewer.spin();
+    }
+  }
+
 }

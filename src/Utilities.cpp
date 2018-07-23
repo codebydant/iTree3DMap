@@ -274,17 +274,20 @@ void Utilities::help(){
             << "<path image sequence> and press \"Enter\"." << "\n"
             << "<output path> and press \"Enter\"." << std::endl
             << "<focal length> and press \"Enter\"." << std::endl
-            << "==============================================="<< reset << std::endl;
+            << "<scale factor> and press \"Enter\"." << std::endl               
+            << "==============================================="<< reset << std::endl
+            << "How to get the scale factor?" << std::endl
+            << "Enter the image that contain the pattern and press \"Enter\"." << std::endl;
 }
 
 void Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
-                               pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,float scale,
+                               pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,const float scale,
                                bool show){
 
   std::cout << "Scaling pointcloud to real measurements..." << std::endl;
 
   Eigen::MatrixXf scale_matrix(4,4);
-
+                                            //Uniform scaling: vx = vy = vz = s --> Common scale factor
   scale_matrix << scale,  0,    0,    0,    //       |vx  0   0   0|
                    0,   scale,  0,    0,    //  Sv = |0   vy  0   0| => Scale matrix
                    0,     0,  scale,  0,    //       |0   0   vz  0|
@@ -309,7 +312,6 @@ void Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
     viewer.setPosition(0,0);
     viewer.setSize(640,480);
     viewer.setBackgroundColor(0.05, 0.05, 0.05, 0);
-    //viewer.addCoordinateSystem(1.0, "ucs", 0);
     viewer.setCameraPosition(0,0,1,0,0,0);
 
     /*Coordinate system*/
@@ -344,6 +346,75 @@ void Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
 
     viewer.close();
   }
+}
+
+void Utilities::getScaleFactor(float& scale_factor){
+
+  std::string img_path;
+  const std::string red("\033[0;31m");
+  const std::string blue("\033[0;34m");
+  const std::string yellow("\033[0;33m");
+  const std::string reset("\033[0m");
+
+  std::cout << "Enter image pattern path." << std::endl;
+  std::cout << "------------------------------------------" << std::endl;
+
+  std::getline(std::cin, img_path);
+
+  cv::Mat img = cv::imread(img_path.c_str(),1);
+  cv::Mat img_copy = img.clone();
+
+  cv::Mat gray;
+
+  cv::cvtColor(img_copy,gray,CV_BGR2GRAY);
+  cv::GaussianBlur(gray,gray,cv::Size(9,9),2,2);
+  //cv::medianBlur(gray,gray,5);
+
+  std::vector<cv::Vec3f> circles;
+
+  cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT, 1, gray.rows/8, 200, 100, 0, 0);
+  cv::Point pattern_center;
+
+  for( size_t i = 0; i < circles.size(); i++ ){
+
+    cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+    pattern_center = cv::Point(center.x,center.y);
+    std::cout << "center" << center << std::endl;
+    int radius = cvRound(circles[i][2]);
+    // circle center
+    cv::circle(img_copy, center, 1, cv::Scalar(0,255,0),10);
+    // circle outline
+    cv::circle(img_copy, center, radius,cv::Scalar(0,255,0),30);
+
+  }
+
+  std::cout << "Pattern center:" << pattern_center << std::endl;
+  std::cout << "Num rows:" << gray.rows << std::endl;
+  std::cout << "Num cols:" << gray.cols << std::endl;
+  std::cout << "Pixels distance:" << gray.rows - pattern_center.y << std::endl;
+  int ref_pixels = gray.rows - pattern_center.y;
+  int y = gray.rows -(gray.rows - pattern_center.y);
+  int x = pattern_center.x;
+  cv::Point org(x,y);
+  cv::Point end_p(x,gray.rows);
+  cv::line(img_copy,org,end_p,cv::Scalar(0,255,0),30);
+  std::string out = "Pix ref:";
+  std::string ref = std::to_string(ref_pixels);
+  out += ref;
+  float ref_real = 64.0;
+  scale_factor = float(ref_real/float(ref_pixels));
+  std::cout << "Real ref:" << ref_real << std::endl;
+  std::cout << "ref pixels:" << ref_pixels << std::endl;
+  std::cout << "scale factor:" << scale_factor << std::endl;
+
+  cv::putText(img_copy,out ,end_p/2,1,10,cv::Scalar(0,255,0),10);
+
+  cv::namedWindow("pattern",CV_WINDOW_NORMAL);
+  cv::resizeWindow("pattern",640,480);
+  cv::moveWindow("pattern",0,0);
+  cv::imshow("pattern",img_copy);
+  cv::waitKey(0);
+
 }
 
 
