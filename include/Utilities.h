@@ -22,6 +22,9 @@
 #include <pcl/common/geometry.h>
 #include <pcl/common/common.h>
 
+#include "ros/ros.h"
+#include <tinyxml2.h>
+
 class Utilities{
 
 
@@ -31,7 +34,12 @@ private:
 public:
 
    Utilities(){}
-  ~Utilities(){}
+  ~Utilities(){}   
+
+   struct Point3DInMap{
+     cv::Point3f pt;
+     std::map<const int,std::map<const int,cv::Point2f>> feat_ref;// [id image,id pt2d, pt2d]
+   };
 
    static void run_openMVG();
    static void createPMVS_Files();
@@ -41,7 +49,9 @@ public:
                                   bool show=false);
    static void help();
    static void getScaleFactor(float& scale_factor);
-
+   static void fromPoint3DToPCLCloud(const std::vector<Point3DInMap> &input_cloud,
+                              pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL);
+   static bool loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL,bool show=false);
 };
 
 
