@@ -1,6 +1,7 @@
 ﻿#include "include/Utilities.h"
 
 std::string output_dir;
+using namespace tinyxml2;
 
 void Utilities::run_openMVG(){
 
@@ -415,6 +416,169 @@ void Utilities::getScaleFactor(float& scale_factor){
   cv::imshow("pattern",img_copy);
   cv::waitKey(0);
 
+}
+
+bool Utilities::loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL,bool show){
+
+  std::cout << "Reading sfm_data.xml file. Please wait." << std::endl;
+
+  // Empty document
+  tinyxml2::XMLDocument xml_doc;
+
+  // Load xml document
+  tinyxml2::XMLError eResult = xml_doc.LoadFile("sfm_data.xml");
+  if(eResult != tinyxml2::XML_SUCCESS){
+    std::cout << "Error: Could not find a xml file." << std::endl;
+    return false;
+  }
+
+  // Point3D structure for saved pts3d xml document
+  std::vector<Point3DInMap> pts3d;
+
+  // Root xml document
+  tinyxml2::XMLNode * root = xml_doc.FirstChildElement("cereal");
+  if(root!=nullptr){
+
+    // Root pointcloud xml document
+    tinyxml2::XMLElement * structure = root->FirstChildElement("structure");
+    if(structure == nullptr){
+      std::cout << "Error: <structure> tag was not found in xml document." << std::endl;
+    }
+
+    // Iterate over <structure> tag
+    for(tinyxml2::XMLElement* child = structure->FirstChildElement();child != NULL;
+        child = child->NextSiblingElement()){
+
+      Point3DInMap * pt3d = new Point3DInMap();
+
+      tinyxml2::XMLElement * X_root = child->FirstChildElement("value")->FirstChildElement("X");
+      if(X_root==nullptr){
+        std::cout << "Error: 3D point not found in <X> tag." << std::endl;
+        continue;
+      }
+
+      float x,y,z;
+
+      // Iterate over <X> tag
+      for(tinyxml2::XMLElement* child = X_root->FirstChildElement();child != NULL;
+          child = child->NextSiblingElement()){
+
+        x=y;
+        y=z;
+        eResult = child->QueryFloatText(&z);   //z=coordinate;
+      }
+
+      pt3d->pt = cv::Point3f(x,y,z);
+
+      tinyxml2::XMLElement * Observ_root = child->FirstChildElement("value")->FirstChildElement("observations");
+      if(Observ_root==nullptr){
+        std::cout << "Error: 3D-2d view point not found in <observations> tag." << std::endl;
+        continue;
+      }
+
+      // Iterate over <observations> tag
+      for(tinyxml2::XMLElement* child = Observ_root->FirstChildElement();child != NULL;
+          child = child->NextSiblingElement()){
+
+        int img_id;
+        child->FirstChildElement("key")->QueryIntText(&img_id);
+
+        tinyxml2::XMLElement * id_feat_root = child->FirstChildElement("value");
+
+        int img_id_feat;
+        id_feat_root->FirstChildElement("id_feat")->QueryIntText(&img_id_feat);
+
+        tinyxml2::XMLElement * feature_root = id_feat_root->FirstChildElement("x");
+
+        float x,y;
+
+        // Iterate over <x> tag
+        for(tinyxml2::XMLElement* child = feature_root->FirstChildElement();child != NULL;
+            child = child->NextSiblingElement()){
+
+          x = y;
+          eResult = child->QueryFloatText(&y);   //y=coordinate;
+        }
+
+         cv::Point2f pt2d(x,y);
+         std::map<const int,cv::Point2f> feature;
+         feature[img_id_feat]=pt2d;
+
+         pt3d->feat_ref[img_id]=feature;
+
+      }
+      pts3d.push_back(*pt3d);
+
+    }
+    std::cout << "pt3d ini: " << pts3d[0].pt << std::endl;
+    std::cout << "pt3d ini num observations:" << pts3d[0].feat_ref.size() << std::endl;
+    for(std::pair<const int,std::map<const int,cv::Point2f>>&  ft : pts3d[0].feat_ref){
+
+        for(std::pair<const int,cv::Point2f>&  pt2d : ft.second){
+          std::cout << "img:" << ft.first <<" ft_id:" << pt2d.first << " pt2d:" << pt2d.second << std::endl;
+        }
+    }
+
+    std::cout << "pt3d end: " << pts3d[pts3d.size()-1].pt << std::endl;
+    std::cout << "pt3d end num observations:" << pts3d[pts3d.size()-1].feat_ref.size() << std::endl;
+    for(std::pair<const int,std::map<const int,cv::Point2f>>&  ft : pts3d[pts3d.size()-1].feat_ref){
+
+        for(std::pair<const int,cv::Point2f>&  pt2d : ft.second){
+          std::cout << "img:" << ft.first <<" ft_id:" << pt2d.first << " pt2d:" << pt2d.second << std::endl;
+        }
+    }
+    std::cout << "pointcloud size:" << pts3d.size() << std::endl;
+
+    fromPoint3DToPCLCloud(pts3d,cloudPCL);
+
+  }else{
+    std::cout << "Error: root of xml could not found. Must be: <cereal>" << std::endl;
+    return false;
+  }
+
+  if(show){
+
+    pcl::visualization::PCLVisualizer viewer = pcl::visualization::PCLVisualizer("XML pointcloud",true);
+
+    viewer.setPosition(0,0);
+    viewer.setSize(640,480);
+    viewer.setBackgroundColor(0.05, 0.05, 0.05, 0);
+    viewer.addCoordinateSystem();
+    viewer.setCameraPosition(0,0,1,0,0,0);
+    pcl::PointXYZ p1, p2, p3;
+    p1.getArray3fMap() << 1, 0, 0;
+    p2.getArray3fMap() << 0, 1, 0;
+    p3.getArray3fMap() << 0,0.1,1;
+
+    viewer.addText3D("x", p1, 0.2, 1, 0, 0, "x_");
+    viewer.addText3D("y", p2, 0.2, 0, 1, 0, "y_");
+    viewer.addText3D ("z", p3, 0.2, 0, 0, 1, "z_");
+    viewer.addPointCloud(cloudPCL,"xml_pointcloud");
+    viewer.resetCamera();
+
+    std::cout << "Press [q] to continue!" << std::endl;
+
+    while(!viewer.wasStopped ()) {
+           viewer.spin();
+    }
+  }
+}
+
+void Utilities::fromPoint3DToPCLCloud(const std::vector<Point3DInMap> &input_cloud,
+                           pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL){
+
+  for(size_t i = 0; i < input_cloud.size(); ++i){
+      cv::Point3f pt3d = input_cloud[i].pt;
+      pcl::PointXYZ pclp;
+      pclp.x  = pt3d.x;
+      pclp.y  = pt3d.y;
+      pclp.z  = pt3d.z;
+      cloudPCL->push_back(pclp);
+   }
+   cloudPCL->width = (uint32_t) cloudPCL->points.size(); // number of points
+   cloudPCL->height = 1;	// a list, one row of data
+   cloudPCL->header.frame_id ="map";
+   cloudPCL->is_dense = false;
 }
 
 
