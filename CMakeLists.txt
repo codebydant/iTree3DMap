@@ -52,7 +52,7 @@ message("***********************")
 message("Catkin PACKAGE")
 message("***********************")
 
-find_package(catkin REQUIRED COMPONENTS roscpp sensor_msgs std_msgs)
+find_package(catkin REQUIRED COMPONENTS roscpp sensor_msgs std_msgs cmake_modules)
 if(catkin_FOUND)
     message(STATUS "catkin status:")
     message(STATUS "    version: ${catkin_VERSION}")
@@ -64,6 +64,7 @@ message("***********************")
 message("Eigen3 PACKAGE")
 message("***********************")
 
+
 find_package(Eigen3 REQUIRED)
 
 message("***********************")
@@ -71,6 +72,7 @@ message("Boost PACKAGE")
 message("***********************")
 
 find_package(Boost REQUIRED)
+find_package(TinyXML2 REQUIRED)
 
 message("***********************")
 message("PCL PACKAGE")
@@ -109,6 +111,9 @@ endif()
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
 # catkin_python_setup()
+
+
+
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -194,7 +199,7 @@ catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS roscpp sensor_msgs std_msgs
-#  DEPENDS eigen boost openMVG pmvs2
+  DEPENDS TinyXML2
 )
 
 ###########
@@ -213,6 +218,7 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
   ${Eigen3_INCLUDE_DIRS}
+   ${TinyXML2_INCLUDE_DIRS}
 )
 include(CheckFunctionExists)
 
@@ -284,7 +290,8 @@ target_link_libraries(${PROJECT_NAME}
                       ${PCL_LIBRARIES}
                       ${catkin_LIBRARIES}
                       ${Boost_LIBRARIES}
-                      ${Eigen3_LIBRARIES}                      
+                      ${Eigen3_LIBRARIES}
+                      ${TinyXML2_LIBRARIES}
 )
 
 #############

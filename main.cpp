@@ -2,7 +2,6 @@
            HEADERS
 **********************************/
 #include "include/DendrometryE.h"
-#include "ros/ros.h"
 
 /*
 void subscriberCallback(const cv::Mat& img){
@@ -15,9 +14,11 @@ void subscriberCallback(const cv::Mat& img){
 int main(int argc, char **argv){
 
   Utilities::help();
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPCL (new pcl::PointCloud<pcl::PointXYZ>());
+  bool success = Utilities::loadSFM_XML_Data(cloudPCL,true);
+
   float scale;
   Utilities::getScaleFactor(scale);
-
 
   /*************************
   STEP 1: ROS INTERFACE
