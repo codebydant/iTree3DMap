@@ -1,4 +1,4 @@
-﻿#include "include/Utilities.h"
+#include "include/Utilities.h"
 
 std::string output_dir;
 using namespace tinyxml2;
@@ -274,11 +274,10 @@ void Utilities::help(){
             << std::endl << "Enter:\n" << "<project name> and press \"Enter\"." << "\n"
             << "<path image sequence> and press \"Enter\"." << "\n"
             << "<output path> and press \"Enter\"." << std::endl
-            << "<focal length> and press \"Enter\"." << std::endl
-            << "<scale factor> and press \"Enter\"." << std::endl               
-            << "==============================================="<< reset << std::endl
-            << "How to get the scale factor?" << std::endl
-            << "Enter the image that contain the pattern and press \"Enter\"." << std::endl;
+            << "<focal length> and press \"Enter\"." << std::endl                          
+            << "==============================================="<< std::endl
+            << "once the sfm finish, enter the image pattern path and press \"Enter\"." << std::endl
+            << "<reference measure> and press \"Enter\"." << reset << std::endl;
 }
 
 void Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
@@ -349,16 +348,75 @@ void Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   }
 }
 
-void Utilities::getScaleFactor(float& scale_factor){
+bool Utilities::getScaleFactor(float& scale_factor){
 
-  std::string img_path;
   const std::string red("\033[0;31m");
   const std::string blue("\033[0;34m");
   const std::string yellow("\033[0;33m");
   const std::string reset("\033[0m");
 
-  std::cout << "Enter image pattern path." << std::endl;
-  std::cout << "------------------------------------------" << std::endl;
+  std::cout << blue << "Getting the scale factor." << reset << std::endl;
+
+  cv::Mat_<float> intrinsic;
+  std::vector<cv::Matx34f> cameras_poses;
+  std::vector<Point3DInMap> cloud;
+
+  bool success = Utilities::loadSFM_XML_Data(cloud,intrinsic,cameras_poses,false);
+  if(not success){
+    std::cout << "Could not get a scale factor." << std::endl;
+    return false;
+  }
+
+  std::cout << "\nCloud xml: " << cloud.size() << " pts" << std::endl;
+  std::cout << "Poses: " << cameras_poses.size() << " cameras" << std::endl;
+  std::cout << "Intrinsic camera:\n" << intrinsic << std::endl;
+
+  std::string image_pattern_path;
+  float x_, y_,s,orientation;
+  std::vector<cv::Point2f> image_points;
+
+  while(image_pattern_path.size()<=0){
+
+    std::cout << blue << "\nEnter the feature file associated to pattern:" << reset << std::endl;
+    std::cout << blue << "Must be: file.feat in "<< output_dir << "/matches/.feat" << reset << std::endl;
+    std::cout << "------------------------------------------" << std::endl;
+    std::getline(std::cin, image_pattern_path);
+
+    std::ifstream file(image_pattern_path.c_str());
+    if(!file.is_open()){
+      std::cout << red << "Error: Could not find "<< image_pattern_path << reset << std::endl;
+      image_pattern_path.clear();
+      continue;
+    }
+
+    if(image_points.size()<=0){
+      while(file >> x_ >> y_ >> s >> orientation){
+        image_points.push_back(cv::Point2f(x_,y_));
+      }
+    }
+  }
+
+  std::cout << yellow << "\nFeature selected:" << image_pattern_path << std::endl;
+  std::cout << "Image points: " << image_points.size() << " points" << reset << std::endl;
+
+  /*
+
+
+
+  cv::Mat rvecLeft;
+  cv::Rodrigues(cameras_poses[0].get_minor<3,3>(0,0),rvecLeft);
+  cv::Mat tvecLeft(cameras_poses[0].get_minor<3,1>(0,3));
+
+  std::vector<cv::Point2f> projected_points(cloudPCL->size());
+  cv::projectPoints(cloud,rvecLeft,tvecLeft,intrinsic,cv::Mat(),projected_points);
+
+
+  const float MIN_REPROJECTION_ERROR = 8.0; //Maximum 10-pixel allowed re-projection error
+
+  //check if point reprojection error is small enough
+  const float error = cv::norm(projected_points[0]  - image_points[0]);
+  std::cout << "projected p1:" << projected_points[0] << " p1:" << image_points[0] << std::endl;
+  std::cout << "error" << error << std::endl;
 
   std::getline(std::cin, img_path);
 
@@ -415,74 +473,104 @@ void Utilities::getScaleFactor(float& scale_factor){
   cv::moveWindow("pattern",0,0);
   cv::imshow("pattern",img_copy);
   cv::waitKey(0);
+  */
 
 }
 
-bool Utilities::loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL,bool show){
+bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
+                                 cv::Mat_<float>& intrinsic,
+                                 std::vector<cv::Matx34f>& cameras_poses,bool show){  
 
-  std::cout << "Reading sfm_data.xml file. Please wait." << std::endl;
+  const std::string red("\033[0;31m");
+  const std::string blue("\033[0;34m");
+  const std::string yellow("\033[0;33m");
+  const std::string reset("\033[0m");
 
   // Empty document
   tinyxml2::XMLDocument xml_doc;
 
+  /*READING FILE*/
+  std::cout << blue <<"Reading sfm_data.xml file. Please wait." << reset << std::endl;
+  std::string sfm_data;
+  sfm_data += output_dir;
+  sfm_data += "/reconstruction_sequential/sfm_data.xml";
+
   // Load xml document
   tinyxml2::XMLError eResult = xml_doc.LoadFile("sfm_data.xml");
   if(eResult != tinyxml2::XML_SUCCESS){
-    std::cout << "Error: Could not find a xml file." << std::endl;
+    std::cout << red << "Error: Could not find a xml file." << reset << std::endl;
+    sfm_data.clear();
     return false;
   }
 
-  std::cout << "Found:" << "sfm_data.xml" << std::endl;
+  std::cout << yellow << "sfm_data.xml:" << std::endl;
+  std::cout << "<intrinsics>" << std::endl;
+  std::cout << "<extrinsics>" << std::endl;
+  std::cout << "<structure>" << reset << std::endl;
 
-  // Point3D structure for saved pts3d xml document
-  std::vector<Point3DInMap> pts3d;
-  std::vector<cv::Mat_<float>> cameras_poses;
+  std::cout << "\nFounding root tag <cereal> ..." << std::endl;
+  std::cout << "------------------------------------------" << std::endl;
 
   // Root xml document
   tinyxml2::XMLNode * root = xml_doc.FirstChildElement("cereal");
   if(root!=nullptr){
 
-    std::cout << "Root tag <cereal>" << std::endl;
+    std::cout << yellow << "Found: tag <cereal>" << reset << std::endl;
+    std::cout  << "\nFounding <intrinsics> tag ..." << std::endl;
+    std::cout << "------------------------------------------" << std::endl;
 
     /*INTRINSICS DATA*/
     // Root intrinsics xml document
     tinyxml2::XMLElement * intrinsics = root->FirstChildElement("intrinsics");
     if(intrinsics == nullptr){
-      std::cout << "Error: <intrinsics> tag was not found in xml document." << std::endl;
+      std::cout << red << "Error: <intrinsics> tag was not found in xml document." << reset << std::endl;
+      return false;
     }
 
+    std::cout << yellow << "Found: tag <intrinsics>" << reset << std::endl;
+
+    // Root intrinsics data xml document
     tinyxml2::XMLElement * data = intrinsics->FirstChildElement("value0")->FirstChildElement("value")->FirstChildElement("ptr_wrapper")->FirstChildElement("data");
     if(data == nullptr){
-      std::cout << "Error: <data> tag was not found in xml document." << std::endl;
+      std::cout << red << "Error: <data> tag was not found in xml document." << reset << std::endl;
+      return false;
     }
 
     float f,cx,cy;
     data->FirstChildElement("focal_length")->QueryFloatText(&f);
 
+    // Root intrinsics data - principal point xml document
     tinyxml2::XMLElement * pp = data->FirstChildElement("principal_point");
     if(pp == nullptr){
-      std::cout << "Error: <principal_point> tag was not found in xml document." << std::endl;
+      std::cout << red <<  "Error: <principal_point> tag was not found in xml document." << reset << std::endl;
+      return false;
     }
 
     // Iterate over <principal_point> tag
     for(tinyxml2::XMLElement* child = pp->FirstChildElement();child != NULL;
         child = child->NextSiblingElement()){
-
       cx=cy;
       child->QueryFloatText(&cy);
     }
 
-    std::cout << "f:" << f << " cx:" << cx << " cy:" << cy << std::endl;
+    // Matrix K
+    intrinsic = (cv::Mat_<float>(3, 3) << f, 0, cx,
+                                          0, f, cy,
+                                          0, 0, 1);    
+
+    std::cout  << "\nFounding <extrinsics> tag ..." << std::endl;
+    std::cout << "------------------------------------------" << std::endl;
 
     /*EXTRINSICS DATA*/
     // Root extrinsics xml document
     tinyxml2::XMLElement * extrinsics = root->FirstChildElement("extrinsics");
     if(extrinsics == nullptr){
-      std::cout << "Error: <extrinsics> tag was not found in xml document." << std::endl;
+      std::cout << red << "Error: <extrinsics> tag was not found in xml document." << reset << std::endl;
+      return false;
     }
 
+    std::cout << yellow << "Found: tag <extrinsics>" << reset << std::endl;
     int id_camera;
-
 
     // Iterate over <extrinsics> tag
     for(tinyxml2::XMLElement* child = extrinsics->FirstChildElement();child != NULL;
@@ -490,18 +578,22 @@ bool Utilities::loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL,b
 
       child->FirstChildElement("key")->QueryIntText(&id_camera);
 
+      // Root extrinsics data - rotation xml document
       tinyxml2::XMLElement * rotation = child->FirstChildElement("value")->FirstChildElement("rotation");
       if(rotation == nullptr){
-        std::cout << "Error: <rotation> tag was not found in xml document." << std::endl;
+        std::cout << red << "Error: <rotation> tag was not found in xml document." << reset << std::endl;
+        return false;
       }
 
       float r11,r12,r13;
       float r21,r22,r23;
       float r31,r32,r33;
 
+      // Iterate over <rotation> tag
       for(tinyxml2::XMLElement* child = rotation->FirstChildElement();child != NULL;
           child = child->NextSiblingElement()){
 
+        // Iterate over <value> rotation tag
         for(tinyxml2::XMLElement* child2 = child->FirstChildElement();child2 != NULL;
             child2 = child2->NextSiblingElement()){
 
@@ -514,21 +606,33 @@ bool Utilities::loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL,b
           r31 = r32;
           r32 = r33;
           child2->QueryFloatText(&r33);
+          /*
+          r11 = r21;
+          r21 = r31;
+          r31 = r12;
+
+          r12 = r22;
+          r22 = r32;
+          r32 = r13;
+
+          r13 = r23;
+          r23 = r33;
+          child2->QueryFloatText(&r33);
+          */
 
         }
       }
 
-      //std::cout << "r11:" << r11 << " r12:" << r12 << " r13:" << r13 << std::endl;
-      //std::cout << "r21:" << r21 << " r22:" << r22 << " r23:" << r23 << std::endl;
-      //std::cout << "r31:" << r31 << " r32:" << r32 << " r33:" << r33 << std::endl;
-
       float t1,t2,t3;
 
+      // Root extrinsics data - traslation xml document
       tinyxml2::XMLElement * traslation = child->FirstChildElement("value")->FirstChildElement("center");
       if(traslation == nullptr){
-        std::cout << "Error: <center> tag was not found in xml document." << std::endl;
+        std::cout << red << "Error: <center> tag was not found in xml document." << reset << std::endl;
+        return false;
       }
 
+      // Iterate over <traslation> tag
       for(tinyxml2::XMLElement* child = traslation->FirstChildElement();child != NULL;
           child = child->NextSiblingElement()){
 
@@ -537,24 +641,27 @@ bool Utilities::loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL,b
         child->QueryFloatText(&t3);
       }
 
-      //std::cout << "t1:" << t1 << " t2:" << t2 << " t3:" << t3 << std::endl;
-      cv::Mat_<float> pose = (cv::Mat_<float>(3, 4) << r11, r12, r13, t1,
-                                                       r21, r22, r23, t2,
-                                                       r31, r32, r33, t3);
-      cameras_poses.push_back(pose);
+      // Camera pose
+      cv::Matx34f pose = cv::Matx34f(r11, r12, r13, t1,
+                                     r21, r22, r23, t2,
+                                     r31, r32, r33, t3);
 
-      //break;
+      // Saving camera pose
+      cameras_poses.push_back(pose);    
     }
 
-    std::cout << "camera:\n" << cameras_poses.at(0) << std::endl;
-    std::cout << "Camera poses:" << cameras_poses.size() << " cameras." << std::endl;
+    std::cout  << "\nFounding <structure> tag ..." << std::endl;
+    std::cout << "------------------------------------------" << std::endl;
 
     /*POINTCLOUD DATA*/
     // Root structure xml document
     tinyxml2::XMLElement * structure = root->FirstChildElement("structure");
     if(structure == nullptr){
-      std::cout << "Error: <structure> tag was not found in xml document." << std::endl;
+      std::cout << red <<"Error: <structure> tag was not found in xml document." << reset << std::endl;
+      return false;
     }
+
+    std::cout << yellow << "Found: tag <structure>" << reset << std::endl;
 
     // Iterate over <structure> tag
     for(tinyxml2::XMLElement* child = structure->FirstChildElement();child != NULL;
@@ -564,8 +671,8 @@ bool Utilities::loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL,b
 
       tinyxml2::XMLElement * X_root = child->FirstChildElement("value")->FirstChildElement("X");
       if(X_root==nullptr){
-        std::cout << "Error: 3D point not found in <X> tag." << std::endl;
-        continue;
+        std::cout << red << "Error: 3D point not found in <X> tag." << reset << std::endl;
+        return false;
       }
 
       float x,y,z;
@@ -579,8 +686,10 @@ bool Utilities::loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL,b
         eResult = child->QueryFloatText(&z);   //z=coordinate;
       }
 
+      // Filling pt feature
       pt3d->pt = cv::Point3f(x,y,z);
 
+      // Root <observations> tag
       tinyxml2::XMLElement * Observ_root = child->FirstChildElement("value")->FirstChildElement("observations");
       if(Observ_root==nullptr){
         std::cout << "Error: 3D-2d view point not found in <observations> tag." << std::endl;
@@ -594,19 +703,21 @@ bool Utilities::loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL,b
         int img_id;
         child->FirstChildElement("key")->QueryIntText(&img_id);
 
+        // Root value - <bservations> tag
         tinyxml2::XMLElement * id_feat_root = child->FirstChildElement("value");
         if(id_feat_root==nullptr){
-          std::cout << "Error: <id_feat> tag not found." << std::endl;
-          continue;
+          std::cout << red << "Error: <id_feat> tag not found." << reset << std::endl;
+          return false;
         }
 
         int img_id_feat;
         id_feat_root->FirstChildElement("id_feat")->QueryIntText(&img_id_feat);
 
+        // Root feature - <bservations> tag
         tinyxml2::XMLElement * feature_root = id_feat_root->FirstChildElement("x");
         if(feature_root==nullptr){
-          std::cout << "Error: <x> tag not found." << std::endl;
-          continue;
+          std::cout << red << "Error: <x> tag not found." << reset << std::endl;
+          return false;
         }
 
         float x,y;
@@ -619,6 +730,7 @@ bool Utilities::loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL,b
           eResult = child->QueryFloatText(&y);   //y=coordinate;
         }
 
+         // 2D Point - <bservations> tag
          cv::Point2f pt2d(x,y);
          std::map<const int,cv::Point2f> feature;
          feature[img_id_feat]=pt2d;
@@ -626,8 +738,9 @@ bool Utilities::loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL,b
          pt3d->feat_ref[img_id]=feature;
 
       }
-      pts3d.push_back(*pt3d);
 
+      // Saving pt3d
+      pts3d.push_back(*pt3d);
     }
 
     /*
@@ -649,18 +762,18 @@ bool Utilities::loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL,b
         }
     }
     */
-    std::cout << "pointcloud size:" << pts3d.size() << std::endl;
-
-    fromPoint3DToPCLCloud(pts3d,cloudPCL);
 
   }else{
-    std::cout << "Error: root of xml could not found. Must be: <cereal>" << std::endl;
+    std::cout << red << "Error: root of xml could not found. Must be: <cereal>" << reset << std::endl;
     return false;
   }
 
   if(show){
 
-    pcl::visualization::PCLVisualizer viewer = pcl::visualization::PCLVisualizer("XML pointcloud",true);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPCL (new pcl::PointCloud<pcl::PointXYZ>());
+    fromPoint3DToPCLCloud(pts3d,cloudPCL);
+
+    pcl::visualization::PCLVisualizer viewer = pcl::visualization::PCLVisualizer("3D Mapping",true);
 
     viewer.setPosition(0,0);
     viewer.setSize(640,480);
