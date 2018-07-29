@@ -2,6 +2,7 @@
            HEADERS
 **********************************/
 #include "include/DendrometryE.h"
+#include <sstream>
 
 /*
 void subscriberCallback(const cv::Mat& img){
@@ -15,7 +16,26 @@ int main(int argc, char **argv){
 
   Utilities::help();
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPCL (new pcl::PointCloud<pcl::PointXYZ>());
-  bool success = Utilities::loadSFM_XML_Data(cloudPCL,true);
+  bool success = Utilities::loadSFM_XML_Data(cloudPCL,false);
+
+  std::ifstream file("IMG_20180629_161757_DRO.feat");
+  if(!file.is_open()){
+    std::cout << "Error: Could not find feature file." << std::endl;
+  }
+
+  float x, y,s,orientation;
+  std::vector<cv::Point2f> image_points;
+
+  while(file >> x >> y >> s >> orientation){
+
+      //std::cout << "x:" << x << " y:" << y << std::endl;
+      image_points.push_back(cv::Point2f(x,y));
+  }
+
+  std::cout << "image points:" << image_points.size()<< std::endl;
+
+
+
 
   float scale;
   Utilities::getScaleFactor(scale);
