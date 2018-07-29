@@ -38,7 +38,7 @@ public:
 
    struct Point3DInMap{
      cv::Point3f pt;
-     std::map<const int,std::map<const int,cv::Point2f>> feat_ref;// [id image,id pt2d, pt2d]
+     std::map<const int,std::map<const int,cv::Point2f>> feat_ref;// [id image,[id pt2d, pt2d]]
    };
 
    static void run_openMVG();
