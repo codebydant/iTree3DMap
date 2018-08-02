@@ -1,7 +1,25 @@
 #include "include/Utilities.h"
 
 std::string output_dir;
-using namespace tinyxml2;
+const std::string red("\033[0;31m");
+const std::string blue("\033[0;34m");
+const std::string yellow("\033[0;33m");
+const std::string reset("\033[0m");
+
+// This function displays the help
+void Utilities::help(){
+  const std::string green("\033[0;32m");
+  const std::string reset("\033[0m");
+  std::cout << green << "===============================================\n"
+               "The program create a 3D mapping of individual tree from a images sequence using openMVG and PMVS2."
+            << std::endl << "Enter:\n" << "<project name> and press \"Enter\"." << "\n"
+            << "<path image sequence> and press \"Enter\"." << "\n"
+            << "<output path> and press \"Enter\"." << std::endl
+            << "<focal length> and press \"Enter\"." << std::endl
+            << "==============================================="<< std::endl
+            << "once the sfm finish, enter the image pattern path and press \"Enter\"." << std::endl
+            << "<reference measure> and press \"Enter\"." << reset << std::endl;
+}
 
 void Utilities::run_openMVG(){
 
@@ -15,6 +33,7 @@ void Utilities::run_openMVG(){
   const std::string yellow("\033[0;33m");
   const std::string reset("\033[0m");
   std::string answer;
+  auto start = std::chrono::high_resolution_clock::now();
 
   bool choise = false;
 
@@ -169,199 +188,56 @@ void Utilities::run_openMVG(){
   std::cout << red << "Failed. SfM_SequentialPipeline.py not found" << reset << std::endl;
   std::exit(-1);
  }
-
  std::cout << "\n" << "3D Mapping --> [COMPLETE]." << std::endl;
-
+ auto end = std::chrono::high_resolution_clock::now();
+ auto difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+ if(difference >=60){
+   std::cout << "3D Mapping Time: " << difference/60 << " minutes" << std::endl;
+ }else{
+   std::cout << "3D Mapping Time: " << difference << " seconds" << std::endl;
+ }
 }
 
-void Utilities::createPMVS_Files(){
+bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D, float& scale_factor){
 
-  const std::string red("\033[0;31m");
-  const std::string blue("\033[0;34m");
-  const std::string reset("\033[0m");
+  std::cout << "Showing 3D Mapping..." << std::endl;
+  std::cout << "Converting sfm_data.bin to sfm_data.xml..." << std::endl;
+  auto start = std::chrono::high_resolution_clock::now();
 
-  std::cout << "\n------------------------------------------" << std::endl;
-  std::cout << blue <<"Creating files for PMVS2..." << reset << std::endl;
+  /*
+  ./openMVG_main_ConvertSfM_DataFormat
+  Usage: ./openMVG_main_ConvertSfM_DataFormat
+  [-i|--input_file] path to the input SfM_Data scene
+  [-o|--output_file] path to the output SfM_Data scene
+       .json, .bin, .xml, .ply, .baf
 
-  std::string command2 = "~/catkin_ws/src/iTree3DMap/openMVG/openMVG_Build/Linux-x86_64-RELEASE/openMVG_main_openMVG2PMVS -i ";
-  command2 += output_dir;
-  command2 += "/reconstruction_sequential/sfm_data.bin -o ";
-  command2 += output_dir;
+  [Options to export partial data (by default all data are exported)]
 
-  int dont_care = std::system(command2.c_str());
+  Usable for json/bin/xml format
+  [-V|--VIEWS] export views
+  [-I|--INTRINSICS] export intrinsics
+  [-E|--EXTRINSICS] export extrinsics (view poses)
+  [-S|--STRUCTURE] export structure
+  [-C|--CONTROL_POINTS] export control points
+  */
+  /*
+  std::string command = "~/catkin_ws/src/iTree3DMap/openMVG/openMVG_Build/Linux-x86_64-RELEASE/openMVG_main_ConvertSfM_DataFormat -i ";
+  command += output_dir;
+  command += "/reconstruction_sequential/sfm_data.bin -o ";
+  command += output_dir;
+  command += "/reconstruction_sequential/sfm_data.xml -I -E -S";
 
+  int dont_care = std::system(command.c_str());
   if(dont_care > 0){
-   std::cout << red << "Failed. openMVG_main_openMVG2PMVS not found" << reset << std::endl;
+   std::cout << "Failed. Could not convert sfm_data.bin to xml" << std::endl;
    std::exit(-1);
   }
-
-}
-
-void Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_cloud){
-
-  const std::string blue("\033[0;34m");
-  const std::string reset("\033[0m");
-
-  std::cout << "\n------------------------------------------" << std::endl;
-  std::cout << blue << "Densify cloud process initializing..." << reset << std::endl;
-
-  std::string command3 = "~/catkin_ws/src/iTree3DMap/programs/pmvs2 ";
-  command3 += output_dir;
-  command3 += "/PMVS/ ";
-  command3 += "pmvs_options.txt";
-
-  int dont_care = std::system("chmod 771 ~/catkin_ws/src/iTree3DMap/programs/pmvs2");
-  dont_care = std::system(command3.c_str());
-
-  if(dont_care > 0){
-   std::cout << "Failed. ./pmvs2 no found" << std::endl;
-   std::exit(-1);
-  }
-
-  std::string cloudPLY = output_dir;
-  cloudPLY += "/PMVS/models/pmvs_options.txt.ply";
-
-  pcl::PLYReader inputPlyCloud;
-  inputPlyCloud.read(cloudPLY,*output_cloud);
-
-  std::cout << "Densify proccess --> [OK]" << std::endl;
-  std::cout << "Saving dense 3d mapping file with prefix --> MAP3D_dense.pcd" << std::endl;
-
-  std::string prefix1 = output_dir;
-  std::string output_pcd_files = "3D_Mapping";
-  prefix1 += "/";
-  prefix1 += output_pcd_files;
-  prefix1 += "/";
-  prefix1 += "MAP3D_dense.pcd";
-
-  pcl::io::savePCDFileBinary(prefix1.c_str(), *output_cloud);
-
-  std::cout << "\n------------------------------------------" << std::endl;
-  std::cout << "Showing 3D mapping" << std::endl;
-
-  pcl::visualization::PCLVisualizer viewer = pcl::visualization::PCLVisualizer("MAP3D",true);
-
-  viewer.setPosition(0,0);
-  viewer.setSize(640,480);
-  viewer.setBackgroundColor(0.05, 0.05, 0.05, 0); // Setting background to a dark grey
-  viewer.addCoordinateSystem ();
-  viewer.setCameraPosition(0,0,1,0,0,0);
-  pcl::PointXYZ p1, p2, p3;
-  p1.getArray3fMap() << 1, 0, 0;
-  p2.getArray3fMap() << 0, 1, 0;
-  p3.getArray3fMap() << 0,0.1,1;
-
-  viewer.addText3D("x", p1, 0.2, 1, 0, 0, "x_");
-  viewer.addText3D("y", p2, 0.2, 0, 1, 0, "y_");
-  viewer.addText3D ("z", p3, 0.2, 0, 0, 1, "z_");
-  viewer.addPointCloud(output_cloud,"tree_cloud");
-  viewer.resetCamera();
-
-  std::cout << "Press [q] to continue --> SEGMENTATION PROCESS!" << std::endl;
-
-  while(!viewer.wasStopped ()) {
-         viewer.spin();
-  }
-
-}
-
-// This function displays the help
-void Utilities::help(){
-  const std::string green("\033[0;32m");
-  const std::string reset("\033[0m");
-  std::cout << green << "===============================================\n"
-               "The program create a 3D mapping of individual tree from a images sequence using openMVG and PMVS2."
-            << std::endl << "Enter:\n" << "<project name> and press \"Enter\"." << "\n"
-            << "<path image sequence> and press \"Enter\"." << "\n"
-            << "<output path> and press \"Enter\"." << std::endl
-            << "<focal length> and press \"Enter\"." << std::endl                          
-            << "==============================================="<< std::endl
-            << "once the sfm finish, enter the image pattern path and press \"Enter\"." << std::endl
-            << "<reference measure> and press \"Enter\"." << reset << std::endl;
-}
-
-void Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
-                               pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,const float scale,
-                               bool show){
-
-  std::cout << "Scaling pointcloud to real measurements..." << std::endl;
-
-  Eigen::MatrixXf scale_matrix(4,4);
-                                            //Uniform scaling: vx = vy = vz = s --> Common scale factor
-  scale_matrix << scale,  0,    0,    0,    //       |vx  0   0   0|
-                   0,   scale,  0,    0,    //  Sv = |0   vy  0   0| => Scale matrix
-                   0,     0,  scale,  0,    //       |0   0   vz  0|
-                   0,     0,    0,    1;    //       |0   0   0   1|
-                                            //https://en.wikipedia.org/wiki/Scaling_(geometry)
-
-  std::cout << "Here is the matrix scale factor:\n" << scale_matrix << std::endl;
-
-  std::cout << "Executing the transformation..." << std::endl;
-  pcl::transformPointCloud(*cloud, *cloud_scaled, scale_matrix);
-
-  if(show){
-
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_xyz (new pcl::PointCloud<pcl::PointXYZ>());
-    pcl::copyPointCloud(*cloud,*cloud_xyz);
-
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_scale_xyz (new pcl::PointCloud<pcl::PointXYZ>());
-    pcl::copyPointCloud(*cloud_scaled,*cloud_scale_xyz);
-
-    // Visualization
-    pcl::visualization::PCLVisualizer viewer = pcl::visualization::PCLVisualizer("cloud scale",true);
-    viewer.setPosition(0,0);
-    viewer.setSize(640,480);
-    viewer.setBackgroundColor(0.05, 0.05, 0.05, 0);
-    viewer.setCameraPosition(0,0,1,0,0,0);
-
-    /*Coordinate system*/
-    viewer.addCoordinateSystem ();
-
-    pcl::PointXYZ p1, p2, p3;
-    p1.getArray3fMap() << 1, 0, 0;
-    p2.getArray3fMap() << 0, 1, 0;
-    p3.getArray3fMap() << 0,0.1,1;
-
-    viewer.addText3D("x", p1, 0.2, 1, 0, 0, "x_");
-    viewer.addText3D("y", p2, 0.2, 0, 1, 0, "y_");
-    viewer.addText3D ("z", p3, 0.2, 0, 0, 1, "z_");
-
-    // White --> original cloud
-    viewer.addPointCloud(cloud_xyz, "original_cloud");
-
-    // Red --> cloud scale
-    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> cloud_scale_color(cloud_scale_xyz, 230, 20, 20);
-    viewer.addPointCloud(cloud_scale_xyz,cloud_scale_color, "transformed_cloud");
-
-    viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "original_cloud");
-    viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "transformed_cloud");
-
-    viewer.resetCamera();
-
-    std::cout << "Press [q] to continue process segmentation!" << std::endl;
-
-    while(!viewer.wasStopped ()) {
-           viewer.spin();
-    }
-
-    viewer.close();
-  }
-}
-
-bool Utilities::getScaleFactor(float& scale_factor){
-
-  const std::string red("\033[0;31m");
-  const std::string blue("\033[0;34m");
-  const std::string yellow("\033[0;33m");
-  const std::string reset("\033[0m");
-
-  std::cout << blue << "Getting the scale factor." << reset << std::endl;
-
+  */
   cv::Mat_<float> intrinsic;
   std::vector<cv::Matx34f> cameras_poses;
   std::vector<Point3DInMap> cloud;
 
-  bool success = Utilities::loadSFM_XML_Data(cloud,intrinsic,cameras_poses,false);
+  bool success = Utilities::loadSFM_XML_Data(cloud,intrinsic,cameras_poses,true);
   if(not success){
     std::cout << "Could not get a scale factor." << std::endl;
     return false;
@@ -371,6 +247,143 @@ bool Utilities::getScaleFactor(float& scale_factor){
   std::cout << "Poses: " << cameras_poses.size() << " cameras" << std::endl;
   std::cout << "Intrinsic camera:\n" << intrinsic << std::endl;
 
+  fromPoint3DToPCLCloud(cloud,Map3D);
+
+  std::cout << blue << "\nGetting the scale factor." << reset << std::endl;
+
+  float W_reference;
+  std::string world_reference;
+  float n=-1;
+
+  while(n<=0){
+
+    while(std::cout << blue << "\nEnter the world reference (mm/cm/m/) etc!\n" << reset <<
+            "------------------------------------------" << std::endl
+            && !(std::cin >> n)){
+              //std::cin.clear();
+              std::getline(std::cin, world_reference);
+              std::cout << yellow << "I am sorry, but '" << world_reference << "' is not a number" << reset
+                        << std::endl;
+    }
+
+    if(n<=0){
+        std::cout << red << "Error: insert a valid world reference" << reset << std::endl;
+        n = -1;
+        world_reference.clear();
+        continue;
+    }
+  }
+
+  W_reference = n;
+  std::cout <<yellow << "Using world reference:" << W_reference << "\n" << reset << std::endl;
+
+  float image_pixel_reference=-1;
+  std::string answer;
+  std::string img_path;
+  cv::Mat image_2DReference;
+
+  while(image_pixel_reference<=0){
+
+    std::cout << blue << "\nEnter image pattern full path:" << reset << std::endl;
+    std::cout << "------------------------------------------" << std::endl;
+    std::cin >> img_path;
+    //std::getline(std::cin, img_path);
+
+    cv::Mat img = cv::imread(img_path.c_str(),1);
+    if(!img.data )                    // Check for invalid input
+      {
+          std::cout << red <<"Could not open or find the image" << reset << std::endl;
+          continue;
+      }
+    cv::Mat img_copy = img.clone();
+    image_2DReference = img.clone();
+    cv::Mat gray;
+
+    cv::cvtColor(img_copy,gray,CV_BGR2GRAY);
+    cv::GaussianBlur(gray,gray,cv::Size(9,9),2,2);
+    //cv::medianBlur(gray,gray,5);
+
+    std::vector<cv::Vec3f> circles(2);
+
+    cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT, 1, gray.rows/8, 200, 100, 0, 150);
+    cv::Point pattern1,pattern2;
+
+    for(size_t i = 0; i < circles.size(); i++ ){
+
+      cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+      pattern2 = pattern1;
+      pattern1 = cv::Point(center.x,center.y);
+      int radius = cvRound(circles[i][2]);
+      // circle center
+      cv::circle(img_copy, center, 1, cv::Scalar(0,255,0),10);
+      // circle outline
+      cv::circle(img_copy, center, radius,cv::Scalar(0,255,0),30);
+
+    }
+
+    float pixel_length = cv::norm(pattern1 - pattern2);
+
+    std::cout << "\nNum of circles detect:" << circles.size() << std::endl;
+    std::cout << "Circle 1 center:" << pattern1 << std::endl;
+    std::cout << "Circle 2 center:" << pattern2 << std::endl;
+    std::cout << "Image:"<< img_path << " Num rows:" << gray.rows << " Num cols:" << gray.cols << std::endl;
+    std::cout << "Pixels length:" << pixel_length << std::endl;
+    cv::line(img_copy,pattern1,pattern2,cv::Scalar(0,255,0),30);
+
+    cv::namedWindow("pattern",CV_WINDOW_NORMAL);
+    cv::resizeWindow("pattern",640,480);
+    cv::moveWindow("pattern",0,0);
+    cv::imshow("pattern",img_copy);
+    cv::waitKey(700);
+
+    bool choise = false;
+
+    if(not choise){
+
+      std::cout << yellow << "\nIs this lenght OK? (yes/no):" << reset << std::endl;
+      std::cout << "------------------------------------------" << std::endl;
+      std::cin.ignore();
+      std::getline(std::cin, answer);
+      if(answer == "yes"){
+        std::cout << yellow << "Using pixels reference length: " << pixel_length << reset << std::endl;
+        choise = true;
+        image_pixel_reference = pixel_length;
+        cv::destroyAllWindows();
+        break;
+      }else if(answer == "no"){
+        image_pixel_reference = -1;
+        answer.clear();
+        choise = true;
+        continue;
+      }else{
+        while(not choise){
+          std::cout << red << answer << " is not a valid answer." << reset << std::endl;
+          choise = false;
+          answer.clear();
+          std::cout << yellow << "Is this lenght OK? (yes/no):" << reset << std::endl;
+          std::cout << "------------------------------------------" << std::endl;
+          //std::cin.ignore();
+          std::getline(std::cin, answer);
+          if(answer == "yes"){
+            std::cout << yellow << "Using pixels reference length: " << pixel_length << reset << std::endl;
+            choise = true;
+            image_pixel_reference = pixel_length;
+            cv::destroyAllWindows();
+            break;
+          }else if(answer == "no"){
+            answer.clear();
+            choise = true;
+             image_pixel_reference = -1;
+            break;
+          }else{
+            continue;
+          }
+        }
+      }
+    }
+    cv::destroyAllWindows();
+  }
+
   std::string image_pattern_path;
   float x_, y_,s,orientation;
   std::vector<cv::Point2f> image_points;
@@ -378,7 +391,7 @@ bool Utilities::getScaleFactor(float& scale_factor){
   while(image_pattern_path.size()<=0){
 
     std::cout << blue << "\nEnter the feature file associated to pattern:" << reset << std::endl;
-    std::cout << blue << "Must be: file.feat in "<< output_dir << "/matches/.feat" << reset << std::endl;
+    std::cout << blue << "Must be: file.feat in "<< output_dir << "/matches" << reset << std::endl;
     std::cout << "------------------------------------------" << std::endl;
     std::getline(std::cin, image_pattern_path);
 
@@ -400,9 +413,6 @@ bool Utilities::getScaleFactor(float& scale_factor){
   std::cout << "Image points: " << image_points.size() << " points" << reset << std::endl;
 
   /*
-
-
-
   cv::Mat rvecLeft;
   cv::Rodrigues(cameras_poses[0].get_minor<3,3>(0,0),rvecLeft);
   cv::Mat tvecLeft(cameras_poses[0].get_minor<3,1>(0,3));
@@ -410,76 +420,27 @@ bool Utilities::getScaleFactor(float& scale_factor){
   std::vector<cv::Point2f> projected_points(cloudPCL->size());
   cv::projectPoints(cloud,rvecLeft,tvecLeft,intrinsic,cv::Mat(),projected_points);
 
-
   const float MIN_REPROJECTION_ERROR = 8.0; //Maximum 10-pixel allowed re-projection error
 
   //check if point reprojection error is small enough
   const float error = cv::norm(projected_points[0]  - image_points[0]);
   std::cout << "projected p1:" << projected_points[0] << " p1:" << image_points[0] << std::endl;
   std::cout << "error" << error << std::endl;
-
-  std::getline(std::cin, img_path);
-
-  cv::Mat img = cv::imread(img_path.c_str(),1);
-  cv::Mat img_copy = img.clone();
-
-  cv::Mat gray;
-
-  cv::cvtColor(img_copy,gray,CV_BGR2GRAY);
-  cv::GaussianBlur(gray,gray,cv::Size(9,9),2,2);
-  //cv::medianBlur(gray,gray,5);
-
-  std::vector<cv::Vec3f> circles;
-
-  cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT, 1, gray.rows/8, 200, 100, 0, 0);
-  cv::Point pattern_center;
-
-  for(size_t i = 0; i < circles.size(); i++ ){
-
-    cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-    pattern_center = cv::Point(center.x,center.y);
-    std::cout << "center" << center << std::endl;
-    int radius = cvRound(circles[i][2]);
-    // circle center
-    cv::circle(img_copy, center, 1, cv::Scalar(0,255,0),10);
-    // circle outline
-    cv::circle(img_copy, center, radius,cv::Scalar(0,255,0),30);
-
-  }
-
-  std::cout << "Pattern center:" << pattern_center << std::endl;
-  std::cout << "Num rows:" << gray.rows << std::endl;
-  std::cout << "Num cols:" << gray.cols << std::endl;
-  std::cout << "Pixels distance:" << gray.rows - pattern_center.y << std::endl;
-  int ref_pixels = gray.rows - pattern_center.y;
-  int y = gray.rows -(gray.rows - pattern_center.y);
-  int x = pattern_center.x;
-  cv::Point org(x,y);
-  cv::Point end_p(x,gray.rows);
-  cv::line(img_copy,org,end_p,cv::Scalar(0,255,0),30);
-  std::string out = "Pix ref:";
-  std::string ref = std::to_string(ref_pixels);
-  out += ref;
-  float ref_real = 64.0;
-  scale_factor = float(ref_real/float(ref_pixels));
-  std::cout << "Real ref:" << ref_real << std::endl;
-  std::cout << "ref pixels:" << ref_pixels << std::endl;
-  std::cout << "scale factor:" << scale_factor << std::endl;
-
-  cv::putText(img_copy,out ,end_p/2,1,10,cv::Scalar(0,255,0),10);
-
-  cv::namedWindow("pattern",CV_WINDOW_NORMAL);
-  cv::resizeWindow("pattern",640,480);
-  cv::moveWindow("pattern",0,0);
-  cv::imshow("pattern",img_copy);
-  cv::waitKey(0);
   */
+
+  auto end = std::chrono::high_resolution_clock::now();
+  auto difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+  if(difference >=60){
+    std::cout << "Scale factor Time: " << difference/60 << " minutes" << std::endl;
+  }else{
+    std::cout << "Scale factor Time: " << difference << " seconds" << std::endl;
+  }
 
 }
 
 bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
                                  cv::Mat_<float>& intrinsic,
-                                 std::vector<cv::Matx34f>& cameras_poses,bool show){  
+                                 std::vector<cv::Matx34f>& cameras_poses,bool show){
 
   const std::string red("\033[0;31m");
   const std::string blue("\033[0;34m");
@@ -556,7 +517,7 @@ bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
     // Matrix K
     intrinsic = (cv::Mat_<float>(3, 3) << f, 0, cx,
                                           0, f, cy,
-                                          0, 0, 1);    
+                                          0, 0, 1);
 
     std::cout  << "\nFounding <extrinsics> tag ..." << std::endl;
     std::cout << "------------------------------------------" << std::endl;
@@ -647,7 +608,7 @@ bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
                                      r31, r32, r33, t3);
 
       // Saving camera pose
-      cameras_poses.push_back(pose);    
+      cameras_poses.push_back(pose);
     }
 
     std::cout  << "\nFounding <structure> tag ..." << std::endl;
@@ -772,14 +733,149 @@ bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPCL (new pcl::PointCloud<pcl::PointXYZ>());
     fromPoint3DToPCLCloud(pts3d,cloudPCL);
+/*
+    std::string prefix1 = output_dir;
+    std::string output_pcd_files = "3D_Mapping";
+    prefix1 += "/";
+    prefix1 += output_pcd_files;
+    prefix1 += "/";
+    prefix1 += "MAP3D.pcd";
 
-    pcl::visualization::PCLVisualizer viewer = pcl::visualization::PCLVisualizer("3D Mapping",true);
+    pcl::io::savePCDFileBinary(prefix1.c_str(), *cloudPCL);
+*/
 
+  }
+
+  return true;
+}
+
+void Utilities::createPMVS_Files(){
+
+  const std::string red("\033[0;31m");
+  const std::string blue("\033[0;34m");
+  const std::string reset("\033[0m");
+
+  std::cout << "\n------------------------------------------" << std::endl;
+  std::cout << blue <<"Creating files for PMVS2..." << reset << std::endl;
+
+  std::string command2 = "~/catkin_ws/src/iTree3DMap/openMVG/openMVG_Build/Linux-x86_64-RELEASE/openMVG_main_openMVG2PMVS -i ";
+  command2 += output_dir;
+  command2 += "/reconstruction_sequential/sfm_data.bin -o ";
+  command2 += output_dir;
+
+  int dont_care = std::system(command2.c_str());
+
+  if(dont_care > 0){
+   std::cout << red << "Failed. openMVG_main_openMVG2PMVS not found" << reset << std::endl;
+   std::exit(-1);
+  }
+
+}
+
+void Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_cloud){
+
+  const std::string blue("\033[0;34m");
+  const std::string reset("\033[0m");
+
+  std::cout << "\n------------------------------------------" << std::endl;
+  std::cout << blue << "Densify cloud process initializing..." << reset << std::endl;
+
+  std::string command3 = "~/catkin_ws/src/iTree3DMap/programs/pmvs2 ";
+  command3 += output_dir;
+  command3 += "/PMVS/ ";
+  command3 += "pmvs_options.txt";
+
+  int dont_care = std::system("chmod 771 ~/catkin_ws/src/iTree3DMap/programs/pmvs2");
+  dont_care = std::system(command3.c_str());
+
+  if(dont_care > 0){
+   std::cout << "Failed. ./pmvs2 no found" << std::endl;
+   std::exit(-1);
+  }
+
+  std::string cloudPLY = output_dir;
+  cloudPLY += "/PMVS/models/pmvs_options.txt.ply";
+
+  pcl::PLYReader inputPlyCloud;
+  inputPlyCloud.read(cloudPLY,*output_cloud);
+
+  std::cout << "Densify proccess --> [OK]" << std::endl;
+  std::cout << "Saving dense 3d mapping file with prefix --> MAP3D_dense.pcd" << std::endl;
+
+  std::string prefix1 = output_dir;
+  std::string output_pcd_files = "3D_Mapping";
+  prefix1 += "/";
+  prefix1 += output_pcd_files;
+  prefix1 += "/";
+  prefix1 += "MAP3D_dense.pcd";
+
+  pcl::io::savePCDFileBinary(prefix1.c_str(), *output_cloud);
+
+  std::cout << "\n------------------------------------------" << std::endl;
+  std::cout << "Showing 3D mapping" << std::endl;
+
+  pcl::visualization::PCLVisualizer viewer = pcl::visualization::PCLVisualizer("MAP3D",true);
+
+  viewer.setPosition(0,0);
+  viewer.setSize(640,480);
+  viewer.setBackgroundColor(0.05, 0.05, 0.05, 0); // Setting background to a dark grey
+  viewer.addCoordinateSystem ();
+  viewer.setCameraPosition(0,0,1,0,0,0);
+  pcl::PointXYZ p1, p2, p3;
+  p1.getArray3fMap() << 1, 0, 0;
+  p2.getArray3fMap() << 0, 1, 0;
+  p3.getArray3fMap() << 0,0.1,1;
+
+  viewer.addText3D("x", p1, 0.2, 1, 0, 0, "x_");
+  viewer.addText3D("y", p2, 0.2, 0, 1, 0, "y_");
+  viewer.addText3D ("z", p3, 0.2, 0, 0, 1, "z_");
+  viewer.addPointCloud(output_cloud,"tree_cloud");
+  viewer.resetCamera();
+
+  std::cout << "Press [q] to continue --> SEGMENTATION PROCESS!" << std::endl;
+
+  while(!viewer.wasStopped ()) {
+         viewer.spin();
+  }
+}
+
+void Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
+                               pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,const float scale,
+                               bool show){
+
+  std::cout << "Scaling pointcloud to real measurements..." << std::endl;
+
+  Eigen::MatrixXf scale_matrix(4,4);
+                                            //Uniform scaling: vx = vy = vz = s --> Common scale factor
+  scale_matrix << scale,  0,    0,    0,    //       |vx  0   0   0|
+                   0,   scale,  0,    0,    //  Sv = |0   vy  0   0| => Scale matrix
+                   0,     0,  scale,  0,    //       |0   0   vz  0|
+                   0,     0,    0,    1;    //       |0   0   0   1|
+                                            //https://en.wikipedia.org/wiki/Scaling_(geometry)
+
+  std::cout << "Here is the matrix scale factor:\n" << scale_matrix << std::endl;
+
+  std::cout << "Executing the transformation..." << std::endl;
+  pcl::transformPointCloud(*cloud, *cloud_scaled, scale_matrix);
+
+  if(show){
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_xyz (new pcl::PointCloud<pcl::PointXYZ>());
+    pcl::copyPointCloud(*cloud,*cloud_xyz);
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_scale_xyz (new pcl::PointCloud<pcl::PointXYZ>());
+    pcl::copyPointCloud(*cloud_scaled,*cloud_scale_xyz);
+
+    // Visualization
+    pcl::visualization::PCLVisualizer viewer = pcl::visualization::PCLVisualizer("cloud scale",true);
     viewer.setPosition(0,0);
     viewer.setSize(640,480);
     viewer.setBackgroundColor(0.05, 0.05, 0.05, 0);
-    viewer.addCoordinateSystem();
     viewer.setCameraPosition(0,0,1,0,0,0);
+
+    /*Coordinate system*/
+    viewer.addCoordinateSystem ();
+
     pcl::PointXYZ p1, p2, p3;
     p1.getArray3fMap() << 1, 0, 0;
     p2.getArray3fMap() << 0, 1, 0;
@@ -788,17 +884,27 @@ bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
     viewer.addText3D("x", p1, 0.2, 1, 0, 0, "x_");
     viewer.addText3D("y", p2, 0.2, 0, 1, 0, "y_");
     viewer.addText3D ("z", p3, 0.2, 0, 0, 1, "z_");
-    viewer.addPointCloud(cloudPCL,"xml_pointcloud");
+
+    // White --> original cloud
+    viewer.addPointCloud(cloud_xyz, "original_cloud");
+
+    // Red --> cloud scale
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> cloud_scale_color(cloud_scale_xyz, 230, 20, 20);
+    viewer.addPointCloud(cloud_scale_xyz,cloud_scale_color, "transformed_cloud");
+
+    viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "original_cloud");
+    viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "transformed_cloud");
+
     viewer.resetCamera();
 
-    std::cout << "Press [q] to continue!" << std::endl;
+    std::cout << "Press [q] to continue process segmentation!" << std::endl;
 
     while(!viewer.wasStopped ()) {
            viewer.spin();
     }
-  }
 
-  return true;
+    viewer.close();
+  }
 }
 
 void Utilities::fromPoint3DToPCLCloud(const std::vector<Point3DInMap> &input_cloud,
