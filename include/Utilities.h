@@ -48,7 +48,7 @@ public:
                                   pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,const float scale=2,
                                   bool show=false);
    static void help();
-   static bool getScaleFactor(float& scale_factor);
+   static bool getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D, float& scale_factor);
    static void fromPoint3DToPCLCloud(const std::vector<Point3DInMap> &input_cloud,
                               pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL);
    static bool loadSFM_XML_Data(std::vector<Point3DInMap>& cloud,
