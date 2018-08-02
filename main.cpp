@@ -33,13 +33,14 @@ int main(int argc, char **argv){
   float scale; 
   pcl::PointCloud<pcl::PointXYZ>::Ptr Map3D (new pcl::PointCloud<pcl::PointXYZ>());
   pcl::io::loadPCDFile("MAP3D_dense.pcd",*Map3D);
-  //Utilities::getScaleFactor(Map3D,scale);
+  Utilities::getScaleFactor(Map3D,scale);
 
   std::cout << "Map3D points:" << Map3D->points.size() << std::endl;
 
   /*************************
   PCL VISUALIZER
   **************************/
+  /*
   boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("VISUALIZER",true));
 
   Display* d = XOpenDisplay(NULL);
@@ -80,6 +81,7 @@ int main(int argc, char **argv){
   /*************************
   STEP 4: DENSIFICATION
   **************************/
+  /*
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr Map3DDense (new pcl::PointCloud<pcl::PointXYZRGB>());
   pcl::io::loadPCDFile("MAP3D_dense.pcd",*Map3DDense);
  //
@@ -96,6 +98,7 @@ int main(int argc, char **argv){
     std::cout << "Dense Map Time: " << difference << " seconds" << std::endl;
   }
  */
+  /*
   viewer->addPointCloud<pcl::PointXYZRGB>(Map3DDense, "sample cloud2", PORT2);
   viewer->addPointCloud<pcl::PointXYZRGB>(Map3DDense, "sample cloud3", PORT3);
   viewer->addPointCloud<pcl::PointXYZRGB>(Map3DDense, "sample cloud4", PORT4);
@@ -104,10 +107,13 @@ int main(int argc, char **argv){
   /*************************
   STEP 5: UNIFORM SCALING
   **************************/
-  /*
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr Map3DDense (new pcl::PointCloud<pcl::PointXYZRGB>());
+  pcl::copyPointCloud(*Map3D,*Map3DDense);
+
+
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_3dMap_scaled (new pcl::PointCloud<pcl::PointXYZRGB>());
-  Utilities::uniformScaling(tree_segmented,cloud_3dMap_scaled,scale,true);
-  */
+  Utilities::uniformScaling(Map3DDense,cloud_3dMap_scaled,scale,true);
+
   /*************************
   STEP 6: SEGMENTATION
   **************************/  
@@ -128,6 +134,7 @@ int main(int argc, char **argv){
   STEP 7: DENDROMETRY MEASUREMENTS
   **************************/
   //Dendrometry::estimate(cloud_3dMap_scaled);
+  /*
 
   viewer->setPosition(0,0);
   viewer->addCoordinateSystem();
@@ -151,6 +158,7 @@ int main(int argc, char **argv){
     viewer->spin();
     boost::this_thread::sleep(boost::posix_time::microseconds(100000));
   }
+  */
   return 0;
 }
 
