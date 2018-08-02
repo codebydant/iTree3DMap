@@ -281,6 +281,7 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D, float
   std::string answer;
   std::string img_path;
   cv::Mat image_2DReference;
+  cv::Point2f img_p1,img_p2;
 
   while(image_pixel_reference<=0){
 
@@ -300,12 +301,19 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D, float
     cv::Mat gray;
 
     cv::cvtColor(img_copy,gray,CV_BGR2GRAY);
-    cv::GaussianBlur(gray,gray,cv::Size(9,9),2,2);
+
     //cv::medianBlur(gray,gray,5);
 
     std::vector<cv::Vec3f> circles(2);
 
-    cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT, 1, gray.rows/8, 200, 100, 0, 150);
+    std::cout << "Filtering...Canny!" << std::endl;
+    cv::Canny( gray, gray, 100, 100*2, 3 );
+    std::cout << "Filtering...GaussianBlur!" << std::endl;
+    cv::GaussianBlur(gray,gray,cv::Size(7,7),2,2);
+
+    std::cout << "Detecting circles in image..." << std::endl;
+    cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT,1, gray.rows/16, 200, 100, 0, 150);
+
     cv::Point pattern1,pattern2;
 
     for(size_t i = 0; i < circles.size(); i++ ){
@@ -348,6 +356,8 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D, float
         std::cout << yellow << "Using pixels reference length: " << pixel_length << reset << std::endl;
         choise = true;
         image_pixel_reference = pixel_length;
+        img_p1 = pattern1;
+        img_p2 = pattern2;
         cv::destroyAllWindows();
         break;
       }else if(answer == "no"){
@@ -368,6 +378,8 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D, float
             std::cout << yellow << "Using pixels reference length: " << pixel_length << reset << std::endl;
             choise = true;
             image_pixel_reference = pixel_length;
+            img_p1 = pattern1;
+            img_p2 = pattern2;
             cv::destroyAllWindows();
             break;
           }else if(answer == "no"){
@@ -382,51 +394,177 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D, float
       }
     }
     cv::destroyAllWindows();
-  }
+  }  
 
   std::string image_pattern_path;
-  float x_, y_,s,orientation;
-  std::vector<cv::Point2f> image_points;
+    float x_, y_,s,orientation;
+    std::vector<cv::Point2f> image_points;
 
-  while(image_pattern_path.size()<=0){
+    while(image_pattern_path.size()<=0){
 
-    std::cout << blue << "\nEnter the feature file associated to pattern:" << reset << std::endl;
-    std::cout << blue << "Must be: file.feat in "<< output_dir << "/matches" << reset << std::endl;
-    std::cout << "------------------------------------------" << std::endl;
-    std::getline(std::cin, image_pattern_path);
+      std::cout << blue << "\nEnter the feature file associated to pattern:" << reset << std::endl;
+      std::cout << blue << "Must be: file.feat in "<< output_dir << "/matches" << reset << std::endl;
+      std::cout << "------------------------------------------" << std::endl;
+      std::getline(std::cin, image_pattern_path);
 
-    std::ifstream file(image_pattern_path.c_str());
-    if(!file.is_open()){
-      std::cout << red << "Error: Could not find "<< image_pattern_path << reset << std::endl;
-      image_pattern_path.clear();
-      continue;
-    }
+      std::ifstream file(image_pattern_path.c_str());
+      if(!file.is_open()){
+        std::cout << red << "Error: Could not find "<< image_pattern_path << reset << std::endl;
+        image_pattern_path.clear();
+        continue;
+      }
 
-    if(image_points.size()<=0){
-      while(file >> x_ >> y_ >> s >> orientation){
-        image_points.push_back(cv::Point2f(x_,y_));
+      if(image_points.size()<=0){
+        while(file >> x_ >> y_ >> s >> orientation){
+          image_points.push_back(cv::Point2f(x_,y_));
+        }
       }
     }
+
+    std::cout << yellow << "\nFeature selected:" << image_pattern_path << std::endl;
+    std::cout << "Image points: " << image_points.size() << " points" << reset << std::endl;
+
+    std::cout << "camera pose:\n" << cameras_poses[53] << std::endl;
+    std::cout << "rot:\n" << cameras_poses[53].get_minor<3,3>(0,0) << std::endl;
+    std::cout << "tra:\n" << cameras_poses[53].get_minor<3,1>(0,3) << std::endl;
+
+  cv::Mat rvec;
+  cv::Rodrigues(cameras_poses[53].get_minor<3,3>(0,0),rvec);
+  cv::Mat tvec(cameras_poses[53].get_minor<3,1>(0,3));
+
+  std::cout << "rvec:\n" << rvec << "\n" << "tvec:\n" << tvec << std::endl;
+
+  std::vector<cv::Point2f> projected_points;
+  std::vector<cv::Point3f> points3d;
+
+  std::cout << "cloud size:" << cloud.size() << std::endl;
+  std::cout << "pts2d projected size:" << projected_points.size() << std::endl;
+
+
+  for(int i=0;i<cloud.size();i++){
+    points3d.push_back(cloud.at(i).pt);
   }
 
-  std::cout << yellow << "\nFeature selected:" << image_pattern_path << std::endl;
-  std::cout << "Image points: " << image_points.size() << " points" << reset << std::endl;
+  std::cout << "pts3d size:" << points3d.size() << std::endl;
 
-  /*
-  cv::Mat rvecLeft;
-  cv::Rodrigues(cameras_poses[0].get_minor<3,3>(0,0),rvecLeft);
-  cv::Mat tvecLeft(cameras_poses[0].get_minor<3,1>(0,3));
+  std::cout << "intrinsic:\n" << intrinsic << std::endl;
 
-  std::vector<cv::Point2f> projected_points(cloudPCL->size());
-  cv::projectPoints(cloud,rvecLeft,tvecLeft,intrinsic,cv::Mat(),projected_points);
+  cv::projectPoints(points3d,rvec,tvec,intrinsic,cv::Mat(),projected_points);
+  std::cout << "Projected points:" << projected_points.size() << std::endl;
 
-  const float MIN_REPROJECTION_ERROR = 8.0; //Maximum 10-pixel allowed re-projection error
+  const float MIN_REPROJECTION_ERROR = 20.0; //Maximum 10-pixel allowed re-projection error
+
+
+  cv::Point2f pr_1,pr_2;
+  float error;
+
+  std::map<float,cv::Point3f> p1_map;
 
   //check if point reprojection error is small enough
-  const float error = cv::norm(projected_points[0]  - image_points[0]);
-  std::cout << "projected p1:" << projected_points[0] << " p1:" << image_points[0] << std::endl;
+  for(size_t i=0;i<cloud.size();i++){
+    pr_1 = projected_points[i];
+    error = cv::norm(pr_1 - img_p1);
+    p1_map[error] = cloud.at(i).pt;
+  }
+
+  /*
+for ( std::vector<std::string>::const_iterator iter_image = vec_image.begin();
+    iter_image != vec_image.end();
+    ++iter_image, ++my_progress_bar )
+  {
+    // Read meta data to fill camera parameter (w,h,focal,ppx,ppy) fields.
+    width = height = ppx = ppy = focal = -1.0;
+
+    const std::string sImageFilename = stlplus::create_filespec( sImageDir, *iter_image );
+    const std::string sImFilenamePart = stlplus::filename_part(sImageFilename);
+
+    // Test if the image format is supported:
+    if (openMVG::image::GetFormat(sImageFilename.c_str()) == openMVG::image::Unknown)
+    {
+      error_report_stream
+          << sImFilenamePart << ": Unkown image file format." << "\n";
+      continue; // image cannot be opened
+    }
+
+    if (sImFilenamePart.find("mask.png") != std::string::npos
+       || sImFilenamePart.find("_mask.png") != std::string::npos)
+    {
+      error_report_stream
+          << sImFilenamePart << " is a mask image" << "\n";
+      continue;
+    }
+   */
+
+  std::cout << "projected p1:" << pr_1 << " p1:" << img_p1 << std::endl;
+
+  std::map<float,cv::Point3f> p2_map;
+
+  //check if point reprojection error is small enough
+  for(size_t i=0;i<cloud.size();i++){
+    pr_2 = projected_points[i];
+    error = cv::norm(pr_2 - img_p2);
+    p2_map[error] = cloud.at(i).pt;
+  }
+
+  std::cout << "projected p2:" << pr_2 << " p2:" << img_p2 << std::endl;
   std::cout << "error" << error << std::endl;
-  */
+
+   pcl::PointXYZ ptt1,pt2;
+
+  for(std::pair<const float,cv::Point3f> pp : p1_map){
+    std::cout << "Points2D/3D --> p1:" << pp.second << std::endl;
+    ptt1 = pcl::PointXYZ(pp.second.x,pp.second.y,pp.second.z);
+    break;
+  }
+
+
+  for(std::pair<const float,cv::Point3f> pp : p2_map){
+    std::cout << "Points2D/3D --> p2:" << pp.second << std::endl;
+    pt2 = pcl::PointXYZ(pp.second.x,pp.second.y,pp.second.z);
+    break;
+  }
+
+  //scale = Ref_W/Ref_PCL
+  float Ref_PCL = pcl::geometry::distance(ptt1,pt2);
+  scale_factor = W_reference/Ref_PCL;
+
+  std::cout << "scale_factor:" << scale_factor << std::endl;
+
+
+  Eigen::Vector4f vector1,vector2;
+  vector1 = ptt1.getVector4fMap();
+  vector2 << pt2.getVector4fMap();
+
+  pcl::visualization::PCLVisualizer viewer = pcl::visualization::PCLVisualizer("MAP3D",true);
+
+  viewer.setPosition(0,0);
+  viewer.setSize(640,480);
+  viewer.setBackgroundColor(0.05, 0.05, 0.05, 0); // Setting background to a dark grey
+  viewer.addCoordinateSystem ();
+  viewer.setCameraPosition(0,0,1,0,0,0);
+  pcl::PointXYZ p1, p2, p3;
+  p1.getArray3fMap() << 1, 0, 0;
+  p2.getArray3fMap() << 0, 1, 0;
+  p3.getArray3fMap() << 0,0.1,1;
+  pcl::visualization::createLine(vector1, vector2);
+  viewer.addLine(ptt1,pt2,0,255,0 ,"lenght",0);
+
+  viewer.addText3D("x", p1, 0.2, 1, 0, 0, "x_");
+  viewer.addText3D("y", p2, 0.2, 0, 1, 0, "y_");
+  viewer.addText3D ("z", p3, 0.2, 0, 0, 1, "z_");
+  viewer.addPointCloud(Map3D,"tree_cloud");
+  viewer.resetCamera();
+
+  std::cout << "Press [q] to continue --> SEGMENTATION PROCESS!" << std::endl;
+
+  while(!viewer.wasStopped ()) {
+         viewer.spin();
+  }
+
+
+
+
+
 
   auto end = std::chrono::high_resolution_clock::now();
   auto difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
@@ -557,17 +695,20 @@ bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
         // Iterate over <value> rotation tag
         for(tinyxml2::XMLElement* child2 = child->FirstChildElement();child2 != NULL;
             child2 = child2->NextSiblingElement()){
-
+/*
           r11 = r12;
-          r12 = r13;
+          r12 = r13;          
           r13 = r21;
-          r21 = r22;
+
+          r21 = r22;          
           r22 = r23;
           r23 = r31;
+
           r31 = r32;
           r32 = r33;
           child2->QueryFloatText(&r33);
-          /*
+          */
+
           r11 = r21;
           r21 = r31;
           r31 = r12;
@@ -579,7 +720,7 @@ bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
           r13 = r23;
           r23 = r33;
           child2->QueryFloatText(&r33);
-          */
+
 
         }
       }
