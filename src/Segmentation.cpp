@@ -34,6 +34,7 @@ void Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   */
   //pcl::io::savePCDFileBinary("cloud_without_trunk.pcd", *cloud_without_trunk);
   pcl::io::savePCDFileBinary("cloud_trunk.pcd", *cloud_trunk);
+  pcl::io::savePLYFileBinary("cloud_trunk.ply", *cloud_trunk);
   pcl::copyPointCloud(*cloud_trunk,*cloud_segmented);
 
 }
