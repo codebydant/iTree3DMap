@@ -41,7 +41,7 @@ public:
      std::map<const int,std::map<const int,cv::Point2f>> feat_ref;// [id image,[id pt2d, pt2d]]
    };
 
-   static void run_openMVG();
+   static bool run_openMVG();
    static void createPMVS_Files();
    static void densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_cloud);
    static void uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
@@ -53,7 +53,7 @@ public:
                               pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL);
    static bool loadSFM_XML_Data(std::vector<Point3DInMap>& cloud,
                                 cv::Mat_<float>& intrinsic,
-                                std::vector<cv::Matx34f>& cameras_poses,bool show);
+                                std::vector<cv::Matx34f>& cameras_poses);
 };
 
 
