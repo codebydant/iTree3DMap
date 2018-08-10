@@ -26,6 +26,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # set corresponding package directories
 set(OpenCV_DIR /opt/opencv-3.4.1/build)
 set(PCL_DIR /opt/pcl-1.8.1/build)
+set(PATH_EIGEN /include/eigen-3.3.5)
 
 # set the CMP0074 policy to old behavior (disable warnings) (CMake 3.12.0-rc1)
 cmake_policy(SET CMP0074 OLD)
@@ -65,7 +66,7 @@ message("Eigen3 PACKAGE")
 message("***********************")
 
 
-find_package(Eigen3 REQUIRED)
+find_package(Eigen3 3.3.4 REQUIRED NO_MODULE PATHS ${PATH_EIGEN})
 
 message("***********************")
 message("Boost PACKAGE")
@@ -292,6 +293,7 @@ target_link_libraries(${PROJECT_NAME}
                       ${Boost_LIBRARIES}
                       ${Eigen3_LIBRARIES}
                       ${TinyXML2_LIBRARIES}
+                      Eigen3::Eigen
 )
 
 #############

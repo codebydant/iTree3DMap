@@ -25,17 +25,24 @@ int main(int argc, char **argv){
   /*************************
   STEP 2: 3D MAPPING
   **************************/
-  //Utilities::run_openMVG();
+  bool success = Utilities::run_openMVG();
+  if(not success){
+    std::cout << "Could not get 3D Model. Failed dendrometric estimation." << std::endl;
+    return -1;
+  }
 
   /*************************
   STEP 3: GET SCALE FACTOR
   **************************/
   float scale; 
   pcl::PointCloud<pcl::PointXYZ>::Ptr Map3D (new pcl::PointCloud<pcl::PointXYZ>());
-  pcl::io::loadPCDFile("MAP3D_dense.pcd",*Map3D);
-  Utilities::getScaleFactor(Map3D,scale);
-
+  success = Utilities::getScaleFactor(Map3D,scale);
+  if(not success){
+    std::cout << "Using scale factor = 2" << std::endl;
+    scale = 2;
+  }
   std::cout << "Map3D points:" << Map3D->points.size() << std::endl;
+  //pcl::io::loadPCDFile("MAP3D_dense.pcd",*Map3D);
 
   /*************************
   PCL VISUALIZER
@@ -81,23 +88,24 @@ int main(int argc, char **argv){
   /*************************
   STEP 4: DENSIFICATION
   **************************/
-  /*
+/*
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr Map3DDense (new pcl::PointCloud<pcl::PointXYZRGB>());
-  pcl::io::loadPCDFile("MAP3D_dense.pcd",*Map3DDense);
+ // pcl::io::loadPCDFile("MAP3D_dense.pcd",*Map3DDense);
  //
  // pcl::copyPointCloud(*cloud_3dMap,*cloud_3dMap_xyz);
-  /*
-   * auto start = std::chrono::high_resolution_clock::now();
+
+  auto start = std::chrono::high_resolution_clock::now();
   Utilities::createPMVS_Files();
-  Utilities::densifyWithPMVS(cloud_3dMap);
-  end = std::chrono::high_resolution_clock::now();
-  difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+  Utilities::densifyWithPMVS(Map3DDense);
+  auto end = std::chrono::high_resolution_clock::now();
+  auto difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
   if(difference >=60){
     std::cout << "Dense Map Time: " << difference/60 << " minutes" << std::endl;
   }else{
     std::cout << "Dense Map Time: " << difference << " seconds" << std::endl;
   }
- */
+  */
+
   /*
   viewer->addPointCloud<pcl::PointXYZRGB>(Map3DDense, "sample cloud2", PORT2);
   viewer->addPointCloud<pcl::PointXYZRGB>(Map3DDense, "sample cloud3", PORT3);
@@ -107,12 +115,14 @@ int main(int argc, char **argv){
   /*************************
   STEP 5: UNIFORM SCALING
   **************************/
+/*
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr Map3DDense (new pcl::PointCloud<pcl::PointXYZRGB>());
   pcl::copyPointCloud(*Map3D,*Map3DDense);
 
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_3dMap_scaled (new pcl::PointCloud<pcl::PointXYZRGB>());
   Utilities::uniformScaling(Map3DDense,cloud_3dMap_scaled,scale,true);
+*/
 
   /*************************
   STEP 6: SEGMENTATION
