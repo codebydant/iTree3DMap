@@ -1,27 +1,153 @@
 #include "include/DendrometryE.h"
 
-void Dendrometry::estimate(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloudPCL){
+const std::string red("\033[0;31m");
+const std::string blue("\033[0;34m");
+const std::string yellow("\033[0;33m");
+const std::string reset("\033[0m");
+
+void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_cloud,
+                           const pcl::PointCloud<pcl::PointXYZ>::Ptr& crown_cloud,
+                           pcl::PointXYZ minDBH,pcl::PointXYZ maxDBH){
 
   std::cout << "************************************************" << std::endl;
   std::cout << "              DENDROMETRY ESTIMATION            " << std::endl;
   std::cout << "************************************************" << std::endl;
 
-  float distance_error;
+  double height_trunk,DBH,height_crown,total_height,factor_morfico,crown_volume;
 
-  pcl::PointXYZRGB minPt,maxPt;
-  pcl::getMinMax3D(*cloudPCL,minPt,maxPt);
-  distance_error = pcl::geometry::distance(minPt,maxPt);
+  std::cout << blue << "\nEstimating trunk features..." << reset << std::endl;
+  std::cout << "------------------------------------------" << std::endl;
+
+  std::cout << yellow << "\nHeight." << reset << std::endl;
+  std::cout << "------------------------------------------" << std::endl;
+
+  pcl::PointXYZ minPt,maxPt;
+  pcl::getMinMax3D(*trunk_cloud,minPt,maxPt);
+  height_trunk = pcl::geometry::distance(minPt,maxPt);
+
+  std::cout << "Max: (" << maxPt.x << "," << maxPt.y << "," << maxPt.z << ")" << std::endl;
+  std::cout << "Min: (" << minPt.x << "," << minPt.y << "," << minPt.z << ")" << std::endl;  
+
+  std::cout << yellow << "\nDBH." << reset << std::endl;
+  std::cout << "------------------------------------------" << std::endl;
+
+  std::vector<pcl::PointXYZ> pts;
+
+  for(int i=0;i<trunk_cloud->points.size();i++){
+
+    pcl::PointXYZ pt = trunk_cloud->points.at(i);
+    if(pt.y>0.83 and pt.y <1.83){
+      pts.push_back(pt);
+    }
+  }
+
+  std::cout << "Points between 1.33+/-0.5cm:" << pts.size() << std::endl;
+  std::map<double,pcl::PointXYZ> minY;
+
+  for(int i=0;i<pts.size();i++){
+    pcl::PointXYZ pt = pts.at(i);
+    minY[pt.x] = pt;
+  }
+
+  std::map<double,pcl::PointXYZ,std::greater<double>> maxY;
+
+  for(int i=0;i<pts.size();i++){
+    pcl::PointXYZ pt = pts.at(i);
+    maxY[pt.x] = pt;
+  }
+
+  for(std::map<double,pcl::PointXYZ>::iterator it=minY.begin(); it!=minY.end(); ++it){
+ //scale_factor = it->first;
+    for(std::map<double,pcl::PointXYZ>::iterator it2=maxY.begin(); it2!=maxY.end(); ++it2){
+
+      DBH = pcl::geometry::distance(it2->second,it->second);
+      std::cout << "MinY:[" << it->second.x << "," << it->second.y << "," << it->second.z << "]" << std::endl;
+      std::cout << "MaxY:[" << it2->second.x << "," << it2->second.y << "," << it2->second.z << "]" << std::endl;
+      minDBH = pcl::PointXYZ(it->second.x,it->second.y,it->second.z);
+      maxDBH = pcl::PointXYZ(it2->second.x,it2->second.y,it2->second.z);
+      break;
+    }
+    break;
+  }
+
+  std::cout << blue << "\nEstimating crown features..." << reset << std::endl;
+  std::cout << "------------------------------------------" << std::endl;
+
+  std::cout << yellow << "\nHeight." << reset << std::endl;
+  std::cout << "------------------------------------------" << std::endl;
+
+  pcl::getMinMax3D(*crown_cloud,minPt,maxPt);
+  height_crown = pcl::geometry::distance(minPt,maxPt);
 
   std::cout << "Max: (" << maxPt.x << "," << maxPt.y << "," << maxPt.z << ")" << std::endl;
   std::cout << "Min: (" << minPt.x << "," << minPt.y << "," << minPt.z << ")" << std::endl;
 
-  std::cout << "*** Measurements ***" << std::endl;
+  std::cout << blue << "\nEstimating other features..." << reset << std::endl;
+  std::cout << "------------------------------------------" << std::endl;
+
+  std::cout << yellow << "\nTotal height." << reset << std::endl;
+  std::cout << "------------------------------------------" << std::endl;
+
+  total_height = height_crown+height_trunk;
+  std::cout << "h1:" << height_crown << std::endl;
+  std::cout << "h2:" << height_trunk << std::endl;
+
+  std::cout << yellow << "\nCrown volume." << reset << std::endl;
+  std::cout << "------------------------------------------" << std::endl;
+
+  std::vector<pcl::PointXYZ> pts2;
+
+  for(int i=0;i<trunk_cloud->points.size();i++){
+
+    pcl::PointXYZ pt = trunk_cloud->points.at(i);
+    if(pt.y>4.8 and pt.y <5.8){
+      pts2.push_back(pt);
+    }
+  }
+
+  std::cout << "Points between 5.3+/-0.5cm:" << pts.size() << std::endl;
+  std::map<double,pcl::PointXYZ> minY2;
+
+  for(int i=0;i<pts2.size();i++){
+    pcl::PointXYZ pt = pts2.at(i);
+    minY2[pt.x] = pt;
+  }
+
+  std::map<double,pcl::PointXYZ,std::greater<double>> maxY2;
+
+  for(int i=0;i<pts2.size();i++){
+    pcl::PointXYZ pt = pts2.at(i);
+    maxY2[pt.x] = pt;
+  }
+
+  for(std::map<double,pcl::PointXYZ>::iterator it=minY2.begin(); it!=minY2.end(); ++it){
+ //scale_factor = it->first;
+    for(std::map<double,pcl::PointXYZ>::iterator it2=maxY2.begin(); it2!=maxY2.end(); ++it2){
+
+      double DBH_5m = pcl::geometry::distance(it2->second,it->second);
+      factor_morfico = DBH_5m/DBH;
+
+      std::cout << "MinY:[" << it->second.x << "," << it->second.y << "," << it->second.z << "]" << std::endl;
+      std::cout << "MaxY:[" << it2->second.x << "," << it2->second.y << "," << it2->second.z << "]" << std::endl;
+      minDBH = pcl::PointXYZ(it->second.x,it->second.y,it->second.z);
+      maxDBH = pcl::PointXYZ(it2->second.x,it2->second.y,it2->second.z);
+      break;
+    }
+    break;
+  }
+
+  crown_volume = (DBH*DBH)*(M_PI/4)*total_height*factor_morfico;
+
+  std::cout << "\n*** Measurements ***" << std::endl;
   std::cout << "---------------------------------------" << std::endl;
   std::cout << "---------------------------------------" << std::endl;
-  std::cout << "------ Total height => " << distance_error << "m" << std::endl;
-  std::cout << "------ Crop base height =>  " << 5.0 << "m" << std::endl;
-  std::cout << "------ Height DBH => " << 1.3 << "cm" << std::endl;
-  std::cout << "------ DBH => " << 30.0 << "cm" << std::endl;
+  std::cout << "------ Crown base height:" << height_trunk << "cm" << std::endl;
+  std::cout << "------ Height DBH:" << 1.3 << "cm" << std::endl;
+  std::cout << "------ DBH:" << DBH << "cm" << std::endl;
+  std::cout << "------ Crown height:" << height_crown << "cm" << std::endl;
+  std::cout << "------ Total height:" << total_height << "cm" << std::endl;
+  std::cout << "------ Factor morfico:" << factor_morfico << std::endl;
+  std::cout << "------ Crown volume:" << crown_volume << "cm^3" << std::endl;
   std::cout << "---------------------------------------" << std::endl;
   std::cout << "---------------------------------------" << std::endl;
   std::cout << "************************************************" << std::endl;

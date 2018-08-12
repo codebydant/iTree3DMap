@@ -257,7 +257,8 @@ bool Utilities::run_openMVG(){
   return true;
 }
 
-bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D, double& scale_factor,std::string& output_path){
+bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D,
+                               double& scale_factor,std::string& output_path){
 
   std::cout << "\n************************************************" << std::endl;
   std::cout << "              SCALE FACTOR                      " << std::endl;
@@ -691,35 +692,6 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D, doubl
 //scale_factor = it->first;
 
   //}
-
-  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer ("Model Reference",true));
-
-  viewer->setPosition(0,0);
-  viewer->setSize(640,480);
-  viewer->setBackgroundColor(0.05, 0.05, 0.05, 0); // Setting background to a dark grey
-  viewer->addCoordinateSystem ();
-  viewer->setCameraPosition(0,0,1,0,0,0);
-  pcl::PointXYZ p1, p2, p3;
-  p1.getArray3fMap() << 1, 0, 0;
-  p2.getArray3fMap() << 0, 1, 0;
-  p3.getArray3fMap() << 0,0.1,1;
-
-  viewer->addLine(ptt1,pt2,0,255,0 ,"lenght",0);
-
-  viewer->addText3D("x", p1, 0.2, 1, 0, 0, "x_");
-  viewer->addText3D("y", p2, 0.2, 0, 1, 0, "y_");
-  viewer->addText3D ("z", p3, 0.2, 0, 0, 1, "z_");
-
-  viewer->addPointCloud(Map3D,"tree_cloud");
-  viewer->initCameraParameters();
-
-  std::cout << "Press [q] to continue" << std::endl;
-
-  while(!viewer->wasStopped ()) {
-         viewer->spin();
-  }
-
-  viewer.reset(new pcl::visualization::PCLVisualizer ("Model Reference",false));
 
   auto end = std::chrono::high_resolution_clock::now();
   auto difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
