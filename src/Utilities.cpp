@@ -27,15 +27,19 @@ void Utilities::help(){
 
 bool Utilities::run_openMVG(){
 
+  std::cout << "\n************************************************" << std::endl;
+  std::cout << "              3D MAPPING                      " << std::endl;
+  std::cout << "************************************************" << std::endl;
+
   //COMMAND LINE INPUT  
   std::string focal_length;
   std::string project_name; 
-  std::string answer;
   auto start = std::chrono::high_resolution_clock::now();
-
 
   /*PROJECT NAME*/
   while(true){
+
+    std::string answer;
 
     bool nameOk = false;
     if(project_name.size()<=0){
@@ -82,7 +86,7 @@ bool Utilities::run_openMVG(){
     }
   }
 
-  /*IMAGES SEQUENCE PATH*/
+  /*INPUT PATH*/
   while(true){
 
     bool imagesOk = false;
@@ -173,9 +177,10 @@ bool Utilities::run_openMVG(){
       break;
     }
   }
+
+  /*FOCAL LENGTH*/
   /*
   double n=-1;
-
   while(n<=0){
 
     std::cout << blue << "\nEnter the focal length:\n" << reset
@@ -184,7 +189,7 @@ bool Utilities::run_openMVG(){
 
     if(std::cin.fail()){
       std::getline(std::cin, focal_length);
-      std::cout << yellow << "I am sorry, but '" << focal_length << "' is not a number" << reset
+      std::cout << red << "I am sorry, but '" << focal_length << "' is not a number" << reset
                 << std::endl;
       focal_length.clear();
       n = -1;
@@ -205,10 +210,7 @@ bool Utilities::run_openMVG(){
       std::cout << "Using focal length:" << focal_length << std::endl;
       break;
     }
-
   }
-
-
 
   int dont_care;
   std::string folder_name = "mkdir ";
@@ -217,10 +219,10 @@ bool Utilities::run_openMVG(){
   folder_name += project_name;
 
   dont_care = std::system(folder_name.c_str());
-*/
+  */
   output_dir += "/";
   output_dir += project_name;
-/*
+  /*
   std::string output_pcd_files = "3D_Mapping";
   std::string folder_name2 = "mkdir ";
   folder_name2 += output_dir;
@@ -253,14 +255,18 @@ bool Utilities::run_openMVG(){
   std::cout << "3D Mapping Time: " << difference << " seconds" << std::endl;
 
   return true;
-
 }
 
-bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D, float& scale_factor){
+bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D, double& scale_factor,std::string& output_path){
+
+  std::cout << "\n************************************************" << std::endl;
+  std::cout << "              SCALE FACTOR                      " << std::endl;
+  std::cout << "************************************************" << std::endl;
 
   std::cout << blue << "\nConverting sfm_data.bin to sfm_data.xml..." << reset << std::endl;
   std::cout << "------------------------------------------" << std::endl;
   auto start = std::chrono::high_resolution_clock::now();
+  output_path = output_dir;
 
   /*
   ./openMVG_main_ConvertSfM_DataFormat
@@ -295,8 +301,8 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D, float
             << "/reconstruction_sequential/sfm_data.xml" <<  std::endl;
   */
 
-  cv::Mat_<float> intrinsic;
-  std::vector<cv::Matx34f> cameras_poses;
+  cv::Mat_<double> intrinsic;
+  std::vector<cv::Matx34d> cameras_poses;
   std::vector<Point3DInMap> cloud;
 
   std::cout << blue << "\nGetting data from sfm_data.xml..." << reset << std::endl;
@@ -318,14 +324,14 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D, float
   std::cout << blue << "\nGetting scale factor..." << reset << std::endl;
   std::cout << "------------------------------------------";
 
-  float W_reference;
+  double W_reference;
   std::string world_reference;
-  float n=-1;
+  double n=-1;
 
   while(n<=0){
 
     while(std::cout << blue << "\nEnter the world reference (mm/cm/m/) etc!\n" << reset <<
-            "------------------------------------------" << std::endl
+            "------------------------------------------\n" << "->" << std::flush
             && !(std::cin >> n)){             
               std::getline(std::cin, world_reference);
               std::cout << yellow << "I am sorry, but '" << world_reference << "' is not a number" << reset
@@ -345,11 +351,16 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D, float
   W_reference = n;
   std::cout <<yellow << "Using world reference:" << reset << W_reference << "\n" << std::endl;
   std::cout << "Choose a image pattern reference" << std::endl;
-  std::cout << "Select --> 1 or 13 or 5 etc! and press Enter." << std::endl;
 
-  float image_pixel_reference=-1;
+  double image_pixel_reference=-1;
+  int numImg = -1;
+  cv::Point2d img_p1,img_p2;
 
   while(image_pixel_reference<=0){
+
+    std::string answer;
+    bool bestImage = false;
+    /*
 
     for(int i=0;i<images_filenames.size();i++){
 
@@ -369,405 +380,355 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D, float
       cv::imshow("images",img);
       cv::waitKey(0);
     }
+*/
+    cv::destroyAllWindows();    
+    std::string imageChoose;
 
-    int numImg;
-    cv::destroyAllWindows();
+    while(numImg<=0){
 
-    std::cout << "Which one?\n" << "------------------------------------------" << std::endl;
-    std::cin >> numImg;
+      std::cout << yellow << "\nWhich one?" << "\n" << reset << "------------------------------------------\n"
+                << "->" << std::flush;
 
-    std::cout << yellow << "Image selected:" << reset << numImg << std::endl;
+      std::cin >> numImg;
 
-    std::string images_path = input_dir;
-    images_path += "/";
-    images_path += images_filenames.at(numImg);
-
-    cv::Mat img = cv::imread(images_path.c_str(),1);
-    if(!img.data ){
-      std::cout << red <<"Could not open or find the image" << reset << std::endl;
-      return false;
-    }
-    cv::Mat img_copy = img.clone();
-    cv::Mat gray;
-
-    cv::cvtColor(img_copy,gray,CV_BGR2GRAY);
-    std::vector<cv::Vec3f> circles(2);
-
-    std::cout << "Filtering...Canny!" << std::endl;
-    cv::Canny( gray, gray, 100, 100*2, 3 );
-    std::cout << "Filtering...GaussianBlur!" << std::endl;
-    cv::GaussianBlur(gray,gray,cv::Size(7,7),2,2);
-
-    std::cout << "Detecting circles in image..." << std::endl;
-    cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT,1, gray.rows/16, 200, 100, 0, 150);
-
-    cv::Point pattern1,pattern2;
-
-    for(size_t i = 0; i < circles.size(); i++ ){
-
-      cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-      pattern2 = pattern1;
-      pattern1 = cv::Point(center.x,center.y);
-      int radius = cvRound(circles[i][2]);
-      // circle center
-      cv::circle(img_copy, center, 1, cv::Scalar(0,255,0),10);
-      // circle outline
-      cv::circle(img_copy, center, radius,cv::Scalar(0,255,0),30);
-
-    }
-
-    float pixel_length = cv::norm(pattern1 - pattern2);
-
-    std::cout << "\nNum of circles detect:" << circles.size() << std::endl;
-    std::cout << "Circle 1 center:" << pattern1 << std::endl;
-    std::cout << "Circle 2 center:" << pattern2 << std::endl;
-    std::cout << "Image #:"<< numImg << " Num rows:" << gray.rows << " Num cols:" << gray.cols << std::endl;
-    std::cout << "Pixels length:" << pixel_length << std::endl;
-    cv::line(img_copy,pattern1,pattern2,cv::Scalar(0,255,0),30);
-
-    cv::namedWindow("pattern",CV_WINDOW_NORMAL);
-    cv::resizeWindow("pattern",640,480);
-    cv::moveWindow("pattern",0,0);
-    cv::imshow("pattern",img_copy);
-    cv::waitKey(0);
-    cv::destroyAllWindows();
-
-    break;
-
-  }
-
-
-
-  /*
-
-  float image_pixel_reference=-1;
-  std::string answer;
-  std::string img_path;
-  cv::Mat image_2DReference;
-  cv::Point2f img_p1,img_p2;
-
-  while(image_pixel_reference<=0){
-
-    std::cout << blue << "\nEnter image pattern full path:" << reset << std::endl;
-    std::cout << "------------------------------------------" << std::endl;
-    std::cin >> img_path;
-    //std::getline(std::cin, img_path);
-
-    cv::Mat img = cv::imread(img_path.c_str(),1);
-    if(!img.data )                    // Check for invalid input
-      {
-          std::cout << red <<"Could not open or find the image" << reset << std::endl;
-          continue;
-      }
-    cv::Mat img_copy = img.clone();
-    image_2DReference = img.clone();
-    cv::Mat gray;
-
-    cv::cvtColor(img_copy,gray,CV_BGR2GRAY);
-
-    std::vector<cv::Vec3f> circles(2);
-
-    std::cout << "Filtering...Canny!" << std::endl;
-    cv::Canny( gray, gray, 100, 100*2, 3 );
-    std::cout << "Filtering...GaussianBlur!" << std::endl;
-    cv::GaussianBlur(gray,gray,cv::Size(7,7),2,2);
-
-    std::cout << "Detecting circles in image..." << std::endl;
-    cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT,1, gray.rows/16, 200, 100, 0, 150);
-
-    cv::Point pattern1,pattern2;
-
-    for(size_t i = 0; i < circles.size(); i++ ){
-
-      cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-      pattern2 = pattern1;
-      pattern1 = cv::Point(center.x,center.y);
-      int radius = cvRound(circles[i][2]);
-      // circle center
-      cv::circle(img_copy, center, 1, cv::Scalar(0,255,0),10);
-      // circle outline
-      cv::circle(img_copy, center, radius,cv::Scalar(0,255,0),30);
-
-    }
-
-    float pixel_length = cv::norm(pattern1 - pattern2);
-
-    std::cout << "\nNum of circles detect:" << circles.size() << std::endl;
-    std::cout << "Circle 1 center:" << pattern1 << std::endl;
-    std::cout << "Circle 2 center:" << pattern2 << std::endl;
-    std::cout << "Image:"<< img_path << " Num rows:" << gray.rows << " Num cols:" << gray.cols << std::endl;
-    std::cout << "Pixels length:" << pixel_length << std::endl;
-    cv::line(img_copy,pattern1,pattern2,cv::Scalar(0,255,0),30);
-
-    cv::namedWindow("pattern",CV_WINDOW_NORMAL);
-    cv::resizeWindow("pattern",640,480);
-    cv::moveWindow("pattern",0,0);
-    cv::imshow("pattern",img_copy);
-    cv::waitKey(700);
-
-    bool choise = false;
-
-    if(not choise){
-
-      std::cout << yellow << "\nIs this lenght OK? (yes/no):" << reset << std::endl;
-      std::cout << "------------------------------------------" << std::endl;
-      //std::cin.ignore();
-      std::getline(std::cin, answer);
-      if(answer == "yes"){
-        std::cout << yellow << "Using pixels reference length: " << pixel_length << reset << std::endl;
-        choise = true;
-        image_pixel_reference = pixel_length;
-        img_p1 = pattern1;
-        img_p2 = pattern2;
-        cv::destroyAllWindows();
-        break;
-      }else if(answer == "no"){
-        image_pixel_reference = -1;
-        answer.clear();
-        choise = true;
+      if(std::cin.fail()){
+        std::getline(std::cin, imageChoose);
+        std::cout << red << "I am sorry, but '" << numImg << "' is not a number" << reset
+                  << std::endl;
+        imageChoose.clear();
+        numImg = -1;
+        std::cin.clear();
+        std::cin.ignore(1000, '\n');
+        bestImage = false;
+        continue;
+      }else if(numImg<0){
+        std::cout << red << "Error: insert a valid image number" << reset << std::endl;
+        numImg = -1;
+        imageChoose.clear();
+        std::cin.clear();
+        std::cin.ignore(1000, '\n');
+        bestImage = false;
         continue;
       }else{
-        while(not choise){
-          std::cout << red << answer << " is not a valid answer." << reset << std::endl;
-          choise = false;
-          answer.clear();
-          std::cout << yellow << "Is this lenght OK? (yes/no):" << reset << std::endl;
-          std::cout << "------------------------------------------" << std::endl;
-          //std::cin.ignore();
-          std::getline(std::cin, answer);
-
-          if(answer == "yes"){
-            std::cout << yellow << "Using pixels reference length: " << pixel_length << reset << std::endl;
-            choise = true;
-            image_pixel_reference = pixel_length;
-            img_p1 = pattern1;
-            img_p2 = pattern2;
-            cv::destroyAllWindows();
-            break;
-          }else if(answer == "no"){
-            answer.clear();
-            choise = true;
-             image_pixel_reference = -1;
-            break;
-          }else{
-            continue;
-          }
-        }
+        std::cout << "Using image #:" << numImg << std::endl;
+        bestImage = true;
+        break;
       }
     }
-    cv::destroyAllWindows();
-  }  
-  */
-/*
-  std::string image_pattern_path;
-  image_pattern_path += img_path;
 
-  std::cout << "antes del pop:" << image_pattern_path << std::endl;
+    while(numImg > -1){
 
-  std::string backG = images_filenames.at(0);
+      bool foundBestImage = false;
+      std::cout << yellow << "Image selected:" << reset << numImg << " filename:" << images_filenames.at(numImg)
+                << std::endl;
 
-  std::cout << "string reference:" << backG << std::endl;
+      std::string images_path = input_dir;
+      images_path += "/";
+      images_path += images_filenames.at(numImg);
 
-  for(int i=0;i<backG.size();i++){
-    int j=i;
-    image_pattern_path.pop_back();
-  }
+      cv::Mat img = cv::imread(images_path.c_str(),1);
+      if(!img.data ){
+        std::cout << red <<"Could not open or find the image" << reset << std::endl;
+        return false;
+      }
 
-  std::cout << "pop back:" << image_pattern_path << std::endl;
-  std::string img_feat_filename;
+      cv::Mat img_copy = img.clone();
+      cv::Mat gray;
 
-  for(int i=0;i<images_filenames.size();i++){
+      cv::cvtColor(img_copy,gray,CV_BGR2GRAY);
+      std::vector<cv::Vec3f> circles(2);
 
-    std::string comp = image_pattern_path;
-    comp += images_filenames.at(i);
+      std::cout << "\nFiltering...Canny!" << std::endl;
+      cv::Canny(gray, gray, 100, 100*2, 3 );
+      std::cout << "Filtering...GaussianBlur!" << std::endl;
+      cv::GaussianBlur(gray,gray,cv::Size(7,7),2,2);
 
-    if(comp == img_path){
-      std::cout << "Found:" << comp << std::endl;
-      img_feat_filename = images_filenames.at(i);
+      std::cout << "Detecting circles in image..." << std::endl;
+      cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT,1, gray.rows/16, 200, 100, 0, 150);
+
+      cv::Point2d pattern1,pattern2;
+
+      for(size_t i = 0; i < circles.size(); i++ ){
+
+        cv::Point2d center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+        pattern2 = pattern1;
+        pattern1 = cv::Point2d(center.x,center.y);
+        int radius = cvRound(circles[i][2]);
+        // circle center
+        cv::circle(img_copy, center, 1, cv::Scalar(0,255,0),10);
+        // circle outline
+        cv::circle(img_copy, center, radius,cv::Scalar(0,255,0),30);
+      }
+
+      double pixel_length = cv::norm(pattern1 - pattern2);
+
+      std::cout << "\nNum of circles detect:" << circles.size() << std::endl;
+      std::cout << "Circle 1 center:" << pattern1 << std::endl;
+      std::cout << "Circle 2 center:" << pattern2 << std::endl;
+      std::cout << "Image #:"<< numImg << " Num rows:" << gray.rows << " Num cols:" << gray.cols << std::endl;
+      std::cout << "Pixels length:" << pixel_length << std::endl;
+      cv::line(img_copy,pattern1,pattern2,cv::Scalar(0,255,0),30);
+
+      Display* d = XOpenDisplay(NULL);
+      Screen*  s = DefaultScreenOfDisplay(d);
+
+      int x = s->width;
+
+      cv::namedWindow("pattern",CV_WINDOW_NORMAL);
+      cv::resizeWindow("pattern",640,480);
+      cv::moveWindow("pattern",std::round(x/2),0);
+      cv::imshow("pattern",img_copy);
+      cv::waitKey(0);
+      cv::destroyAllWindows();
+
+      while(true){
+
+        std::cout << yellow << "\nIs this lenght OK? (yes/no):" << reset << std::endl;
+        std::cout << "------------------------------------------\n" << "->" << std::flush;
+        std::cin.clear();
+        std::cin.ignore(100, '\n');
+        std::getline(std::cin, answer);
+        if(answer.empty()){
+          std::cout << red << "Nothing entered." << reset << std::endl;
+          answer.clear();
+          std::cin.clear();
+          continue;
+        }
+
+        if(answer == "yes"){
+          img_p1 = pattern1;
+          img_p2 = pattern2;
+          foundBestImage = true;
+          break;
+        }else if(answer == "no"){
+          image_pixel_reference = -1;
+          answer.clear();
+          foundBestImage = false;
+        }else{
+          std::cout << red << "Is not a valid answer" << reset << std::endl;
+          answer.clear();
+          continue;
+        }
+
+        if(not foundBestImage){
+          std::cout << yellow << "\nWhich one?" << "\n" << reset << "------------------------------------------\n"
+                    << "->" << std::flush;
+          std::cin >> numImg;
+          break;
+        }
+      }
+
+      if(foundBestImage){
+        std::cout << yellow << "Using pixels reference length: " << pixel_length << reset << std::endl;
+        image_pixel_reference = pixel_length;
+        bestImage = true;
+        break;
+      }
+
+      if(not foundBestImage){
+        continue;
+      }
+    }
+
+    if(not bestImage){
+      std::cout << red << "No image selected." << reset << std::endl;
+      continue;
+    }
+
+    if(bestImage){
       break;
     }
   }
 
-  img_feat_filename.pop_back();
-  img_feat_filename.pop_back();
-  img_feat_filename.pop_back();
+  std::cout << "id pose:" << numImg << std::endl;
+  std::cout << "Filename:" << images_filenames.at(numImg) << std::endl;
+  std::cout << "camera pose:\n" << cameras_poses[numImg] << std::endl;
 
-  std::string feature_path;
-  feature_path += output_dir;
-  feature_path += "/matches/";
-  feature_path += img_feat_filename;
-  feature_path += "feat";
-
-  float x_, y_,s,orientation;
-  std::vector<cv::Point2f> image_points;
-
-  std::ifstream file(feature_path.c_str());
-  if(!file.is_open()){
-    std::cout << red << "Error: Could not find "<< feature_path << reset << std::endl;
-    feature_path.clear();
-    return false;
-  }
-
-  while(file >> x_ >> y_ >> s >> orientation){
-      image_points.push_back(cv::Point2f(x_,y_));
-  }
-
-  std::cout << yellow << "\nFeature selected:" << feature_path << std::endl;
-  std::cout << "Image points: " << image_points.size() << " points" << reset << std::endl;
-*/
-  /*
-  int id_pose = 21;
-  std::cout << "camera pose:\n" << cameras_poses[id_pose] << std::endl;
-
-  cv::Matx34f pose1 =cameras_poses[id_pose];
-  cv::Mat Rc = cv::Mat(pose1.get_minor<3,3>(0,0));
-  cv::Mat C = cv::Mat(pose1.get_minor<3,1>(0,3));
+  cv::Matx34d pose =cameras_poses[numImg];
+  cv::Mat Rc = cv::Mat(pose.get_minor<3,3>(0,0));
+  cv::Mat C = cv::Mat(pose.get_minor<3,1>(0,3));
 
   cv::Mat R = Rc.t();
   cv::Mat t = -R*C;
 
-  pose1 = cv::Matx34f(R.at<float>(0,0),R.at<float>(0,1),R.at<float>(0,2),t.at<float>(0),
-                     R.at<float>(1,0),R.at<float>(1,1),R.at<float>(1,2),t.at<float>(1),
-                     R.at<float>(2,0),R.at<float>(2,1),R.at<float>(2,2),t.at<float>(2));
+  pose = cv::Matx34d(R.at<double>(0,0),R.at<double>(0,1),R.at<double>(0,2),t.at<double>(0),
+                     R.at<double>(1,0),R.at<double>(1,1),R.at<double>(1,2),t.at<double>(1),
+                     R.at<double>(2,0),R.at<double>(2,1),R.at<double>(2,2),t.at<double>(2));
 
   cv::Mat rvec;
-  cv::Rodrigues(pose1.get_minor<3,3>(0,0),rvec);
-  cv::Mat tvec(pose1.get_minor<3,1>(0,3));
+  cv::Rodrigues(pose.get_minor<3,3>(0,0),rvec);
+  cv::Mat tvec(pose.get_minor<3,1>(0,3));
 
-  std::vector<cv::Point2f> projected_points;
-  std::vector<cv::Point3f> points3d;
-
-  std::cout << "cloud size:" << cloud.size() << std::endl;
+  std::vector<cv::Point2d> projected_points;
+  std::vector<cv::Point3d> points3d;
 
   for(int i=0;i<cloud.size();i++){
     points3d.push_back(cloud.at(i).pt);
   }
 
-  std::cout << "pts3d size:" << points3d.size() << std::endl;
-  std::cout << "intrinsic:\n" << intrinsic << std::endl;
-
   cv::projectPoints(points3d,rvec,tvec,intrinsic,cv::Mat(),projected_points);
-  std::cout << "Projected points:" << projected_points.size() << std::endl;
-
-  cv::Point2f pr_1,pr_2;
   double error;
-     pcl::PointXYZ ptt1,pt2;
+  pcl::PointXYZ ptt1,pt2;
 
-  std::map<double,std::pair<cv::Point2f,cv::Point3f>> p1_map;
-
-  //check if point reprojection error is small enough
-  for(int i=0;i<points3d.size();i++){
-    pr_1 = projected_points[i];
-    error = cv::norm(pr_1 - img_p1);
-
-      p1_map[error] = std::make_pair(pr_1,points3d.at(i));
-
-  }
-
-  std::map<double,std::pair<cv::Point2f,cv::Point3f>> p2_map;
+  std::map<double,std::pair<cv::Point2d,cv::Point3d>> p1_map;
 
   //check if point reprojection error is small enough
   for(int i=0;i<points3d.size();i++){
-    pr_2 = projected_points[i];
-    error = cv::norm(pr_2 - img_p2);
-
-      p2_map[error] = std::make_pair(pr_2,points3d.at(i));
-
+    error = cv::norm(projected_points[i] - img_p1);
+    p1_map[error] = std::make_pair(projected_points[i],points3d.at(i));
   }
 
+  std::map<double,std::pair<cv::Point2d,cv::Point3d>> p2_map;
+
+  //check if point reprojection error is small enough
+  for(int i=0;i<points3d.size();i++){
+    error = cv::norm(projected_points[i] - img_p2);
+    p2_map[error] = std::make_pair(projected_points[i],points3d.at(i));
+  }
+
+  std::vector<cv::Point2d> p1_map_pts;
+  std::vector<cv::Point2d> p2_map_pts;
+
+  cv::Point3d punto1,punto2;
 
   for(auto ptp2 : p1_map){
-       std::cout << "projected p1:" << ptp2.second.first << " p1:" << img_p1 << std::endl;
-       std::cout << "error: " << ptp2.first << std::endl;
-       std::cout << "P1 Point3D:" << ptp2.second.second << std::endl;
+
+       p1_map_pts.push_back(ptp2.second.first);
+       punto1 = cv::Point3d(ptp2.second.first.x,ptp2.second.first.y,1);
+       std::cout << "Projected point1:" << ptp2.second.first << " original point1:" << img_p1 << std::endl;
+       std::cout << "Error: " << ptp2.first << std::endl;
+       std::cout << "Point3D:" << ptp2.second.second << std::endl;
        ptt1 = pcl::PointXYZ(ptp2.second.second.x,ptp2.second.second.y,ptp2.second.second.z);
        break;
-
   }
 
+  cv::Mat pts2d_ref1H;
+  cv::convertPointsToHomogeneous(p1_map_pts,pts2d_ref1H);
+
   for(auto ptp2 : p2_map){
-       std::cout << "projected p2:" << ptp2.second.first << " p2:" << img_p2 << std::endl;
-       std::cout << "error: " << ptp2.first << std::endl;
-       std::cout << "P2 Point3D:" << ptp2.second.second << std::endl;
+    p2_map_pts.push_back(ptp2.second.first);
+    punto2 = cv::Point3d(ptp2.second.first.x,ptp2.second.first.y,1);
+       std::cout << "\nProjected point2:" << ptp2.second.first << " original point2:" << img_p2 << std::endl;
+       std::cout << "Error: " << ptp2.first << std::endl;
+       std::cout << "Point3D:" << ptp2.second.second << std::endl;
        pt2 = pcl::PointXYZ(ptp2.second.second.x,ptp2.second.second.y,ptp2.second.second.z);
        break;
   }
 
-
-
-
- // ptt1 = pcl::PointXYZ(0.11601659388820981,0.33759194974945006,1.5855298677299712);
-
-
-
-  std::cout << "puntos p2 elegidos:" << p2_map.size() << std::endl;
-
-
-  float Ref_PCL = pcl::geometry::distance(ptt1,pt2);
+  double Ref_PCL = pcl::geometry::distance(ptt1,pt2);
   scale_factor = W_reference/Ref_PCL;
-  std::cout << "Model reference:" << Ref_PCL << std::endl;
-    std::cout << "scale_factor:" << scale_factor << std::endl;
-
-  //scale = Ref_W/Ref_PCL
-
-
-
-
-  // pcl::PointXYZ ptt1,pt2;
-  */
+  std::cout << "\nModel reference:" << Ref_PCL << std::endl;
+  std::cout << "scale_factor:" << scale_factor << std::endl;
 /*
-//  for(std::map<float,std::pair<pcl::PointXYZ,pcl::PointXYZ>>::iterator it=bestPts.begin(); it!=bestPts.end(); ++it){
+  cv::Mat pts2d_ref2H;
+  cv::convertPointsToHomogeneous(p2_map_pts,pts2d_ref2H);
+
+
+
+  cv::Mat poseInv;
+  cv::Mat pose_nueva = cv::Mat(intrinsic)*cv::Mat(pose);
+  std::cout << "pose nueva:" << pose_nueva << std::endl;
+  cv::invert(pose_nueva,poseInv,cv::DECOMP_SVD);
+
+  std::cout << "Pose pseudo inverse:" << poseInv << std::endl;
+
+  std::cout << "punto1:" << punto1 << std::endl;
+  std::cout << "punto2:" << punto2 << std::endl;
+
+
+  cv::Mat pts3d_reprojected_3D;
+  pts3d_reprojected_3D = poseInv*cv::Mat(punto1);
+
+  cv::Mat pts3d_reprojected_3D2;
+  pts3d_reprojected_3D2 = poseInv*cv::Mat(punto2);
+
+  std::cout << "Producto punto:" << pts3d_reprojected_3D << std::endl;
+
+
+
+ // cv::Mat pts3d;
+ // cv::convertPointsFromHomogeneous(pts3d_reprojected_3D.t(),pts3d);
+
+   //   std::cout << "from homogeneous:" << pts3d.at<double>(0,0) << std::endl;
+
+
+  std::cout << "Reprojected pt3d:" << "[" << pts3d_reprojected_3D.at<double>(0,0)/pts3d_reprojected_3D.at<double>(0,2)
+            <<  ","<< pts3d_reprojected_3D.at<double>(0,1)/pts3d_reprojected_3D.at<double>(0,2) << "," << pts3d_reprojected_3D.at<double>(0,2)/pts3d_reprojected_3D.at<double>(0,2)
+            << "]"<< std::endl;
+
+  pt2 = pcl::PointXYZ(pts3d_reprojected_3D.at<double>(0,0),pts3d_reprojected_3D.at<double>(0,1),pts3d_reprojected_3D.at<double>(0,2));
+  ptt1 =pcl::PointXYZ(pts3d_reprojected_3D2.at<double>(0,0),pts3d_reprojected_3D2.at<double>(0,1),pts3d_reprojected_3D2.at<double>(0,2));
+
+  std::map<double,cv::Point3d> pcl_p1;
+
+  //check if point reprojection error is small enough
+  for(int i=0;i<points3d.size();i++){
+    double error = cv::norm(points3d.at(i) - cv::Point3d(pts3d_reprojected_3D.at<double>(0,0),pts3d_reprojected_3D.at<double>(0,1),pts3d_reprojected_3D.at<double>(0,2)));
+    pcl_p1[error] = points3d.at(i);
+  }
+
+  std::map<double,cv::Point3d> pcl_p2;
+
+
+  for(int i=0;i<points3d.size();i++){
+    double error = cv::norm(points3d.at(i) - cv::Point3d(pts3d_reprojected_3D2.at<double>(0,0),pts3d_reprojected_3D2.at<double>(0,1),pts3d_reprojected_3D2.at<double>(0,2)));
+    pcl_p2[error] = points3d.at(i);
+  }
+
+  for(auto ptp2 : pcl_p1){
+       ptt1 = pcl::PointXYZ(ptp2.second.x,ptp2.second.y,ptp2.second.z);
+       break;
+  }
+
+  for(auto ptp2 : pcl_p2){
+
+       pt2 = pcl::PointXYZ(ptp2.second.x,ptp2.second.y,ptp2.second.z);
+       break;
+  }
+
+*/
+//  for(std::map<double,std::pair<pcl::PointXYZ,pcl::PointXYZ>>::iterator it=bestPts.begin(); it!=bestPts.end(); ++it){
 //scale_factor = it->first;
 
   //}
 
+  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer ("Model Reference",true));
 
-
- // scale_factor = W_reference/0.788;
-
-*/
-  /*
-
-  pcl::visualization::PCLVisualizer viewer = pcl::visualization::PCLVisualizer("MAP3D",true);
-
-  viewer.setPosition(0,0);
-  viewer.setSize(640,480);
-  viewer.setBackgroundColor(0.05, 0.05, 0.05, 0); // Setting background to a dark grey
-  viewer.addCoordinateSystem ();
-  viewer.setCameraPosition(0,0,1,0,0,0);
+  viewer->setPosition(0,0);
+  viewer->setSize(640,480);
+  viewer->setBackgroundColor(0.05, 0.05, 0.05, 0); // Setting background to a dark grey
+  viewer->addCoordinateSystem ();
+  viewer->setCameraPosition(0,0,1,0,0,0);
   pcl::PointXYZ p1, p2, p3;
   p1.getArray3fMap() << 1, 0, 0;
   p2.getArray3fMap() << 0, 1, 0;
   p3.getArray3fMap() << 0,0.1,1;
 
-  viewer.addLine(ptt1,pt2,0,255,0 ,"lenght",0);
+  viewer->addLine(ptt1,pt2,0,255,0 ,"lenght",0);
 
-  viewer.addText3D("x", p1, 0.2, 1, 0, 0, "x_");
-  viewer.addText3D("y", p2, 0.2, 0, 1, 0, "y_");
-  viewer.addText3D ("z", p3, 0.2, 0, 0, 1, "z_");
+  viewer->addText3D("x", p1, 0.2, 1, 0, 0, "x_");
+  viewer->addText3D("y", p2, 0.2, 0, 1, 0, "y_");
+  viewer->addText3D ("z", p3, 0.2, 0, 0, 1, "z_");
 
-  viewer.addPointCloud(Map3D,"tree_cloud");
-  viewer.resetCamera();
+  viewer->addPointCloud(Map3D,"tree_cloud");
+  viewer->initCameraParameters();
 
-  std::cout << "Press [q] to continue --> SEGMENTATION PROCESS!" << std::endl;
+  std::cout << "Press [q] to continue" << std::endl;
 
-  while(!viewer.wasStopped ()) {
-         viewer.spin();
+  while(!viewer->wasStopped ()) {
+         viewer->spin();
   }
+
+  viewer.reset(new pcl::visualization::PCLVisualizer ("Model Reference",false));
 
   auto end = std::chrono::high_resolution_clock::now();
   auto difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-  if(difference >=60){
-    std::cout << "Scale factor Time: " << difference/60 << " minutes" << std::endl;
-  }else{
-    std::cout << "Scale factor Time: " << difference << " seconds" << std::endl;
-  }
-*/
+  std::cout << "Scale factor Time: " << difference << " seconds" << std::endl;
 }
 
 bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
-                                 cv::Mat_<float>& intrinsic,
-                                 std::vector<cv::Matx34f>& cameras_poses){
+                                 cv::Mat_<double>& intrinsic,
+                                 std::vector<cv::Matx34d>& cameras_poses){
 
   // Empty document
   tinyxml2::XMLDocument xml_doc;
@@ -849,8 +810,8 @@ bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
       return false;
     }
 
-    float f,cx,cy;
-    data->FirstChildElement("focal_length")->QueryFloatText(&f);
+    double f,cx,cy;
+    data->FirstChildElement("focal_length")->QueryDoubleText(&f);
 
     // Root intrinsics data - principal point xml document
     tinyxml2::XMLElement * pp = data->FirstChildElement("principal_point");
@@ -863,11 +824,11 @@ bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
     for(tinyxml2::XMLElement* child = pp->FirstChildElement();child != NULL;
         child = child->NextSiblingElement()){
       cx=cy;
-      child->QueryFloatText(&cy);
+      child->QueryDoubleText(&cy);
     }
 
     // Matrix K
-    intrinsic = (cv::Mat_<float>(3, 3) << f, 0, cx,
+    intrinsic = (cv::Mat_<double>(3, 3) << f, 0, cx,
                                           0, f, cy,
                                           0, 0, 1);
 
@@ -898,9 +859,9 @@ bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
         return false;
       }
 
-      float r11,r12,r13;
-      float r21,r22,r23;
-      float r31,r32,r33;
+      double r11,r12,r13;
+      double r21,r22,r23;
+      double r31,r32,r33;
 
       // Iterate over <rotation> tag
       for(tinyxml2::XMLElement* child = rotation->FirstChildElement();child != NULL;
@@ -920,11 +881,12 @@ bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
 
           r13 = r23;
           r23 = r33;
-          child2->QueryFloatText(&r33);
+          child2->QueryDoubleText(&r33);
+
         }
       }
 
-      float t1,t2,t3;
+      double t1,t2,t3;
 
       // Root extrinsics data - traslation xml document
       tinyxml2::XMLElement * traslation = child->FirstChildElement("value")->FirstChildElement("center");
@@ -939,11 +901,11 @@ bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
 
         t1 = t2;
         t2 = t3;
-        child->QueryFloatText(&t3);
+        child->QueryDoubleText(&t3);
       }
 
       // Camera pose
-      cv::Matx34f pose = cv::Matx34f(r11, r12, r13, t1,
+      cv::Matx34d pose = cv::Matx34d(r11, r12, r13, t1,
                              r21, r22, r23, t2,
                              r31, r32, r33, t3);
 
@@ -976,7 +938,7 @@ bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
         return false;
       }
 
-      float x,y,z;
+      double x,y,z;
 
       // Iterate over <X> tag
       for(tinyxml2::XMLElement* child = X_root->FirstChildElement();child != NULL;
@@ -984,11 +946,11 @@ bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
 
         x=y;
         y=z;
-        eResult = child->QueryFloatText(&z);   //z=coordinate;
+        eResult = child->QueryDoubleText(&z);   //z=coordinate;
       }
 
       // Filling pt feature
-      pt3d->pt = cv::Point3f(x,y,z);
+      pt3d->pt = cv::Point3d(x,y,z);
 
       // Root <observations> tag
       tinyxml2::XMLElement * Observ_root = child->FirstChildElement("value")->FirstChildElement("observations");
@@ -1021,19 +983,19 @@ bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
           return false;
         }
 
-        float x,y;
+        double x,y;
 
         // Iterate over <x> tag
         for(tinyxml2::XMLElement* child = feature_root->FirstChildElement();child != NULL;
             child = child->NextSiblingElement()){
 
           x = y;
-          eResult = child->QueryFloatText(&y);   //y=coordinate;
+          eResult = child->QueryDoubleText(&y);   //y=coordinate;
         }
 
          // 2D Point - <bservations> tag
-         cv::Point2f pt2d(x,y);
-         std::map<const int,cv::Point2f> feature;
+         cv::Point2d pt2d(x,y);
+         std::map<const int,cv::Point2d> feature;
          feature[img_id_feat]=pt2d;
 
          pt3d->feat_ref[img_id]=feature;
@@ -1092,6 +1054,10 @@ void Utilities::createPMVS_Files(){
 
 void Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_cloud){
 
+  std::cout << "\n************************************************" << std::endl;
+  std::cout << "              DENSIFICATION                      " << std::endl;
+  std::cout << "************************************************" << std::endl;
+
   std::cout << "\n------------------------------------------" << std::endl;
   std::cout << blue << "Densify cloud process initializing..." << reset << std::endl;
 
@@ -1116,6 +1082,7 @@ void Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
 
   std::cout << "Densify proccess --> [OK]" << std::endl;
   std::cout << "Saving dense 3d mapping file with prefix --> MAP3D_dense.pcd" << std::endl;
+  std::cout << "Dense points:" << output_cloud->points.size() << std::endl;
 
   std::string prefix1 = output_dir;
   std::string output_pcd_files = "3D_Mapping";
@@ -1134,9 +1101,14 @@ void Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
   pcl::io::savePLYFileBinary(prefix2.c_str(), *output_cloud);
 
   std::cout << "\n------------------------------------------" << std::endl;
-  std::cout << "Showing 3D mapping" << std::endl;
+
+
+  /*std::cout << "Showing 3D mapping" << std::endl;
+
 
   pcl::visualization::PCLVisualizer viewer = pcl::visualization::PCLVisualizer("MAP3D",true);
+  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
+  viewer.reset(new pcl::visualization::PCLVisualizer ("Model Reference",true));
 
   viewer.setPosition(0,0);
   viewer.setSize(640,480);
@@ -1159,11 +1131,16 @@ void Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
   while(!viewer.wasStopped ()) {
          viewer.spin();
   }
+  */
 }
 
 void Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
-                               pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,const float scale,
+                               pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,const double scale,
                                bool show){
+
+  std::cout << "\n************************************************" << std::endl;
+  std::cout << "              UNIFORM SCALING                      " << std::endl;
+  std::cout << "************************************************" << std::endl;
 
   std::cout << "Scaling pointcloud to real measurements..." << std::endl;
 
@@ -1181,13 +1158,30 @@ void Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   std::cout << "Executing the transformation..." << std::endl;
   pcl::transformPointCloud(*cloud, *cloud_scaled, scale_matrix);
 
-  if(show){
+  std::string prefix1 = output_dir;
+  std::string output_pcd_files = "3D_Mapping";
+  prefix1 += "/";
+  prefix1 += output_pcd_files;
+  prefix1 += "/";
+  prefix1 += "MAP3D_scaled.pcd";
 
+  std::string prefix2 = output_dir;
+  prefix2 += "/";
+  prefix2 += output_pcd_files;
+  prefix2 += "/";
+  prefix2 += "MAP3D_scaled.ply";
+
+  std::cout << "Saved in:" << prefix1 << " and "<< prefix2 << std::endl;
+
+  pcl::io::savePCDFileBinary(prefix1.c_str(), *cloud_scaled);
+  pcl::io::savePLYFileBinary(prefix2.c_str(), *cloud_scaled);
+
+  if(show){
+/*
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_xyz (new pcl::PointCloud<pcl::PointXYZ>());
     pcl::copyPointCloud(*cloud,*cloud_xyz);
 
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_scale_xyz (new pcl::PointCloud<pcl::PointXYZ>());
-    pcl::copyPointCloud(*cloud_scaled,*cloud_scale_xyz);
+
 
     // Visualization
     pcl::visualization::PCLVisualizer viewer = pcl::visualization::PCLVisualizer("cloud scale",true);
@@ -1196,7 +1190,7 @@ void Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
     viewer.setBackgroundColor(0.05, 0.05, 0.05, 0);
     viewer.setCameraPosition(0,0,1,0,0,0);
 
-    /*Coordinate system*/
+
     viewer.addCoordinateSystem ();
 
     pcl::PointXYZ p1, p2, p3;
@@ -1213,28 +1207,12 @@ void Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
 
     // Red --> cloud scale
     pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> cloud_scale_color(cloud_scale_xyz, 230, 20, 20);
-    viewer.addPointCloud(cloud_scale_xyz,cloud_scale_color, "transformed_cloud");
+   // viewer.addPointCloud(cloud_scale_xyz,cloud_scale_color, "transformed_cloud");
 
     viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "original_cloud");
     viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "transformed_cloud");
 
     viewer.resetCamera();
-
-    std::string prefix1 = output_dir;
-    std::string output_pcd_files = "3D_Mapping";
-    prefix1 += "/";
-    prefix1 += output_pcd_files;
-    prefix1 += "/";
-    prefix1 += "MAP3D_scaled.pcd";
-
-    std::string prefix2 = output_dir;
-    prefix2 += "/";
-    prefix2 += output_pcd_files;
-    prefix2 += "/";
-    prefix2 += "MAP3D_scaled.ply";
-
-    pcl::io::savePCDFileBinary(prefix1.c_str(), *cloud_scale_xyz);
-    pcl::io::savePLYFileBinary(prefix2.c_str(), *cloud_scale_xyz);
 
     std::cout << "Press [q] to continue process segmentation!" << std::endl;
 
@@ -1243,14 +1221,16 @@ void Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
     }
 
     viewer.close();
+    */
   }
+
 }
 
 void Utilities::fromPoint3DToPCLCloud(const std::vector<Point3DInMap> &input_cloud,
                            pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL){
 
   for(size_t i = 0; i < input_cloud.size(); ++i){
-      cv::Point3f pt3d = input_cloud[i].pt;
+      cv::Point3d pt3d = input_cloud[i].pt;
       pcl::PointXYZ pclp;
       pclp.x  = pt3d.x;
       pclp.y  = pt3d.y;

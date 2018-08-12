@@ -1,9 +1,10 @@
 ﻿#include "include/Segmentation.h"
 
 void Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
-                               pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_segmented){
+                               const std::string& output_path,
+                               pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_segmented){
 
-  std::cout << "************************************************" << std::endl;
+  std::cout << "\n************************************************" << std::endl;
   std::cout << "              SEGMENTATION                      " << std::endl;
   std::cout << "************************************************" << std::endl;
 
@@ -22,19 +23,25 @@ void Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_without_trunk (new pcl::PointCloud<pcl::PointXYZ>());
   trunkSegmentation(cloud_xyz,cloud_without_trunk,cloud_trunk,true);
 
-  std::cout << "Segmentation proccess --> [OK]" << std::endl;
   std::cout << "Saving segmentation 3d mapping file with prefix --> MAP3D_segmented.pcd" << std::endl;
 
-  /*
-  std::string prefix2 = output_dir;
+  std::string output_pcd_files = "3D_Mapping";
+  std::string prefix1 = output_path;
+  prefix1 += "/";
+  prefix1 += output_pcd_files;
+  prefix1 += "/";
+  prefix1 += "MAP3D_trunk_segmented.pcd";
+
+  std::string prefix2 = output_path;
   prefix2 += "/";
   prefix2 += output_pcd_files;
   prefix2 += "/";
-  prefix2 += "MAP3D_segmented.pcd";
-  */
-  //pcl::io::savePCDFileBinary("cloud_without_trunk.pcd", *cloud_without_trunk);
-  pcl::io::savePCDFileBinary("cloud_trunk.pcd", *cloud_trunk);
-  pcl::io::savePLYFileBinary("cloud_trunk.ply", *cloud_trunk);
+  prefix2 += "MAP3D_trunk_segmented.ply";
+
+  pcl::io::savePCDFileBinary(prefix1.c_str(), *cloud_trunk);
+  pcl::io::savePLYFileBinary(prefix2.c_str(), *cloud_trunk);
+
+  std::cout << "Segmentation proccess --> [OK]" << std::endl;  
   pcl::copyPointCloud(*cloud_trunk,*cloud_segmented);
 
 }
@@ -308,7 +315,6 @@ void Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
                                      pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_without_trunk,
                                      pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_trunk,bool show){
 
-  pcl::PassThrough<pcl::PointXYZ> pass;
   pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
   pcl::SACSegmentationFromNormals<pcl::PointXYZ, pcl::Normal> seg;
 
@@ -323,14 +329,7 @@ void Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   pcl::ModelCoefficients::Ptr coefficients_plane (new pcl::ModelCoefficients), coefficients_cylinder (new pcl::ModelCoefficients);
   pcl::PointIndices::Ptr inliers_plane (new pcl::PointIndices), inliers_cylinder (new pcl::PointIndices);
 
-  /*
-  //Build a passthrough filter to remove spurious NaNs
-  pass.setInputCloud(cloud);
-  pass.setFilterFieldName("z");
-  pass.setFilterLimits(0.0, 20.0);
-  pass.filter(*cloud_filtered);
-  std::cout << "PointCloud after filtering has: " << cloud_filtered->points.size () << " data points." << std::endl;
-*/
+
   // Estimate point normals
   ne.setSearchMethod(tree);
   ne.setInputCloud(cloud);
@@ -370,8 +369,8 @@ void Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   seg.setMethodType(pcl::SAC_RANSAC);
   seg.setNormalDistanceWeight(0.01);
   seg.setMaxIterations(10000);
-  seg.setDistanceThreshold(0.05);
-  seg.setRadiusLimits(0, 0.5);
+  seg.setDistanceThreshold(0.8);
+  seg.setRadiusLimits(0, 100);
   seg.setInputCloud(cloud_filtered2);
   seg.setInputNormals(cloud_normals2);
 
@@ -389,6 +388,7 @@ void Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   extract.setNegative(true);
   extract.filter(*cloud_without_trunk);
 */
+
   if(show){
 
     pcl::visualization::PCLVisualizer viewer = pcl::visualization::PCLVisualizer("Trunk cloud segmented",true);
