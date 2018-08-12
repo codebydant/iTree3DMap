@@ -41,7 +41,8 @@ public:
                                bool show=false);
 
  static void extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
-                                pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_segmented);
+                         const std::string& output_path,
+                                pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_segmented);
 
 
 

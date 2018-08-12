@@ -22,8 +22,9 @@
 #include <pcl/common/geometry.h>
 #include <pcl/common/common.h>
 
-#include "ros/ros.h"
+#include <ros/ros.h>
 #include <tinyxml2.h>
+#include <X11/Xlib.h>
 
 class Utilities{
 
@@ -37,23 +38,23 @@ public:
   ~Utilities(){}   
 
    struct Point3DInMap{
-     cv::Point3f pt;
-     std::map<const int,std::map<const int,cv::Point2f>> feat_ref;// [id image,[id pt2d, pt2d]]
+     cv::Point3d pt;
+     std::map<const int,std::map<const int,cv::Point2d>> feat_ref;// [id image,[id pt2d, pt2d]]
    };
 
    static bool run_openMVG();
    static void createPMVS_Files();
    static void densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_cloud);
    static void uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
-                                  pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,const float scale=2,
+                                  pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,const double scale=2,
                                   bool show=false);
    static void help();
-   static bool getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D, float& scale_factor);
+   static bool getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D, double& scale_factor,std::string& output_path);
    static void fromPoint3DToPCLCloud(const std::vector<Point3DInMap> &input_cloud,
                               pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL);
    static bool loadSFM_XML_Data(std::vector<Point3DInMap>& cloud,
-                                cv::Mat_<float>& intrinsic,
-                                std::vector<cv::Matx34f>& cameras_poses);
+                                cv::Mat_<double>& intrinsic,
+                                std::vector<cv::Matx34d>& cameras_poses);
 };
 
 
