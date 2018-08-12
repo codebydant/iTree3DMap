@@ -25,24 +25,20 @@ public:
   Segmentation(){}
   ~Segmentation(){}
 
- static void color_based_growing_segmentation(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
-                                        pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_segmented,
-                                              bool show=false);
-
- static void groundModelSegmentation(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
-                                            pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_plane_segmented,bool show=false);
-
- static void based_growing_segmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
-                                               pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_normal_segmented,bool show=false);
 
  static void trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                                 pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_without_trunk,
                                       pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_trunk,
                                bool show=false);
 
+ static void crownSegmentation(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_without_trunk,
+                                      pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_crown);
+
  static void extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
                          const std::string& output_path,
-                                pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_segmented);
+                         pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_cloud,
+                         pcl::PointCloud<pcl::PointXYZ>::Ptr& tree_segmented,
+                         pcl::PointCloud<pcl::PointXYZ>::Ptr& crown_segmented);
 
 
 
