@@ -46,8 +46,7 @@ public:
    static void createPMVS_Files();
    static void densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_cloud);
    static void uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
-                                  pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,const double scale=2,
-                                  bool show=false);
+                                  pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,const double scale=2);
    static void help();
    static bool getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D, double& scale_factor,std::string& output_path);
    static void fromPoint3DToPCLCloud(const std::vector<Point3DInMap> &input_cloud,
