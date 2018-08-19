@@ -41,17 +41,12 @@ int main(int argc, char **argv){
     scale = 2;
   }
   std::cout << "Map3D points:" << Map3D->points.size() << std::endl;
-  //pcl::io::loadPCDFile("MAP3D_dense.pcd",*Map3D);
-
 
   /*************************
   STEP 4: DENSIFICATION
   **************************/
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr Map3DDense (new pcl::PointCloud<pcl::PointXYZRGB>());
   pcl::io::loadPCDFile("MAP3D_dense.pcd",*Map3DDense);
- //
- // pcl::copyPointCloud(*cloud_3dMap,*cloud_3dMap_xyz);
-
   auto start = std::chrono::high_resolution_clock::now();
   //Utilities::createPMVS_Files();
   //Utilities::densifyWithPMVS(Map3DDense);
@@ -63,7 +58,7 @@ int main(int argc, char **argv){
   STEP 5: UNIFORM SCALING
   **************************/
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_3dMap_scaled (new pcl::PointCloud<pcl::PointXYZRGB>());
-  Utilities::uniformScaling(Map3DDense,cloud_3dMap_scaled,scale,false);
+  Utilities::uniformScaling(Map3DDense,cloud_3dMap_scaled,scale);
 
   /*************************
   STEP 6: SEGMENTATION
@@ -80,8 +75,8 @@ int main(int argc, char **argv){
   /*************************
   STEP 7: DENDROMETRY MEASUREMENTS
   **************************/
-  pcl::PointXYZ minDBH,maxDBH;
-  Dendrometry::estimate(trunk_segmented,crown_segmented,minDBH,maxDBH);
+  pcl::PointXYZ minDBH,maxDBH,minTH,maxTH,minCH,maxCH,minDBH5,maxDBH5;
+  Dendrometry::estimate(trunk_segmented,crown_segmented,output_dir,minDBH,maxDBH,minTH,maxTH,minCH,maxCH,minDBH5,maxDBH5);
 
   /*************************
   PCL VISUALIZER
@@ -110,12 +105,12 @@ int main(int argc, char **argv){
   viewer->createViewPort(0.66, 0.5, 1.0, 1.0, PORT3);
   viewer->setBackgroundColor (0, 0, 0, PORT3);
   //viewer->addLine(ptt1,pt2,0,255,0 ,"lenght",PORT3);
-  viewer->addText("CROWN", 10, 10, "PORT3", PORT3);
+  viewer->addText("SCALE MAPPING", 10, 10, "PORT3", PORT3);
 
   int PORT4 = 0;
   viewer->createViewPort(0.0, 0.0, 0.33, 0.5, PORT4);
   viewer->setBackgroundColor (0, 0, 0, PORT4);
-  viewer->addText("SCALE MAPPING", 10, 10, "PORT4", PORT4);
+  viewer->addText("CROWN", 10, 10, "PORT4", PORT4);
 
   int PORT5 = 0;
   viewer->createViewPort(0.33, 0.0, 0.66, 0.5, PORT5);
@@ -134,12 +129,15 @@ int main(int argc, char **argv){
   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> trunk_color(trunk_segmented, 0,255, 0);
   viewer->addPointCloud(trunk_segmented,trunk_color, "Trunk", PORT6);
   viewer->addLine(minDBH,maxDBH,255,0,0,"DBH",PORT6);
+  viewer->addLine(minTH,maxTH,255,0,0,"TH",PORT6);
+  viewer->addLine(minDBH5,maxDBH5,255,0,0,"DBH5m",PORT6);
 
   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> tree_color(tree_segmented, 255, 255, 0);
-  viewer->addPointCloud(tree_segmented,tree_color, "Crown", PORT5);
+  viewer->addPointCloud(tree_segmented,tree_color, "tree_segmented", PORT5);
 
   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> crown_color(trunk_segmented, 255, 0, 255);
-  viewer->addPointCloud(crown_segmented,crown_color,"TreeSegmented", PORT4);
+  viewer->addPointCloud(crown_segmented,crown_color,"crown", PORT4);
+  viewer->addLine(minCH,maxCH,255,255,0,"CH",PORT4);
 
   viewer->setPosition(0,0);
   viewer->addCoordinateSystem ();
@@ -152,6 +150,7 @@ int main(int argc, char **argv){
   viewer->addText3D("y", p2, 0.2, 0, 1, 0, "y_");
   viewer->addText3D ("z", p3, 0.2, 0, 0, 1, "z_");
   viewer->initCameraParameters();
+  viewer->resetCamera();
 
   std::cout << "Press [q] to exit" << std::endl;
 
