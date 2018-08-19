@@ -1,6 +1,5 @@
 ﻿#include "include/Utilities.h"
 
-//std::string output_dir="/home/daniel/catkin_ws";
 std::string output_dir;
 std::string input_dir;
 std::vector<std::string> images_filenames;
@@ -8,11 +7,25 @@ const std::string red("\033[0;31m");
 const std::string blue("\033[0;34m");
 const std::string yellow("\033[0;33m");
 const std::string reset("\033[0m");
+const std::string green("\033[0;32m");
+
+#include <vtkActor.h>
+#include <vtkCallbackCommand.h>
+#include <vtkCommand.h>
+#include <vtkPolyData.h>
+#include <vtkLineSource.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkSmartPointer.h>
+#include <vtkSimplePointsReader.h>
+#include <vtkProperty.h>
+#include <vtkRenderer.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderWindowInteractor.h>
+#include <vtkVertexGlyphFilter.h>
 
 // This function displays the help
 void Utilities::help(){
-  const std::string green("\033[0;32m");
-  const std::string reset("\033[0m");
+
   std::cout << green << "===============================================\n"
                "The program estimate dendrometric features of individual tree from a 3D real scale mapping using "
                "a images sequence with:openMVG and PMVS2."
@@ -179,7 +192,7 @@ bool Utilities::run_openMVG(){
   }
 
   /*FOCAL LENGTH*/
-  /*
+/*
   double n=-1;
   while(n<=0){
 
@@ -219,10 +232,10 @@ bool Utilities::run_openMVG(){
   folder_name += project_name;
 
   dont_care = std::system(folder_name.c_str());
-  */
+*/
   output_dir += "/";
   output_dir += project_name;
-  /*
+/*
   std::string output_pcd_files = "3D_Mapping";
   std::string folder_name2 = "mkdir ";
   folder_name2 += output_dir;
@@ -249,7 +262,7 @@ bool Utilities::run_openMVG(){
     return false;
   }
   std::cout << "\n" << "3D Mapping --> [COMPLETE]." << std::endl;
-  */
+*/
   auto end = std::chrono::high_resolution_clock::now();
   auto difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
   std::cout << "3D Mapping Time: " << difference << " seconds" << std::endl;
@@ -361,7 +374,10 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D,
 
     std::string answer;
     bool bestImage = false;
-    /*
+     std::string imageChoose;
+
+    int inter = std::round(images_filenames.size()/4);
+    int cont =0;
 
     for(int i=0;i<images_filenames.size();i++){
 
@@ -380,12 +396,48 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D,
       cv::resizeWindow("images",cv::Size(640,480));
       cv::imshow("images",img);
       cv::waitKey(0);
-    }
-*/
-    cv::destroyAllWindows();    
-    std::string imageChoose;
+      cont +=1;
 
-    while(numImg<=0){
+      if(cont == inter or cont == 2*inter or cont == 3*inter){
+        cv::destroyAllWindows();
+        while(true){
+
+          std::cout << yellow << "\nWhich one?" << "\n" << reset << "------------------------------------------\n"
+                    << "->" << std::flush;
+
+          std::cin >> numImg;
+
+          if(std::cin.fail()){
+            std::getline(std::cin, imageChoose);
+            std::cout << red << "I am sorry, but '" << numImg << "' is not a number" << reset
+                      << std::endl;
+            imageChoose.clear();
+            numImg = -1;
+            std::cin.clear();
+            std::cin.ignore(1000, '\n');
+            bestImage = false;
+            continue;
+          }else if(numImg<0){
+            std::cout << yellow << "Continue!" << reset << std::endl;
+            numImg = -1;
+            imageChoose.clear();
+            std::cin.clear();
+            bestImage = false;
+            break;
+          }else{
+            bestImage = true;
+            break;
+          }
+        }
+        if(bestImage){
+          break;
+        }
+      }
+    }
+
+    cv::destroyAllWindows();
+
+    while(numImg<0){
 
       std::cout << yellow << "\nWhich one?" << "\n" << reset << "------------------------------------------\n"
                 << "->" << std::flush;
@@ -403,7 +455,7 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D,
         bestImage = false;
         continue;
       }else if(numImg<0){
-        std::cout << red << "Error: insert a valid image number" << reset << std::endl;
+        std::cout << red << "Skip." << reset << std::endl;
         numImg = -1;
         imageChoose.clear();
         std::cin.clear();
@@ -590,104 +642,114 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D,
   std::vector<cv::Point2d> p1_map_pts;
   std::vector<cv::Point2d> p2_map_pts;
 
-  cv::Point3d punto1,punto2;
-
   for(auto ptp2 : p1_map){
 
-       p1_map_pts.push_back(ptp2.second.first);
-       punto1 = cv::Point3d(ptp2.second.first.x,ptp2.second.first.y,1);
-       std::cout << "Projected point1:" << ptp2.second.first << " original point1:" << img_p1 << std::endl;
-       std::cout << "Error: " << ptp2.first << std::endl;
-       std::cout << "Point3D:" << ptp2.second.second << std::endl;
-       ptt1 = pcl::PointXYZ(ptp2.second.second.x,ptp2.second.second.y,ptp2.second.second.z);
-       break;
+    p1_map_pts.push_back(ptp2.second.first);
+    std::cout << "Projected point1:" << ptp2.second.first << " original point1:" << img_p1 << std::endl;
+    std::cout << "Error: " << ptp2.first << std::endl;
+    std::cout << "Point3D:" << ptp2.second.second << std::endl;
+    ptt1 = pcl::PointXYZ(ptp2.second.second.x,ptp2.second.second.y,ptp2.second.second.z);
+    break;
   }
-
-  cv::Mat pts2d_ref1H;
-  cv::convertPointsToHomogeneous(p1_map_pts,pts2d_ref1H);
 
   for(auto ptp2 : p2_map){
     p2_map_pts.push_back(ptp2.second.first);
-    punto2 = cv::Point3d(ptp2.second.first.x,ptp2.second.first.y,1);
-       std::cout << "\nProjected point2:" << ptp2.second.first << " original point2:" << img_p2 << std::endl;
-       std::cout << "Error: " << ptp2.first << std::endl;
-       std::cout << "Point3D:" << ptp2.second.second << std::endl;
-       pt2 = pcl::PointXYZ(ptp2.second.second.x,ptp2.second.second.y,ptp2.second.second.z);
-       break;
+
+    std::cout << "\nProjected point2:" << ptp2.second.first << " original point2:" << img_p2 << std::endl;
+    std::cout << "Error: " << ptp2.first << std::endl;
+    std::cout << "Point3D:" << ptp2.second.second << std::endl;
+    pt2 = pcl::PointXYZ(ptp2.second.second.x,ptp2.second.second.y,ptp2.second.second.z);
+    break;
   }
 
+  vtkSmartPointer<vtkPolyData> cloudVTK = vtkSmartPointer<vtkPolyData>::New();
+  vtkSmartPointer<vtkPoints> pts = vtkSmartPointer<vtkPoints>::New();
+
+  for(int n=0;n<points3d.size();n++){
+    cv::Point3d p = points3d.at(n);
+    pts->InsertNextPoint(p.x,p.y,p.z);
+  }
+  cloudVTK->SetPoints(pts);
+
+  vtkSmartPointer<vtkVertexGlyphFilter> vertexFilter = vtkSmartPointer<vtkVertexGlyphFilter>::New();
+  vertexFilter->SetInputData(cloudVTK);
+  vertexFilter->Update();
+
+  vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+  polydata->ShallowCopy(vertexFilter->GetOutput());
+
+  // Create two points, P0 and P1
+  double p0[3] = {ptt1.x, ptt1.y, ptt1.z};
+  double p1[3] = {pt2.x, pt2.y, pt2.z};
+
+  vtkSmartPointer<vtkLineSource> lineSource = vtkSmartPointer<vtkLineSource>::New();
+  lineSource->SetPoint1(p0);
+  lineSource->SetPoint2(p1);
+  lineSource->Update();
+
+  // Create a mapper and actor
+  vtkSmartPointer<vtkPolyDataMapper> mapper1 = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper1->SetInputData(polydata);
+
+  vtkSmartPointer<vtkActor> actor1 = vtkSmartPointer<vtkActor>::New();
+  actor1->SetMapper(mapper1);
+  actor1->GetProperty()->SetColor(1.0, 1.0, 1.0);
+  actor1->GetProperty()->SetPointSize(1);
+
+  // Create a mapper and actor
+  vtkSmartPointer<vtkPolyDataMapper> mapper2 = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper2->SetInputConnection(lineSource->GetOutputPort());
+
+  vtkSmartPointer<vtkActor> actor2 = vtkSmartPointer<vtkActor>::New();
+  actor2->SetMapper(mapper2);
+  actor2->GetProperty()->SetColor(0.0, 1.0, 0.0);
+  actor2->GetProperty()->SetPointSize(1);
+
+  // Create a renderer, render window, and interactor
+  vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
+  renderer->SetBackground(0.0, 0.0, 0.0);
+  // Zoom in a little by accessing the camera and invoking its "Zoom" method.
+  renderer->ResetCamera();
+  vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
+
+  renderWindow->SetSize(800, 600);
+  renderWindow->AddRenderer(renderer);
+
+  vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+  renderWindowInteractor->SetRenderWindow(renderWindow);
+
+  vtkSmartPointer<vtkCallbackCommand> keypressCallback = vtkSmartPointer<vtkCallbackCommand>::New();
+ // keypressCallback->SetCallback(KeypressCallbackFunction);
+//  renderWindowInteractor->AddObserver(vtkCommand::KeyPressEvent,keypressCallback,);
+
+  // Add the actor to the scene
+  renderer->AddActor(actor1);
+  renderer->AddActor(actor2);
+
+  // Render and interact
+  renderWindow->Render();
+  renderWindow->SetWindowName("VISUALIZER");
+  //boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("VISUALIZER"));
+
+  vtkSmartPointer<vtkInteractorStyleTrackballCamera> style =
+    vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New(); //like paraview
+  renderWindowInteractor->SetInteractorStyle(style);
+  std::cout << "Press [q] to continue" << std::endl;
+  renderWindowInteractor->Start();
+/*
+  vtkRenderWindowInteractor *iren = static_cast<vtkRenderWindowInteractor*>(renderWindowInteractor);
+  // Close the window
+  iren->GetRenderWindow()->Finalize();
+
+  // Stop the interactor
+  iren->TerminateApp();
+  std::cout << "Closing window..." << std::endl;
+*/
   double Ref_PCL = pcl::geometry::distance(ptt1,pt2);
   scale_factor = W_reference/Ref_PCL;
   std::cout << "\nModel reference:" << Ref_PCL << std::endl;
   std::cout << "scale_factor:" << scale_factor << std::endl;
-/*
-  cv::Mat pts2d_ref2H;
-  cv::convertPointsToHomogeneous(p2_map_pts,pts2d_ref2H);
 
-
-
-  cv::Mat poseInv;
-  cv::Mat pose_nueva = cv::Mat(intrinsic)*cv::Mat(pose);
-  std::cout << "pose nueva:" << pose_nueva << std::endl;
-  cv::invert(pose_nueva,poseInv,cv::DECOMP_SVD);
-
-  std::cout << "Pose pseudo inverse:" << poseInv << std::endl;
-
-  std::cout << "punto1:" << punto1 << std::endl;
-  std::cout << "punto2:" << punto2 << std::endl;
-
-
-  cv::Mat pts3d_reprojected_3D;
-  pts3d_reprojected_3D = poseInv*cv::Mat(punto1);
-
-  cv::Mat pts3d_reprojected_3D2;
-  pts3d_reprojected_3D2 = poseInv*cv::Mat(punto2);
-
-  std::cout << "Producto punto:" << pts3d_reprojected_3D << std::endl;
-
-
-
- // cv::Mat pts3d;
- // cv::convertPointsFromHomogeneous(pts3d_reprojected_3D.t(),pts3d);
-
-   //   std::cout << "from homogeneous:" << pts3d.at<double>(0,0) << std::endl;
-
-
-  std::cout << "Reprojected pt3d:" << "[" << pts3d_reprojected_3D.at<double>(0,0)/pts3d_reprojected_3D.at<double>(0,2)
-            <<  ","<< pts3d_reprojected_3D.at<double>(0,1)/pts3d_reprojected_3D.at<double>(0,2) << "," << pts3d_reprojected_3D.at<double>(0,2)/pts3d_reprojected_3D.at<double>(0,2)
-            << "]"<< std::endl;
-
-  pt2 = pcl::PointXYZ(pts3d_reprojected_3D.at<double>(0,0),pts3d_reprojected_3D.at<double>(0,1),pts3d_reprojected_3D.at<double>(0,2));
-  ptt1 =pcl::PointXYZ(pts3d_reprojected_3D2.at<double>(0,0),pts3d_reprojected_3D2.at<double>(0,1),pts3d_reprojected_3D2.at<double>(0,2));
-
-  std::map<double,cv::Point3d> pcl_p1;
-
-  //check if point reprojection error is small enough
-  for(int i=0;i<points3d.size();i++){
-    double error = cv::norm(points3d.at(i) - cv::Point3d(pts3d_reprojected_3D.at<double>(0,0),pts3d_reprojected_3D.at<double>(0,1),pts3d_reprojected_3D.at<double>(0,2)));
-    pcl_p1[error] = points3d.at(i);
-  }
-
-  std::map<double,cv::Point3d> pcl_p2;
-
-
-  for(int i=0;i<points3d.size();i++){
-    double error = cv::norm(points3d.at(i) - cv::Point3d(pts3d_reprojected_3D2.at<double>(0,0),pts3d_reprojected_3D2.at<double>(0,1),pts3d_reprojected_3D2.at<double>(0,2)));
-    pcl_p2[error] = points3d.at(i);
-  }
-
-  for(auto ptp2 : pcl_p1){
-       ptt1 = pcl::PointXYZ(ptp2.second.x,ptp2.second.y,ptp2.second.z);
-       break;
-  }
-
-  for(auto ptp2 : pcl_p2){
-
-       pt2 = pcl::PointXYZ(ptp2.second.x,ptp2.second.y,ptp2.second.z);
-       break;
-  }
-
-*/
 //  for(std::map<double,std::pair<pcl::PointXYZ,pcl::PointXYZ>>::iterator it=bestPts.begin(); it!=bestPts.end(); ++it){
 //scale_factor = it->first;
 
@@ -1072,43 +1134,12 @@ void Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
   pcl::io::savePCDFileBinary(prefix1.c_str(), *output_cloud);
   pcl::io::savePLYFileBinary(prefix2.c_str(), *output_cloud);
 
-  std::cout << "\n------------------------------------------" << std::endl;
+  std::cout << "\n------------------------------------------" << std::endl; 
 
-
-  /*std::cout << "Showing 3D mapping" << std::endl;
-
-
-  pcl::visualization::PCLVisualizer viewer = pcl::visualization::PCLVisualizer("MAP3D",true);
-  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
-  viewer.reset(new pcl::visualization::PCLVisualizer ("Model Reference",true));
-
-  viewer.setPosition(0,0);
-  viewer.setSize(640,480);
-  viewer.setBackgroundColor(0.05, 0.05, 0.05, 0); // Setting background to a dark grey
-  viewer.addCoordinateSystem ();
-  viewer.setCameraPosition(0,0,1,0,0,0);
-  pcl::PointXYZ p1, p2, p3;
-  p1.getArray3fMap() << 1, 0, 0;
-  p2.getArray3fMap() << 0, 1, 0;
-  p3.getArray3fMap() << 0,0.1,1;
-
-  viewer.addText3D("x", p1, 0.2, 1, 0, 0, "x_");
-  viewer.addText3D("y", p2, 0.2, 0, 1, 0, "y_");
-  viewer.addText3D ("z", p3, 0.2, 0, 0, 1, "z_");
-  viewer.addPointCloud(output_cloud,"tree_cloud");
-  viewer.resetCamera();
-
-  std::cout << "Press [q] to continue --> SEGMENTATION PROCESS!" << std::endl;
-
-  while(!viewer.wasStopped ()) {
-         viewer.spin();
-  }
-  */
 }
 
 void Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
-                               pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,const double scale,
-                               bool show){
+                               pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,const double scale){
 
   std::cout << "\n************************************************" << std::endl;
   std::cout << "              UNIFORM SCALING                      " << std::endl;
@@ -1146,55 +1177,7 @@ void Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   std::cout << "Saved in:" << prefix1 << " and "<< prefix2 << std::endl;
 
   pcl::io::savePCDFileBinary(prefix1.c_str(), *cloud_scaled);
-  pcl::io::savePLYFileBinary(prefix2.c_str(), *cloud_scaled);
-
-  if(show){
-/*
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_xyz (new pcl::PointCloud<pcl::PointXYZ>());
-    pcl::copyPointCloud(*cloud,*cloud_xyz);
-
-
-
-    // Visualization
-    pcl::visualization::PCLVisualizer viewer = pcl::visualization::PCLVisualizer("cloud scale",true);
-    viewer.setPosition(0,0);
-    viewer.setSize(640,480);
-    viewer.setBackgroundColor(0.05, 0.05, 0.05, 0);
-    viewer.setCameraPosition(0,0,1,0,0,0);
-
-
-    viewer.addCoordinateSystem ();
-
-    pcl::PointXYZ p1, p2, p3;
-    p1.getArray3fMap() << 1, 0, 0;
-    p2.getArray3fMap() << 0, 1, 0;
-    p3.getArray3fMap() << 0,0.1,1;
-
-    viewer.addText3D("x", p1, 0.2, 1, 0, 0, "x_");
-    viewer.addText3D("y", p2, 0.2, 0, 1, 0, "y_");
-    viewer.addText3D ("z", p3, 0.2, 0, 0, 1, "z_");
-
-    // White --> original cloud
-    viewer.addPointCloud(cloud_xyz, "original_cloud");
-
-    // Red --> cloud scale
-    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> cloud_scale_color(cloud_scale_xyz, 230, 20, 20);
-   // viewer.addPointCloud(cloud_scale_xyz,cloud_scale_color, "transformed_cloud");
-
-    viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "original_cloud");
-    viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "transformed_cloud");
-
-    viewer.resetCamera();
-
-    std::cout << "Press [q] to continue process segmentation!" << std::endl;
-
-    while(!viewer.wasStopped ()) {
-           viewer.spin();
-    }
-
-    viewer.close();
-    */
-  }
+  pcl::io::savePLYFileBinary(prefix2.c_str(), *cloud_scaled); 
 
 }
 
