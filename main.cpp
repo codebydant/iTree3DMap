@@ -34,7 +34,7 @@ int main(int argc, char **argv){
   STEP 3: GET SCALE FACTOR
   **************************/
   double scale; std::string output_dir;
-  pcl::PointCloud<pcl::PointXYZ>::Ptr Map3D (new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr Map3D (new pcl::PointCloud<pcl::PointXYZRGB>());
   success = Utilities::getScaleFactor(Map3D,scale,output_dir);
   if(not success or scale <=0){
     std::cout << "Using scale factor = 2" << std::endl;
@@ -46,10 +46,9 @@ int main(int argc, char **argv){
   STEP 4: DENSIFICATION
   **************************/
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr Map3DDense (new pcl::PointCloud<pcl::PointXYZRGB>());
-  pcl::io::loadPCDFile("MAP3D_dense.pcd",*Map3DDense);
   auto start = std::chrono::high_resolution_clock::now();
   //Utilities::createPMVS_Files();
-  //Utilities::densifyWithPMVS(Map3DDense);
+  Utilities::densifyWithPMVS(Map3DDense);
   auto end = std::chrono::high_resolution_clock::now();
   auto difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
   std::cout << "Dense Map Time: " << difference << " seconds" << std::endl;
