@@ -25,7 +25,6 @@ const std::string green("\033[0;32m");
 
 // This function displays the help
 void Utilities::help(){
-
   std::cout << green << "===============================================\n"
                "The program estimate dendrometric features of individual tree from a 3D real scale mapping using "
                "a images sequence with:openMVG and PMVS2."
@@ -270,7 +269,7 @@ bool Utilities::run_openMVG(){
   return true;
 }
 
-bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D,
+bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
                                double& scale_factor,std::string& output_path){
 
   std::cout << "\n************************************************" << std::endl;
@@ -317,23 +316,23 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D,
 
   cv::Mat_<double> intrinsic;
   std::vector<cv::Matx34d> cameras_poses;
-  std::vector<Point3DInMap> cloud;
+  //std::vector<Point3DInMap> cloud;
 
   std::cout << blue << "\nGetting data from sfm_data.xml..." << reset << std::endl;
   std::cout << "------------------------------------------" << std::endl;
 
-  bool success = Utilities::loadSFM_XML_Data(cloud,intrinsic,cameras_poses);
+  bool success = Utilities::loadSFM_XML_Data(Map3D,intrinsic,cameras_poses);
   if(not success){
     std::cout << "Could not get a scale factor." << std::endl;
     return false;
   }
 
   std::cout << "\nImages: " << images_filenames.size() << std::endl;
-  std::cout << "Cloud xml: " << cloud.size() << " pts" << std::endl;
+  std::cout << "Cloud xml: " << Map3D->points.size() << " pts" << std::endl;
   std::cout << "Camera Poses: " << cameras_poses.size() << " cameras" << std::endl;
   std::cout << "Intrinsic camera:\n" << intrinsic << std::endl;
 
-  fromPoint3DToPCLCloud(cloud,Map3D);
+  //fromPoint3DToPCLCloud(cloud,Map3D);
 
   std::cout << blue << "\nGetting scale factor..." << reset << std::endl;
   std::cout << "------------------------------------------";
@@ -615,8 +614,8 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D,
   std::vector<cv::Point2d> projected_points;
   std::vector<cv::Point3d> points3d;
 
-  for(int i=0;i<cloud.size();i++){
-    points3d.push_back(cloud.at(i).pt);
+  for(int i=0;i<Map3D->points.size();i++){
+    points3d.push_back(cv::Point3d(Map3D->points[i].x,Map3D->points[i].y,Map3D->points[i].z));
   }
 
   cv::projectPoints(points3d,rvec,tvec,intrinsic,cv::Mat(),projected_points);
@@ -718,7 +717,7 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D,
   vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
   renderWindowInteractor->SetRenderWindow(renderWindow);
 
-  vtkSmartPointer<vtkCallbackCommand> keypressCallback = vtkSmartPointer<vtkCallbackCommand>::New();
+ // vtkSmartPointer<vtkCallbackCommand> keypressCallback = vtkSmartPointer<vtkCallbackCommand>::New();
  // keypressCallback->SetCallback(KeypressCallbackFunction);
 //  renderWindowInteractor->AddObserver(vtkCommand::KeyPressEvent,keypressCallback,);
 
@@ -760,12 +759,13 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D,
   std::cout << "Scale factor Time: " << difference << " seconds" << std::endl;
 }
 
-bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
+bool Utilities::loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& pts3d/*std::vector<Point3DInMap>& pts3d*/,
                                  cv::Mat_<double>& intrinsic,
                                  std::vector<cv::Matx34d>& cameras_poses){
 
   // Empty document
-  tinyxml2::XMLDocument xml_doc;
+  tinyxml2::XMLDocument xml_doc;  
+  pcl::PolygonMesh polyMesh;
 
   /*READING FILE*/
   std::cout << blue <<"Reading sfm_data.xml file. Please wait." << reset << std::endl;
@@ -785,7 +785,7 @@ bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
   std::cout << "<views>" << std::endl;
   std::cout << "<intrinsics>" << std::endl;
   std::cout << "<extrinsics>" << std::endl;
-  std::cout << "<structure>" << reset << std::endl;
+  //std::cout << "<structure>" << reset << std::endl;
 
   std::cout << "\nFounding root tag <cereal> ..." << std::endl;
   std::cout << "------------------------------------------" << std::endl;
@@ -947,10 +947,11 @@ bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
       cameras_poses.push_back(pose);
     }
 
-    std::cout  << "\nFounding <structure> tag ..." << std::endl;
-    std::cout << "------------------------------------------" << std::endl;
+    //std::cout  << "\nFounding <structure> tag ..." << std::endl;
+    //std::cout << "------------------------------------------" << std::endl;
 
     /*POINTCLOUD DATA*/
+    /*
     // Root structure xml document
     tinyxml2::XMLElement * structure = root->FirstChildElement("structure");
     if(structure == nullptr){
@@ -1039,30 +1040,30 @@ bool Utilities::loadSFM_XML_Data(std::vector<Point3DInMap>& pts3d,
       // Saving pt3d
       pts3d.push_back(*pt3d);
     }
+     */
 
   }else{
     std::cout << red << "Error: root of xml could not found. Must be: <cereal>" << reset << std::endl;
     return false;
   }
 
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPCL (new pcl::PointCloud<pcl::PointXYZ>());
-  fromPoint3DToPCLCloud(pts3d,cloudPCL);
+  std::string polyFile = output_dir;
+  polyFile += "/reconstruction_sequential/colorized.ply";
 
-  std::string prefix1 = output_dir;
-  std::string output_pcd_files = "3D_Mapping";
-  prefix1 += "/";
-  prefix1 += output_pcd_files;
-  prefix1 += "/";
-  prefix1 += "MAP3D.pcd";
+  pcl::io::loadPolygonFile(polyFile.c_str(),polyMesh);
+  pcl::fromPCLPointCloud2(polyMesh.cloud, *pts3d);
+  //fromPoint3DToPCLCloud(pts3d,cloudPCL);
 
-  std::string prefix2 = output_dir;
-  prefix2 += "/";
-  prefix2 += output_pcd_files;
-  prefix2 += "/";
+  std::string prefix = output_dir;
+  prefix += "/3D_Mapping/";
+  std::string prefix1 = prefix;
+  prefix1 +="MAP3D.pcd";
+
+  std::string prefix2 = prefix;
   prefix2 += "MAP3D.ply";
 
-  pcl::io::savePCDFileBinary(prefix1.c_str(), *cloudPCL);
-  pcl::io::savePLYFileBinary(prefix2.c_str(), *cloudPCL);
+  pcl::io::savePCDFileBinary(prefix1.c_str(), *pts3d);
+  pcl::io::savePLYFileBinary(prefix2.c_str(), *pts3d);
 
   return true;
 }
@@ -1094,7 +1095,7 @@ void Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
 
   std::cout << "\n------------------------------------------" << std::endl;
   std::cout << blue << "Densify cloud process initializing..." << reset << std::endl;
-
+  /*
   std::string command3 = "~/catkin_ws/src/iTree3DMap/programs/pmvs2 ";
   command3 += output_dir;
   command3 += "/PMVS/ ";
@@ -1107,7 +1108,7 @@ void Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
    std::cout << "Failed. ./pmvs2 no found" << std::endl;
    std::exit(-1);
   }
-
+*/
   std::string cloudPLY = output_dir;
   cloudPLY += "/PMVS/models/pmvs_options.txt.ply";
 
@@ -1118,24 +1119,18 @@ void Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
   std::cout << "Saving dense 3d mapping file with prefix --> MAP3D_dense.pcd" << std::endl;
   std::cout << "Dense points:" << output_cloud->points.size() << std::endl;
 
-  std::string prefix1 = output_dir;
-  std::string output_pcd_files = "3D_Mapping";
-  prefix1 += "/";
-  prefix1 += output_pcd_files;
-  prefix1 += "/";
+  std::string prefix = output_dir;
+  prefix += "/3D_Mapping/";
+  std::string prefix1 = prefix;
   prefix1 += "MAP3D_dense.pcd";
 
-  std::string prefix2 = output_dir;
-  prefix2 += "/";
-  prefix2 += output_pcd_files;
-  prefix2 += "/";
+  std::string prefix2 = prefix;
   prefix2 += "MAP3D_dense.ply";
 
   pcl::io::savePCDFileBinary(prefix1.c_str(), *output_cloud);
   pcl::io::savePLYFileBinary(prefix2.c_str(), *output_cloud);
 
   std::cout << "\n------------------------------------------" << std::endl; 
-
 }
 
 void Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
