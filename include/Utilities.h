@@ -21,6 +21,7 @@
 #include <pcl/common/transforms.h>
 #include <pcl/common/geometry.h>
 #include <pcl/common/common.h>
+#include <pcl/io/vtk_lib_io.h>
 
 #include <ros/ros.h>
 #include <tinyxml2.h>
@@ -48,10 +49,10 @@ public:
    static void uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
                                   pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,const double scale=2);
    static void help();
-   static bool getScaleFactor(pcl::PointCloud<pcl::PointXYZ>::Ptr& Map3D, double& scale_factor,std::string& output_path);
+   static bool getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D, double& scale_factor,std::string& output_path);
    static void fromPoint3DToPCLCloud(const std::vector<Point3DInMap> &input_cloud,
                               pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL);
-   static bool loadSFM_XML_Data(std::vector<Point3DInMap>& cloud,
+   static bool loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& pts3d,
                                 cv::Mat_<double>& intrinsic,
                                 std::vector<cv::Matx34d>& cameras_poses);
 };
