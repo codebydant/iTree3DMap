@@ -1,5 +1,7 @@
 #include "include/Segmentation.h"
-#include <pcl/segmentation/extract_clusters.h>
+
+pcl::PointXYZ trunkMin;
+pcl::PointXYZ trunkMax;
 
 void Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
                                const std::string& output_path,
@@ -11,18 +13,25 @@ void Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   std::cout << "              SEGMENTATION                      " << std::endl;
   std::cout << "************************************************" << std::endl;
 
-  if(cloud->size() <= 0){
-     std::cout << "Cloud reading failed. no data points found" << std::endl;
+  if(cloud->points.size() <= 0){
+     PCL_ERROR("Input point cloud has no data!");
      std::exit(-1);
   }
 
   /*CONVERT XYZRGB TO XYZ*/
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_xyz (new pcl::PointCloud<pcl::PointXYZ>());
-  pcl::copyPointCloud(*cloud,*cloud_xyz);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr temp (new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::copyPointCloud(*cloud,*temp);
+
+  pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+  sor.setInputCloud(temp);
+  sor.setMeanK(200);
+  sor.setStddevMulThresh(1.0);
+  sor.filter(*cloud_xyz);
 
   /*TRUNK SEGMENTATION*/
   std::cout << "Trunk cloud segmentation with cylinder segmentation plane..." << std::endl;
-  trunkSegmentation(cloud_xyz,tree_segmented,trunk_cloud,false);
+  trunkSegmentation(cloud_xyz,tree_segmented,trunk_cloud);
   std::cout << "Crown cloud segmentation with SACSegmentationSphere..." << std::endl;
   crownSegmentation(tree_segmented,crown_segmented);
 
@@ -64,7 +73,12 @@ void Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
 
 void Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                                      pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_without_trunk,
-                                     pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_trunk,bool show){
+                                     pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_trunk){
+
+  if(cloud->points.size() <= 0){
+     PCL_ERROR("Input point cloud has no data!");
+     std::exit(-1);
+  }
 
   pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
   pcl::SACSegmentationFromNormals<pcl::PointXYZ, pcl::Normal> seg;
@@ -74,9 +88,11 @@ void Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ> ());
 
  // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered2 (new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::PointCloud<pcl::Normal>::Ptr cloud_normals2 (new pcl::PointCloud<pcl::Normal>);
+  pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>());
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered2 (new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::PointCloud<pcl::PointXYZ>::Ptr temp (new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::PointCloud<pcl::PointXYZ>::Ptr temp2 (new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::PointCloud<pcl::Normal>::Ptr cloud_normals2 (new pcl::PointCloud<pcl::Normal>());
   pcl::ModelCoefficients::Ptr coefficients_plane (new pcl::ModelCoefficients), coefficients_cylinder (new pcl::ModelCoefficients);
   pcl::PointIndices::Ptr inliers_plane (new pcl::PointIndices), inliers_cylinder (new pcl::PointIndices);
 
@@ -131,131 +147,171 @@ void Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   extract.setInputCloud(cloud_filtered2);
   extract.setIndices(inliers_cylinder);
   extract.setNegative(false);
-  extract.filter(*cloud_trunk);
+  extract.filter(*temp);
 
   extract.setNegative(true);
-  extract.filter(*cloud_without_trunk);  
+  extract.filter(*temp2);
+
+  Eigen::Matrix4f align_cloud = Eigen::Matrix4f::Identity();
+
+  pcl::PointXYZ minH,maxH;
+  pcl::getMinMax3D(*temp,minH,maxH);
+
+  double offsetY = std::abs(minH.y - 0);
+  double offsetX = std::abs(0 - minH.x);
+  double offsetZ = std::abs(0 - minH.z);
+
+  std::cout << "offsetY:" << offsetY << std::endl;
+  std::cout << "Min:" << minH << std::endl;
+  std::cout << "Max:" << maxH << std::endl;
+
+  if(minH.y < 0 ){
+
+                                            //Uniform scaling: vx = vy = vz = s --> Common scale factor
+  align_cloud << 1,   0,    0,    0,    //       |vx  0   0   0|
+                 0,   1,    0,    offsetY,    //  Sv = |0   vy  0   0| => Scale matrix
+                 0,   0,    1,    0,    //       |0   0   vz  0|
+                 0,   0,    0,    1;    //       |0   0   0   1|
+                                            //https://en.wikipedia.org/wiki/Scaling_(geometry)
+
+  }else{
+
+    //Uniform scaling: vx = vy = vz = s --> Common scale factor
+align_cloud << 1,   0,    0,    0,    //       |vx  0   0   0|
+0,   1,    0,    -offsetY,    //  Sv = |0   vy  0   0| => Scale matrix
+0,   0,    1,    0,    //       |0   0   vz  0|
+0,   0,    0,    1;    //       |0   0   0   1|
+    //https://en.wikipedia.org/wiki/Scaling_(geometry)
+
+  }
+
+  //std::cout << "Here is the matrix transform:\n" << align_cloud << std::endl;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr temp3 (new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::PointCloud<pcl::PointXYZ>::Ptr temp4 (new pcl::PointCloud<pcl::PointXYZ>());
+
+  ROS_INFO("Executing the transformation...");
+  pcl::transformPointCloud(*temp, *temp4, align_cloud);
+  pcl::transformPointCloud(*temp2, *temp3, align_cloud);
+
+  pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor2;
+  sor2.setInputCloud(temp4);
+  sor2.setMeanK(10);
+  sor2.setStddevMulThresh(1.0);
+  sor2.filter(*cloud_trunk);
+
+
+  pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+  sor.setInputCloud(temp3);
+  sor.setMeanK(50);
+  sor.setStddevMulThresh(1.0);
+  sor.filter(*cloud_without_trunk);
+
+  trunkMin = minH;
+  trunkMax = maxH;
 
 }
 
 void Segmentation::crownSegmentation(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_without_trunk,
                                      pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_crown){
 
+  if(cloud_without_trunk->points.size() <= 0){
+    PCL_ERROR("Input point cloud has no data!");
+    std::exit(-1);
+  }
+
+  std::cout << "PointCloud before filtering has: " << cloud_without_trunk->points.size ()
+            << " data points." << std::endl;
+
+  double meanMedian = pcl::geometry::distance(trunkMin,trunkMax);
+
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
+
+  // Create the filtering object
+  pcl::PassThrough<pcl::PointXYZ> pass;
+  pass.setInputCloud(cloud_without_trunk);
+  pass.setFilterFieldName("y");
+  pass.setFilterLimits(-900, meanMedian/2);
+  pass.setFilterLimitsNegative(true);
+  pass.filter(*cloud_filtered);
+
+
 /*
-    pcl::ExtractIndices<pcl::PointXYZ> extract;
-    pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
-    pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
-    // Create the segmentation object
-    pcl::SACSegmentation<pcl::PointXYZ> seg;
-    // Optional
-    seg.setOptimizeCoefficients(true);
-    // Mandatory
-    seg.setModelType(pcl::SACMODEL_SPHERE);
-    seg.setMethodType(pcl::SAC_RANSAC);
-    seg.setDistanceThreshold (5);
 
-    seg.setInputCloud(cloud_without_trunk);
-    seg.segment(*inliers, *coefficients);
+      for(int it =0; it< cloud_filtered->points.size(); it++){
 
-    if (inliers->indices.size () == 0){
-      PCL_ERROR ("Could not estimate a planar model for the given dataset.");
+        cloud_crown->points.push_back(cloud_filtered->points.at(it));
 
-    }
-
-    std::cout << "Model coefficients: " << coefficients->values[0] << " "
-                                        << coefficients->values[1] << " "
-                                        << coefficients->values[2] << " "
-                                        << coefficients->values[3] << std::endl;
-
-    std::cout << "Model inliers: " << inliers->indices.size () << std::endl;
-
-
-    extract.setInputCloud(cloud_without_trunk);
-    extract.setIndices(inliers);
-    extract.setNegative(true);
-    extract.filter(*cloud_crown);
-*/
-
-
-
-    std::cout << "PointCloud before filtering has: " << cloud_without_trunk->points.size () << " data points." << std::endl; //*
-/*
-    // Create the filtering object: downsample the dataset using a leaf size of 1cm
-    pcl::VoxelGrid<pcl::PointXYZ> vg;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
-
-    vg.setInputCloud (cloud_without_trunk);
-    vg.setLeafSize (0.01f, 0.01f, 0.01f);
-    vg.filter (*cloud_filtered);
-    std::cout << "PointCloud after filtering has: " << cloud_filtered->points.size ()  << " data points." << std::endl; //*
-*/
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_f (new pcl::PointCloud<pcl::PointXYZRGB>);
-    // Create the segmentation object for the planar model and set all the parameters
-    pcl::SACSegmentation<pcl::PointXYZ> seg;
-    pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
-    pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane (new pcl::PointCloud<pcl::PointXYZ> ());
-    pcl::PCDWriter writer;
-    seg.setOptimizeCoefficients (true);
-    seg.setModelType (pcl::SACMODEL_PLANE);
-    seg.setMethodType (pcl::SAC_RANSAC);
-    seg.setMaxIterations (100);
-    seg.setDistanceThreshold (0.02);
-
-    int i=0, nr_points = (int) cloud_without_trunk->points.size ();
-    /*
-    while (cloud_without_trunk->points.size () > 0.7 * nr_points)
-    {
-      // Segment the largest planar component from the remaining cloud
-      seg.setInputCloud (cloud_without_trunk);
-      seg.segment (*inliers, *coefficients);
-      if (inliers->indices.size () == 0)
-      {
-        std::cout << "Could not estimate a planar model for the given dataset." << std::endl;
-        break;
       }
 
-      // Extract the planar inliers from the input cloud
-      pcl::ExtractIndices<pcl::PointXYZ> extract;
-      extract.setInputCloud (cloud_without_trunk);
-      extract.setIndices (inliers);
-      extract.setNegative (false);
-
-      // Get the points associated with the planar surface
-      extract.filter (*cloud_plane);
-      std::cout << "PointCloud representing the planar component: " << cloud_plane->points.size () << " data points." << std::endl;
-
-      // Remove the planar inliers, extract the rest
-      extract.setNegative (true);
-      extract.filter (*cloud_f);
-      *cloud_without_trunk = *cloud_f;
-    }
-*/
-    // Creating the KdTree object for the search method of the extraction
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
-    tree->setInputCloud (cloud_without_trunk);
-
-    std::vector<pcl::PointIndices> cluster_indices;
-    pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-    ec.setClusterTolerance (20); // 2cm
-    ec.setMinClusterSize (7000);
-    ec.setMaxClusterSize (25000);
-    ec.setSearchMethod (tree);
-    ec.setInputCloud (cloud_without_trunk);
-    ec.extract (cluster_indices);
-
-    std::cout << "clusters:" << cluster_indices.size() << std::endl;
-
-    for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it){
-
-      pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
-      for(std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
-
-      cloud_crown->points.push_back(cloud_without_trunk->points[*pit]);
-
-      cloud_crown->width = cloud_cluster->points.size ();
+      cloud_crown->width = cloud_filtered->points.size ();
       cloud_crown->height = 1;
       cloud_crown->is_dense = true;
 
+*/
+
+    // Creating the KdTree object for the search method of the extraction
+    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+    tree->setInputCloud (cloud_filtered);
+
+    std::vector<pcl::PointIndices> cluster_indices;
+    pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
+    ec.setClusterTolerance(14); // 2cm
+    ec.setMinClusterSize(30);
+    ec.setMaxClusterSize(25000);
+    ec.setSearchMethod(tree);
+    ec.setInputCloud(cloud_filtered);
+    ec.extract(cluster_indices);
+
+    std::cout << "clusters:" << cluster_indices.size() << std::endl;
+    std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> vecClusters;
+
+    for(std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end(); ++it){
+
+      pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
+      for(std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit){
+
+      cloud_cluster->points.push_back(cloud_filtered->points[*pit]);
+
+      }
+
+      cloud_cluster->width = cloud_cluster->points.size ();
+      cloud_cluster->height = 1;
+      cloud_cluster->is_dense = true;
+
+      vecClusters.push_back(cloud_cluster);
     }
+
+ pcl::PointCloud<pcl::PointXYZ>::Ptr temp3 (new pcl::PointCloud<pcl::PointXYZ>());
+    for(size_t i=0;i<vecClusters.size()-1;i++){
+      pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
+      cloud_cluster = vecClusters.at(i);
+
+      for(size_t j=0;j< cloud_cluster->points.size();j++){
+
+      temp3->points.push_back(cloud_cluster->points.at(j));
+
+    }
+
+      temp3->width = cloud_crown->points.size ();
+      temp3->height = 1;
+      temp3->is_dense = true;
+
+    }
+
+    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+    sor.setInputCloud(temp3);
+    sor.setMeanK(100);
+    sor.setStddevMulThresh(0.2);
+    sor.filter(*cloud_crown);
+
 }
+
+
+
+
+
+
+
+
+
+

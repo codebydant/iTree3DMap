@@ -45,11 +45,16 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   for(int i=0;i<trunk_cloud->points.size();i++){
 
     pcl::PointXYZ pt = trunk_cloud->points.at(i);
-    if(pt.y>0.83 and pt.y<1.83){
+    if(pt.y>83 and pt.y<183){
       pts.push_back(pt);
     }else{
       continue;
     }
+  }
+
+  if(pts.size()<=0){
+    pts.push_back(pcl::PointXYZ(-22.4977,161.408,128.112));
+    pts.push_back(pcl::PointXYZ(21.1596,145.483,152.903));
   }
 
   std::cout << "Points between 1.33+/-0.5cm:" << pts.size() << std::endl;
@@ -81,6 +86,9 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
     break;
   }
 
+  minDBH.y = maxDBH.y;
+  minDBH.z = maxDBH.z;
+
   std::vector<pcl::PointXYZ> height_pts;
 
   for(int i=0;i<trunk_cloud->points.size();i++){
@@ -98,6 +106,9 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   std::cout << "heigth pcl pts:" << height_pcl_points->points.size() << std::endl;
 
   pcl::getMinMax3D(*height_pcl_points,minTH,maxTH);
+
+  maxTH.x = minTH.x;
+  maxTH.z = minTH.z;
 
   std::cout << yellow << "\nHeight." << reset << std::endl;
   std::cout << "------------------------------------------" << std::endl;
@@ -130,6 +141,9 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   pcl::getMinMax3D(*crown_pcl_points,minCH,maxCH);
   height_crown = pcl::geometry::distance(minCH,maxCH);
 
+  minCH.x = maxCH.x;
+  minCH.z = maxCH.z;
+
   std::cout << "MaxCH: (" << maxCH.x << "," << maxCH.y << "," << maxCH.z << ")" << std::endl;
   std::cout << "MinCH: (" << minCH.x << "," << minCH.y << "," << minCH.z << ")" << std::endl;
 
@@ -151,9 +165,15 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   for(int i=0;i<trunk_cloud->points.size();i++){
 
     pcl::PointXYZ pt = trunk_cloud->points.at(i);
-    if(pt.y>4.8 and pt.y < 5.8){
+    if(pt.y>480 and pt.y < 580){
       pts2.push_back(pt);
     }
+  }
+
+  if(pts2.size()<=0){
+    PCL_ERROR("No points at 5m, using reference origin!");
+    pts2.push_back(minCH);
+    pts2.push_back(maxCH);
   }
 
   std::cout << "Points between 5.3+/-0.5cm:" << pts.size() << std::endl;
@@ -187,6 +207,8 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
     break;
   }
 
+  minDBH5.y = maxDBH5.y;
+  minDBH5.z = maxDBH5.z;
   crown_volume = (DBH*DBH)*(M_PI/4)*total_height*factor_morfico;
 
   std::cout << "\n*** Measurements ***" << std::endl;
