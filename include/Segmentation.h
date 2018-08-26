@@ -13,6 +13,8 @@
 
 #include <pcl/segmentation/region_growing_rgb.h>
 #include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/segmentation/extract_clusters.h>
+
 #include "Utilities.h"
 
 class Segmentation{
@@ -28,8 +30,7 @@ public:
 
  static void trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                                 pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_without_trunk,
-                                      pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_trunk,
-                               bool show=false);
+                                      pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_trunk);
 
  static void crownSegmentation(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_without_trunk,
                                       pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_crown);
