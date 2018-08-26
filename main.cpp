@@ -33,7 +33,8 @@ int main(int argc, char **argv){
   /*************************
   STEP 3: GET SCALE FACTOR
   **************************/
-  double scale; std::string output_dir;
+  double scale;
+  std::string output_dir;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr Map3D (new pcl::PointCloud<pcl::PointXYZRGB>());
   success = Utilities::getScaleFactor(Map3D,scale,output_dir);
   if(not success or scale <=0){
@@ -56,6 +57,7 @@ int main(int argc, char **argv){
   /*************************
   STEP 5: UNIFORM SCALING
   **************************/
+  scale = 120.728;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_3dMap_scaled (new pcl::PointCloud<pcl::PointXYZRGB>());
   Utilities::uniformScaling(Map3DDense,cloud_3dMap_scaled,scale);
 
@@ -128,8 +130,11 @@ int main(int argc, char **argv){
   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> trunk_color(trunk_segmented, 0,255, 0);
   viewer->addPointCloud(trunk_segmented,trunk_color, "Trunk", PORT6);
   viewer->addLine(minDBH,maxDBH,255,0,0,"DBH",PORT6);
+  viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH,3,"DBH",PORT6);
   viewer->addLine(minTH,maxTH,255,0,0,"TH",PORT6);
-  viewer->addLine(minDBH5,maxDBH5,255,0,0,"DBH5m",PORT6);
+  viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH,3,"TH",PORT6);
+  viewer->addLine(minDBH5,maxDBH5,255,255,255,"DBH5m",PORT6);
+  viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH,3,"DBH5m",PORT6);
 
   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> tree_color(tree_segmented, 255, 255, 0);
   viewer->addPointCloud(tree_segmented,tree_color, "tree_segmented", PORT5);
@@ -137,17 +142,45 @@ int main(int argc, char **argv){
   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> crown_color(trunk_segmented, 255, 0, 255);
   viewer->addPointCloud(crown_segmented,crown_color,"crown", PORT4);
   viewer->addLine(minCH,maxCH,255,255,0,"CH",PORT4);
+  viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH,3,"CH",PORT4);
+
+  pcl::PointXYZ p1, p2, p3;
+  p1.getArray3fMap() << 100, 0, 0;
+  p2.getArray3fMap() << 0, 100, 0;
+  p3.getArray3fMap() << 0,0.1,100;
+
+  viewer->addCoordinateSystem(100,"scale_ucs",PORT3);
+  viewer->addText3D("x", p1, 15, 1, 0, 0, "x_",PORT3);
+  viewer->addText3D("y", p2, 15, 0, 1, 0, "y_",PORT3);
+  viewer->addText3D ("z", p3, 15, 0, 0, 1, "z_",PORT3);
+  viewer->addCoordinateSystem(100,"crown_ucs",PORT4);
+  viewer->addText3D("x", p1, 15, 1, 0, 0, "x_",PORT4);
+  viewer->addText3D("y", p2, 15, 0, 1, 0, "y_",PORT4);
+  viewer->addText3D ("z", p3, 15, 0, 0, 1, "z_",PORT4);
+  viewer->addCoordinateSystem(100,"tree_without_trunk_ucs",PORT5);
+  viewer->addText3D("x", p1, 15, 1, 0, 0, "x_",PORT5);
+  viewer->addText3D("y", p2, 15, 0, 1, 0, "y_",PORT5);
+  viewer->addText3D ("z", p3, 15, 0, 0, 1, "z_",PORT5);
+  viewer->addCoordinateSystem(100,"trunk_ucs",PORT6);
+  viewer->addText3D("x", p1, 15, 1, 0, 0, "x_",PORT6);
+  viewer->addText3D("y", p2, 15, 0, 1, 0, "y_",PORT6);
+  viewer->addText3D ("z", p3, 15, 0, 0, 1, "z_",PORT6);
 
   viewer->setPosition(0,0);
-  viewer->addCoordinateSystem ();
-  pcl::PointXYZ p1, p2, p3;
-  p1.getArray3fMap() << 1, 0, 0;
-  p2.getArray3fMap() << 0, 1, 0;
-  p3.getArray3fMap() << 0,0.1,1;
+  viewer->addCoordinateSystem();
 
-  viewer->addText3D("x", p1, 0.2, 1, 0, 0, "x_");
-  viewer->addText3D("y", p2, 0.2, 0, 1, 0, "y_");
-  viewer->addText3D ("z", p3, 0.2, 0, 0, 1, "z_");
+  pcl::PointXYZ p11, p22, p33;
+  p11.getArray3fMap() << 1, 0, 0;
+  p22.getArray3fMap() << 0, 1, 0;
+  p33.getArray3fMap() << 0,0.1,1;
+
+  viewer->addText3D("x", p11, 0.2, 1, 0, 0, "x_",PORT1);
+  viewer->addText3D("y", p22, 0.2, 0, 1, 0, "y_",PORT1);
+  viewer->addText3D ("z", p33, 0.2, 0, 0, 1, "z_",PORT1);
+
+  viewer->addText3D("x", p1, 0.2, 1, 0, 0, "x_",PORT2);
+  viewer->addText3D("y", p2, 0.2, 0, 1, 0, "y_",PORT2);
+  viewer->addText3D ("z", p3, 0.2, 0, 0, 1, "z_",PORT2);
   viewer->initCameraParameters();
   viewer->resetCamera();
 
