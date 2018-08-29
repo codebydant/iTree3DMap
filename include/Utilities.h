@@ -22,6 +22,43 @@
 #include <pcl/common/geometry.h>
 #include <pcl/common/common.h>
 #include <pcl/io/vtk_lib_io.h>
+#include <pcl/point_types.h>
+#include <pcl/features/normal_3d.h>
+
+#include <pcl/search/search.h>
+#include <pcl/search/kdtree.h>
+
+#include <pcl/filters/extract_indices.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/extract_indices.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/filters/radius_outlier_removal.h>
+#include <pcl/filters/statistical_outlier_removal.h>
+
+#include <pcl/segmentation/region_growing_rgb.h>
+#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/segmentation/extract_clusters.h>
+
+#include <vtkActor.h>
+#include <vtkCallbackCommand.h>
+#include <vtkCommand.h>
+#include <vtkPolyData.h>
+#include <vtkLineSource.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkSmartPointer.h>
+#include <vtkSimplePointsReader.h>
+#include <vtkProperty.h>
+#include <vtkRenderer.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderWindowInteractor.h>
+#include <vtkVertexGlyphFilter.h>
+#include <vtkAxesActor.h>
+#include <vtkOrientationMarkerWidget.h>
+#include <vtkCaptionActor2D.h>
+#include <vtkNamedColors.h>
+#include <vtkTransform.h>
+
+#include <pcl/common/pca.h>
 
 #include <ros/ros.h>
 #include <tinyxml2.h>
@@ -44,14 +81,13 @@ public:
    };
 
    static bool run_openMVG();
-   static void createPMVS_Files();
-   static void densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_cloud);
+   static bool createPMVS_Files();
+   static bool densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_cloud);
    static void uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
                                   pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,const double scale=2);
    static void help();
    static bool getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D, double& scale_factor,std::string& output_path);
-   static void fromPoint3DToPCLCloud(const std::vector<Point3DInMap> &input_cloud,
-                              pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPCL);
+
    static bool loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& pts3d,
                                 cv::Mat_<double>& intrinsic,
                                 std::vector<cv::Matx34d>& cameras_poses);
