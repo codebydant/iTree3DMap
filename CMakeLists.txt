@@ -14,7 +14,7 @@ add_compile_options(-std=c++11)
 ## is used, also find other catkin packages
 
 # set build type = Release mode
-set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Debug)
 
 message("\n" "=========================================")
 message("Project: ${PROJECT_NAME} ")
