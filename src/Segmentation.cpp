@@ -1,9 +1,9 @@
-#include "include/Segmentation.h"
+﻿#include "include/Segmentation.h"
 
 pcl::PointXYZ trunkMin;
 pcl::PointXYZ trunkMax;
 
-void Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
+bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
                                const std::string& output_path,
                                pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_cloud,
                                pcl::PointCloud<pcl::PointXYZ>::Ptr& tree_segmented,
@@ -14,8 +14,8 @@ void Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   std::cout << "************************************************" << std::endl;
 
   if(cloud->points.size() <= 0){
-     PCL_ERROR("Input point cloud has no data!");
-     std::exit(-1);
+     ROS_ERROR("Input point cloud has no data!");
+     return false;
   }
 
   /*CONVERT XYZRGB TO XYZ*/
@@ -69,15 +69,17 @@ void Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
 
   std::cout << "Segmentation proccess --> [OK]" << std::endl;  
 
+  return true;
+
 }
 
-void Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
+bool Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                                      pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_without_trunk,
                                      pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_trunk){
 
   if(cloud->points.size() <= 0){
-     PCL_ERROR("Input point cloud has no data!");
-     std::exit(-1);
+     ROS_ERROR("Input point cloud has no data!");
+     return false;
   }
 
   pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
@@ -155,34 +157,40 @@ void Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   Eigen::Matrix4f align_cloud = Eigen::Matrix4f::Identity();
 
   pcl::PointXYZ minH,maxH;
-  pcl::getMinMax3D(*temp,minH,maxH);
+  std::map<double,pcl::PointXYZ> minMaxValues;
+
+  for(pcl::PointCloud<pcl::PointXYZ>::iterator it=temp->begin(); it!=temp->end(); ++it){
+    pcl::PointXYZ p = pcl::PointXYZ(it->x,it->y,it->z);
+    minMaxValues[p.y] = p;
+  }
+
+  std::map<double,pcl::PointXYZ>::iterator it1 = minMaxValues.begin();
+  minH = it1->second;
+
+  std::map<double,pcl::PointXYZ>::iterator it2 = std::prev(minMaxValues.end());
+  maxH = it2->second;
+
+  std::cout << "min trunk it:" << minH << std::endl;
+  std::cout << "max trunk it:" << maxH << std::endl;
 
   double offsetY = std::abs(minH.y - 0);
-  double offsetX = std::abs(0 - minH.x);
-  double offsetZ = std::abs(0 - minH.z);
+  std::cout << "offset trunk Y:" << offsetY << std::endl;
 
-  std::cout << "offsetY:" << offsetY << std::endl;
-  std::cout << "Min:" << minH << std::endl;
-  std::cout << "Max:" << maxH << std::endl;
+  if(minH.y < 0){
 
-  if(minH.y < 0 ){
 
-                                            //Uniform scaling: vx = vy = vz = s --> Common scale factor
-  align_cloud << 1,   0,    0,    0,    //       |vx  0   0   0|
-                 0,   1,    0,    offsetY,    //  Sv = |0   vy  0   0| => Scale matrix
-                 0,   0,    1,    0,    //       |0   0   vz  0|
-                 0,   0,    0,    1;    //       |0   0   0   1|
-                                            //https://en.wikipedia.org/wiki/Scaling_(geometry)
+    align_cloud << 1,   0,    0,    0,           //       |1  0    0   x       |
+                   0,   1,    0,    offsetY,     //   t = |0   1   0   y+offset| => traslation matrix
+                   0,   0,    1,    0,           //       |0   0   1   z       |
+                   0,   0,    0,    1;           //       |0   0   0   1       |
 
   }else{
 
-    //Uniform scaling: vx = vy = vz = s --> Common scale factor
-align_cloud << 1,   0,    0,    0,    //       |vx  0   0   0|
-0,   1,    0,    -offsetY,    //  Sv = |0   vy  0   0| => Scale matrix
-0,   0,    1,    0,    //       |0   0   vz  0|
-0,   0,    0,    1;    //       |0   0   0   1|
-    //https://en.wikipedia.org/wiki/Scaling_(geometry)
 
+    align_cloud << 1,   0,    0,    0,
+                   0,   1,    0,    -offsetY,
+                   0,   0,    1,    0,
+                   0,   0,    0,    1;
   }
 
   //std::cout << "Here is the matrix transform:\n" << align_cloud << std::endl;
@@ -190,39 +198,163 @@ align_cloud << 1,   0,    0,    0,    //       |vx  0   0   0|
   pcl::PointCloud<pcl::PointXYZ>::Ptr temp4 (new pcl::PointCloud<pcl::PointXYZ>());
 
   ROS_INFO("Executing the transformation...");
-  pcl::transformPointCloud(*temp, *temp4, align_cloud);
-  pcl::transformPointCloud(*temp2, *temp3, align_cloud);
+  pcl::transformPointCloud(*temp, *cloud_trunk, align_cloud);
+  pcl::transformPointCloud(*temp2, *cloud_without_trunk, align_cloud);
 
+  std::map<double,pcl::PointXYZ> minMaxValues2;
+
+  for(pcl::PointCloud<pcl::PointXYZ>::iterator it=cloud_trunk->begin(); it!=cloud_trunk->end(); ++it){
+    pcl::PointXYZ p = pcl::PointXYZ(it->x,it->y,it->z);
+    minMaxValues2[p.y] = p;
+  }
+
+  pcl::PointXYZ minH1,maxH2;
+
+  std::map<double,pcl::PointXYZ>::iterator it11 = minMaxValues2.begin();
+  minH1 = it11->second;
+
+  std::map<double,pcl::PointXYZ>::iterator it22 = std::prev(minMaxValues2.end());
+  maxH2 = it22->second;
+
+  std::cout << "New min:" << minH1 << std::endl;
+  std::cout << "New max:" << maxH2 << std::endl;
+  trunkMin = minH1;
+  trunkMax = maxH2;
+  trunkMin.x=trunkMax.x;
+  trunkMin.z=trunkMax.z;
+  double dist = pcl::geometry::distance(trunkMin,trunkMax);
+  std::cout << "mean:" << dist << std::endl;
+/*
+  vtkSmartPointer<vtkPolyData> cloudVTK = vtkSmartPointer<vtkPolyData>::New();
+  vtkSmartPointer<vtkPoints> pts = vtkSmartPointer<vtkPoints>::New();
+
+  for(int n=0;n<cloud_trunk->points.size();n++){
+    pcl::PointXYZ p = cloud_trunk->points.at(n);
+    pts->InsertNextPoint(p.x,p.y,p.z);
+  }
+  cloudVTK->SetPoints(pts);
+
+  vtkSmartPointer<vtkVertexGlyphFilter> vertexFilter = vtkSmartPointer<vtkVertexGlyphFilter>::New();
+  vertexFilter->SetInputData(cloudVTK);
+  vertexFilter->Update();
+
+  vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+  polydata->ShallowCopy(vertexFilter->GetOutput());
+
+  // Create two points, P0 and P1
+  double p0[3] = {trunkMin.x, trunkMin.y, trunkMin.z};
+  double p1[3] = {trunkMax.x, trunkMax.y, trunkMax.z};
+
+  std::cout << "p1:" << p0[0] << "," << p0[1] << "," << p0[2] << std::endl;
+   std::cout << "p2:" << p1[0] << "," << p1[1] << "," << p1[2] << std::endl;
+
+  vtkSmartPointer<vtkLineSource> lineSource = vtkSmartPointer<vtkLineSource>::New();
+  lineSource->SetPoint1(p0);
+  lineSource->SetPoint2(p1);
+  lineSource->Update();
+
+  // Create a mapper and actor
+  vtkSmartPointer<vtkPolyDataMapper> mapper1 = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper1->SetInputData(polydata);
+
+  vtkSmartPointer<vtkActor> actor1 = vtkSmartPointer<vtkActor>::New();
+  actor1->SetMapper(mapper1);
+  actor1->GetProperty()->SetColor(1.0, 1.0, 1.0);
+  actor1->GetProperty()->SetPointSize(1);
+
+  // Create a mapper and actor
+  vtkSmartPointer<vtkPolyDataMapper> mapper2 = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper2->SetInputConnection(lineSource->GetOutputPort());
+
+  vtkSmartPointer<vtkActor> actor2 = vtkSmartPointer<vtkActor>::New();
+  actor2->SetMapper(mapper2);
+  actor2->GetProperty()->SetColor(0.0, 1.0, 0.0);
+  actor2->GetProperty()->SetPointSize(1);
+
+  // Create a renderer, render window, and interactor
+  vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
+  renderer->SetBackground(0.0, 0.0, 0.0);
+  // Zoom in a little by accessing the camera and invoking its "Zoom" method.
+  renderer->ResetCamera();
+  vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
+
+  renderWindow->SetSize(800, 600);
+  renderWindow->AddRenderer(renderer);
+
+  vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+  renderWindowInteractor->SetRenderWindow(renderWindow);
+
+  vtkSmartPointer<vtkNamedColors> colors =
+      vtkSmartPointer<vtkNamedColors>::New();
+
+  // Add the actor to the scene
+  renderer->AddActor(actor1);
+  renderer->AddActor(actor2);
+
+  vtkSmartPointer<vtkAxesActor> axes = vtkSmartPointer<vtkAxesActor>::New();
+  axes->GetXAxisCaptionActor2D()->GetCaptionTextProperty()->SetColor(colors->GetColor3d("Red").GetData());
+  axes->SetScale(3000,3000,3000);
+
+  renderer->AddActor(axes);
+
+  // Render and interact
+  renderWindow->SetWindowName("VISUALIZER");
+  //renderWindow->SetFullScreen(true);
+  renderWindow->Render();
+
+  vtkSmartPointer<vtkInteractorStyleTrackballCamera> style =
+      vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New(); //like paraview
+  renderWindowInteractor->SetInteractorStyle(style);
+  std::cout << "Press [q] to continue" << std::endl;
+
+  vtkSmartPointer<vtkOrientationMarkerWidget> widget =
+      vtkSmartPointer<vtkOrientationMarkerWidget>::New();
+  widget->SetOutlineColor( 0.9300, 0.5700, 0.1300 );
+  widget->SetOrientationMarker( axes );
+  widget->SetInteractor( renderWindowInteractor );
+  //widget->SetViewport( 0.0, 0.0, 0.4, 0.4 );
+  widget->SetEnabled( 1 );
+  widget->InteractiveOn();
+
+  renderer->ResetCamera();
+  renderWindowInteractor->Start();
+*/
+
+/*
   pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor2;
   sor2.setInputCloud(temp4);
-  sor2.setMeanK(10);
+  sor2.setMeanK(80);
   sor2.setStddevMulThresh(1.0);
   sor2.filter(*cloud_trunk);
-
+*/
+/*
 
   pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
   sor.setInputCloud(temp3);
   sor.setMeanK(50);
   sor.setStddevMulThresh(1.0);
   sor.filter(*cloud_without_trunk);
+*/
 
-  trunkMin = minH;
-  trunkMax = maxH;
+  return true;
+
+
 
 }
 
-void Segmentation::crownSegmentation(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_without_trunk,
+bool Segmentation::crownSegmentation(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_without_trunk,
                                      pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_crown){
 
   if(cloud_without_trunk->points.size() <= 0){
-    PCL_ERROR("Input point cloud has no data!");
-    std::exit(-1);
+    ROS_ERROR("Input point cloud has no data!");
+    return false;
   }
 
-  std::cout << "PointCloud before filtering has: " << cloud_without_trunk->points.size ()
-            << " data points." << std::endl;
+  ROS_INFO("PointCloud before filtering has %lu %s", cloud_without_trunk->points.size()," data points.");
 
   double meanMedian = pcl::geometry::distance(trunkMin,trunkMax);
+  ROS_INFO("Mean median: %f",meanMedian);
+  ROS_INFO("Mean median/2: %f",meanMedian/2);
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -233,6 +365,9 @@ void Segmentation::crownSegmentation(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_
   pass.setFilterLimits(-900, meanMedian/2);
   pass.setFilterLimitsNegative(true);
   pass.filter(*cloud_filtered);
+
+  std::cout << "PointCloud after filtering has: " << cloud_filtered->points.size ()
+            << " data points." << std::endl;
 
 
 /*
@@ -262,7 +397,7 @@ void Segmentation::crownSegmentation(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_
     ec.setInputCloud(cloud_filtered);
     ec.extract(cluster_indices);
 
-    std::cout << "clusters:" << cluster_indices.size() << std::endl;
+    ROS_INFO("clusters:%lu", cluster_indices.size());
     std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> vecClusters;
 
     for(std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end(); ++it){
