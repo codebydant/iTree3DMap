@@ -21,9 +21,14 @@
 #include <pcl/common/transforms.h>
 #include <pcl/common/geometry.h>
 #include <pcl/common/common.h>
+
 #include <pcl/io/vtk_lib_io.h>
 #include <pcl/point_types.h>
 #include <pcl/features/normal_3d.h>
+#include <pcl/features/gasd.h>
+#include <pcl/features/normal_3d_omp.h>
+#include <pcl/surface/poisson.h>
+#include <pcl/surface/simplification_remove_unused_vertices.h>
 
 #include <pcl/search/search.h>
 #include <pcl/search/kdtree.h>
@@ -58,8 +63,6 @@
 #include <vtkNamedColors.h>
 #include <vtkTransform.h>
 
-#include <pcl/common/pca.h>
-
 #include <ros/ros.h>
 #include <tinyxml2.h>
 #include <X11/Xlib.h>
@@ -83,7 +86,7 @@ public:
    static bool run_openMVG();
    static bool createPMVS_Files();
    static bool densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_cloud);
-   static void uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
+   static bool uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
                                   pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,const double scale=2);
    static void help();
    static bool getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D, double& scale_factor,std::string& output_path);
@@ -91,6 +94,13 @@ public:
    static bool loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& pts3d,
                                 cv::Mat_<double>& intrinsic,
                                 std::vector<cv::Matx34d>& cameras_poses);
+   static bool alignCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
+                              pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_align);
+                              
+   static void create_mesh(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud,pcl::PolygonMesh &mesh);
+   static void vizualizeMesh(pcl::PolygonMesh &mesh);
+   static void vtkVisualizer(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,pcl::PointXYZ& pt1,pcl::PointXYZ& pt2);
+
 };
 
 
