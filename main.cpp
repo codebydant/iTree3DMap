@@ -26,7 +26,7 @@ int main(int argc, char **argv){
   **************************/
   bool success = Utilities::run_openMVG();
   if(not success){
-    ROS_ERROR("Could not get 3D Model. Failed dendrometric estimation.");
+    PCL_ERROR("Could not get 3D Model. Failed dendrometric estimation.");
     return -1;
   }
 
@@ -38,11 +38,12 @@ int main(int argc, char **argv){
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr Map3D (new pcl::PointCloud<pcl::PointXYZRGB>());
   success = Utilities::getScaleFactor(Map3D,scale,output_dir);
   if(not success or scale <=0){
-    ROS_WARN("Using scale factor = 120.128");
+    PCL_WARN("Using scale factor = 120.128");
     scale = 120.128;
   }
 
-  ROS_INFO("Map3D points: %lu",Map3D->points.size());
+  PCL_INFO("Map3D points: %lu",Map3D->points.size());
+  std::cout << std::endl;
 
   /*************************
   STEP 4: DENSIFICATION
@@ -52,12 +53,12 @@ int main(int argc, char **argv){
   //success = Utilities::createPMVS_Files();
   success = Utilities::densifyWithPMVS(Map3DDense);
   if(not success or Map3DDense->points.empty()){
-    ROS_FATAL("Could not densify the points.");
-    scale = 120.128;
+    PCL_ERROR("Could not densify the points.");
+    return -1;
   }
   auto end = std::chrono::high_resolution_clock::now();
   auto difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-  ROS_INFO("Dense map time %li %s", difference, "seconds");
+  PCL_INFO("Dense map time %li %s", difference, "seconds\n");
 
   /*************************
   STEP 5: UNIFORM SCALING
@@ -65,7 +66,7 @@ int main(int argc, char **argv){
   //scale = 120.28;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_3dMap_scaled (new pcl::PointCloud<pcl::PointXYZRGB>());
   Utilities::uniformScaling(Map3DDense,cloud_3dMap_scaled,scale);
-
+ 
   /*************************
   STEP 6: SEGMENTATION
   **************************/  
