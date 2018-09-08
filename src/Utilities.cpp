@@ -18,9 +18,7 @@ void Utilities::help(){
             << "<path image sequence> and press \"Enter\"." << "\n"
             << "<output path> and press \"Enter\"." << std::endl
             << "<focal length> and press \"Enter\"." << std::endl
-            << "==============================================="<< std::endl
-            << "Once the 3D Mapping finish, enter the image pattern path and press \"Enter\"." << std::endl
-            << "<reference measure> and press \"Enter\"." << reset << std::endl;
+            << "===============================================" << reset << std::endl;
 }
 
 bool Utilities::run_openMVG(){
@@ -46,7 +44,7 @@ bool Utilities::run_openMVG(){
       std::cout << "------------------------------------------" << "\n" << "->" << std::flush;
       std::getline(std::cin, project_name);
       if(project_name.empty()){
-        ROS_ERROR("Nothing entered.");
+        PCL_ERROR("Nothing entered.");
         project_name.clear();
         continue;
       }
@@ -58,7 +56,7 @@ bool Utilities::run_openMVG(){
       std::cout << "->" << std::flush;
       std::getline(std::cin, answer);
       if(answer.empty()){
-        ROS_ERROR("Nothing entered.");
+        PCL_ERROR("Nothing entered.");
         answer.clear();
         continue;
       }
@@ -71,7 +69,7 @@ bool Utilities::run_openMVG(){
         answer.clear();
         continue;
       }else{
-        std::cout << red << answer << " is not a valid answer." << reset << std::endl;
+        PCL_ERROR("%s %s",answer.c_str(),"is not a valid answer.\n");
         nameOk = false;
         answer.clear();
         continue;
@@ -94,7 +92,7 @@ bool Utilities::run_openMVG(){
       std::cout << "------------------------------------------" << "\n" << "->" << std::flush;
       std::getline(std::cin, input_dir);
       if(input_dir.empty()){
-        ROS_ERROR("Nothing entered.");
+        PCL_ERROR("Nothing entered.");
         input_dir.clear();
         continue;
       }
@@ -150,7 +148,7 @@ bool Utilities::run_openMVG(){
       std::cout << "------------------------------------------" << "\n" << "->" << std::flush;
       std::getline(std::cin, output_dir);
       if(output_dir.empty()){
-        ROS_ERROR("Nothing entered.");
+        PCL_ERROR("Nothing entered.");
         output_dir.clear();
         dirOk = false;
         continue;
@@ -250,7 +248,7 @@ bool Utilities::run_openMVG(){
 */
   auto end = std::chrono::high_resolution_clock::now();
   auto difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-  ROS_INFO("3D mapping time: %li %s",difference,"seconds");
+  PCL_INFO("3D mapping time: %li %s",difference,"seconds");
 
   return true;
 }
@@ -302,23 +300,30 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
 
   cv::Mat_<double> intrinsic;
   std::vector<cv::Matx34d> cameras_poses;
-  //std::vector<Point3DInMap> cloud;
 
   std::cout << blue << "\nGetting data from sfm_data.xml..." << reset << std::endl;
   std::cout << "------------------------------------------" << std::endl;
 
-  bool success = Utilities::loadSFM_XML_Data(Map3D,intrinsic,cameras_poses);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB>());
+
+  bool success = Utilities::loadSFM_XML_Data(cloud_filtered,intrinsic,cameras_poses);
   if(not success){
-    std::cout << "Could not get a scale factor." << std::endl;
+    PCL_ERROR("Could not get a scale factor.");
     return false;
   }
 
-  std::cout << "\nImages: " << images_filenames.size() << std::endl;
-  std::cout << "Cloud xml: " << Map3D->points.size() << " pts" << std::endl;
-  std::cout << "Camera Poses: " << cameras_poses.size() << " cameras" << std::endl;
+  // Create the filtering object
+  pcl::PassThrough<pcl::PointXYZRGB> pass;
+  pass.setInputCloud(cloud_filtered);
+  pass.setFilterFieldName("z");
+  pass.setFilterLimits(-900, 0);
+  pass.setFilterLimitsNegative(true);
+  pass.filter(*Map3D);
+  
+  PCL_INFO("Images: %lu",images_filenames.size());
+  PCL_INFO("Cloud xml: %lu %s",Map3D->points.size(),"pts");
+  PCL_INFO("Camera Poses: %lu %s",cameras_poses.size(),"cameras");
   std::cout << "Intrinsic camera:\n" << intrinsic << std::endl;
-
-  //fromPoint3DToPCLCloud(cloud,Map3D);
 
   std::cout << blue << "\nGetting scale factor..." << reset << std::endl;
   std::cout << "------------------------------------------";
@@ -349,11 +354,13 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
 
   W_reference = n;
   std::cout <<yellow << "Using world reference:" << reset << W_reference << "\n" << std::endl;
-  std::cout << "Choose a image pattern reference" << std::endl;
+  PCL_INFO("Choose a image pattern reference");
 
   double image_pixel_reference=-1;
   int numImg = -1;
   cv::Point2d img_p1,img_p2;
+  std::vector<cv::Point2d> pts_for_circle1;
+  std::vector<cv::Point2d> pts_for_circle2;
 
   while(image_pixel_reference<=0){
 
@@ -363,8 +370,8 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
 
     int inter = std::round(images_filenames.size()/4);
     int cont =0;
-    /*
-
+    //----------------------------------------------------
+/*
     for(int i=0;i<images_filenames.size();i++){
 
       std::string images_path = input_dir;
@@ -419,11 +426,13 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
         if(bestImage){
           break;
         }
-      }
-    }
 
-    cv::destroyAllWindows();
+      }
+
+    }
 */
+    cv::destroyAllWindows();
+//----------------------------------------------------
     while(numImg<0){
 
       std::cout << yellow << "\nWhich one?" << "\n" << reset << "------------------------------------------\n"
@@ -433,8 +442,7 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
 
       if(std::cin.fail()){
         std::getline(std::cin, imageChoose);
-        std::cout << red << "I am sorry, but '" << numImg << "' is not a number" << reset
-                  << std::endl;
+        PCL_ERROR("I am sorry, but '%ui %s",numImg,"' is not a number");
         imageChoose.clear();
         numImg = -1;
         std::cin.clear();
@@ -466,6 +474,10 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
       images_path += "/";
       images_path += images_filenames.at(numImg);
 
+      //------------------------------------------------------
+      // CIRCLE PATTERN DETECTION
+      //------------------------------------------------------
+
       cv::Mat img = cv::imread(images_path.c_str(),1);
       if(!img.data ){
         std::cout << red <<"Could not open or find the image" << reset << std::endl;
@@ -486,14 +498,14 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
       std::cout << "Detecting circles in image..." << std::endl;
       cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT,1, gray.rows/16, 200, 100, 0, 150);
 
-      cv::Point2d pattern1,pattern2;
+      cv::Point2d center_pattern1,center_pattern2;
       int radius = 0;
 
       for(size_t i = 0; i < circles.size(); i++ ){
 
         cv::Point2d center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-        pattern2 = pattern1;
-        pattern1 = cv::Point2d(center.x,center.y);
+        center_pattern2 = center_pattern1;
+        center_pattern1 = cv::Point2d(center.x,center.y);
         radius = cvRound(circles[i][2]);
         // circle center
         cv::circle(img_copy, center, 1, cv::Scalar(0,255,0),10);
@@ -501,15 +513,15 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
         cv::circle(img_copy, center, radius,cv::Scalar(0,255,0),30);
       }
 
-      double pixel_length = cv::norm(pattern1 - pattern2);
+      double pixel_length = cv::norm(center_pattern1 - center_pattern2);
 
       std::cout << "\nNum of circles detect:" << circles.size() << std::endl;
-      std::cout << "Circle 1 center:" << pattern1 << std::endl;
-      std::cout << "Circle 2 center:" << pattern2 << std::endl;
+      std::cout << "Circle 1 center:" << center_pattern1 << std::endl;
+      std::cout << "Circle 2 center:" << center_pattern2 << std::endl;
 
       std::cout << "Image #:"<< numImg << " Num rows:" << gray.rows << " Num cols:" << gray.cols << std::endl;
       std::cout << "Pixels length:" << pixel_length << std::endl;
-      cv::line(img_copy,pattern1,pattern2,cv::Scalar(0,255,0),30);
+      cv::line(img_copy,center_pattern1,center_pattern2,cv::Scalar(0,255,0),30);
 
       Display* d = XOpenDisplay(NULL);
       Screen*  s = DefaultScreenOfDisplay(d);
@@ -538,8 +550,82 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
         }
 
         if(answer == "yes"){
-          img_p1 = pattern1;
-          img_p2 = pattern2;
+
+            std::string image_pattern_path;
+            image_pattern_path += images_path;
+            std::cout << "antes del pop back:" << image_pattern_path << std::endl;
+            std::string backG = images_filenames.at(0);
+            std::cout << "string reference:" << backG << std::endl;
+            for(int i=0;i<backG.size();i++){
+              int j=i;
+              image_pattern_path.pop_back();
+            }
+            std::cout << "despues del pop back:" << image_pattern_path << std::endl;
+            std::string img_feat_filename;
+            for(int i=0;i<images_filenames.size();i++){
+              std::string comp = image_pattern_path;
+              comp += images_filenames.at(i);
+              if(comp == images_path){
+                std::cout << "Found:" << comp << std::endl;
+                img_feat_filename = images_filenames.at(i);
+                break;
+              }
+            }
+            img_feat_filename.pop_back();
+            img_feat_filename.pop_back();
+            img_feat_filename.pop_back();
+            std::string feature_path;
+            feature_path += output_dir;
+            feature_path += "/matches/";
+            feature_path += img_feat_filename;
+            feature_path += "feat";
+            float x_, y_,s,orientation;
+            std::vector<cv::Point2d> image_points;
+            std::ifstream file(feature_path.c_str());
+            if(!file.is_open()){
+              std::cout << red << "Error: Could not find "<< feature_path << reset << std::endl;
+              feature_path.clear();
+              return false;
+            }
+            while(file >> x_ >> y_ >> s >> orientation){
+                image_points.push_back(cv::Point2f(x_,y_));
+            }
+            std::cout << yellow << "\nFeature selected:" << feature_path << std::endl;
+            std::cout << "Image points: " << image_points.size() << " points" << reset << std::endl;
+
+
+            for(size_t i=0;i<image_points.size();i++){
+
+              cv::Point2d pt = image_points.at(i);
+              double error = cv::norm(cv::Mat(pt),cv::Mat(center_pattern1));
+              if(error < 100){
+                pts_for_circle1.push_back(pt);
+              }else{
+                continue;
+              }
+            }
+
+            pts_for_circle1.push_back(center_pattern1);
+
+            for(size_t i=0;i<image_points.size();i++){
+
+              cv::Point2d pt = image_points.at(i);
+              double error = cv::norm(pt - center_pattern2);
+              if(error < 100){
+                pts_for_circle2.push_back(pt);
+              }else{
+                continue;
+              }
+
+            }
+
+            pts_for_circle2.push_back(center_pattern2);
+
+
+            std::cout << "pts for cicle 1:" << pts_for_circle1.size()<< std::endl;
+            std::cout << "pts for cicle 2:" << pts_for_circle2.size()<< std::endl;
+
+
           foundBestImage = true;
           break;
         }else if(answer == "no"){
@@ -582,7 +668,7 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
     }
   }
 
-  ROS_INFO("Id pose: %i",numImg);
+  PCL_INFO("Id pose: %i",numImg);
   std::cout << "Filename: " << images_filenames.at(numImg) << std::endl;
   std::cout << "Camera pose:\n" << cameras_poses[numImg] << std::endl;
 
@@ -609,115 +695,90 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
   }
 
   cv::projectPoints(points3d,rvec,tvec,intrinsic,cv::Mat(),projected_points);
+  std::cout << "Points projected:" << projected_points.size()<< std::endl;
   double error;
   pcl::PointXYZ ptt1,pt2;
 
-  std::map<double,std::pair<cv::Point2d,cv::Point3d>> p1_map;
+  std::map<double,std::pair<std::pair<cv::Point2d,cv::Point2d>,cv::Point3d>> p1_map;
+
+  std::cout << "check if point reprojection error is small enough..." <<  std::endl;
+
+
+  std::string dendrometric_results = output_dir;
+  dendrometric_results += "/pts_for_circle1.txt";
+
+  ofstream cir(dendrometric_results.c_str());
+
+  std::string dendrometric_results2 = output_dir;
+  dendrometric_results2 += "/pts_for_circle2.txt";
+
+  ofstream cir2(dendrometric_results2.c_str());
 
   //check if point reprojection error is small enough
-  for(int i=0;i<points3d.size();i++){
-    error = cv::norm(projected_points[i] - img_p1);
-    p1_map[error] = std::make_pair(projected_points[i],points3d.at(i));
+  for(std::vector<cv::Point2d>::iterator it = pts_for_circle1.begin();it!=pts_for_circle1.end();++it){
+
+    cv::Point2d pt2d_circle1 = cv::Point2d(it->x,it->y);
+    cir << "ptss:" << pt2d_circle1 << std::endl;
+
+    for(int i=0;i<projected_points.size();i++){
+
+      error = cv::norm(projected_points.at(i) - pt2d_circle1);
+      p1_map[error] = std::make_pair(std::make_pair(pt2d_circle1,projected_points[i]),points3d.at(i));
+    }
+  }
+  cir.close();
+
+  std::map<double,std::pair<std::pair<cv::Point2d,cv::Point2d>,cv::Point3d>> p2_map;
+
+  for(std::vector<cv::Point2d>::iterator it = pts_for_circle2.begin();it!=pts_for_circle2.end();++it){
+
+    cv::Point2d pt2d_circle2 = cv::Point2d(it->x,it->y);
+     cir2 << "ptss:" << pt2d_circle2 << std::endl;
+
+    for(int i=0;i<projected_points.size();i++){
+
+      error = cv::norm(projected_points.at(i) - pt2d_circle2);
+      p2_map[error] = std::make_pair(std::make_pair(pt2d_circle2,projected_points.at(i)),points3d.at(i));
+
+    }
   }
 
-  std::map<double,std::pair<cv::Point2d,cv::Point3d>> p2_map;
 
+/*
   //check if point reprojection error is small enough
   for(int i=0;i<points3d.size();i++){
     error = cv::norm(projected_points[i] - img_p2);
     p2_map[error] = std::make_pair(projected_points[i],points3d.at(i));
   }
-
-  std::map<double,std::pair<cv::Point2d,cv::Point3d>>::iterator it1 = p1_map.begin();
+*/
+  std::map<double,std::pair<std::pair<cv::Point2d,cv::Point2d>,cv::Point3d>>::iterator it1 = p1_map.begin();
   ptt1 = pcl::PointXYZ(it1->second.second.x,it1->second.second.y,it1->second.second.z);
-  std::cout << "\nProjected point1:" << it1->second.first << " original point1:" << img_p1 << std::endl;
+  std::cout << "\nOriginal point1:" << it1->second.first.first << " projected point1:" << it1->second.first.second
+            << std::endl;
   std::cout << "Error: " << it1->first << std::endl;
   std::cout << "Point3D:" << it1->second.second << std::endl;
 
-  std::map<double,std::pair<cv::Point2d,cv::Point3d>>::iterator it2 = p2_map.begin();
+  std::map<double,std::pair<std::pair<cv::Point2d,cv::Point2d>,cv::Point3d>>::iterator it2 = p2_map.begin();
   pt2 = pcl::PointXYZ(it2->second.second.x,it2->second.second.y,it2->second.second.z);
-  std::cout << "\nProjected point2:" << it2->second.first << " original point2:" << img_p2 << std::endl;
+  std::cout << "\nOriginal point2:" << it2->second.first.first << " projected point2:" << it2->second.first.second
+            << std::endl;
   std::cout << "Error: " << it2->first << std::endl;
   std::cout << "Point3D:" << it2->second.second << std::endl;
+  
+  ptt1.z = pt2.z;
+  ptt1.x = pt2.x;
 
-  vtkSmartPointer<vtkPolyData> cloudVTK = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkPoints> pts = vtkSmartPointer<vtkPoints>::New();
-
-  for(int n=0;n<points3d.size();n++){
-    cv::Point3d p = points3d.at(n);
-    pts->InsertNextPoint(p.x,p.y,p.z);
-  }
-  cloudVTK->SetPoints(pts);
-
-  vtkSmartPointer<vtkVertexGlyphFilter> vertexFilter = vtkSmartPointer<vtkVertexGlyphFilter>::New();
-  vertexFilter->SetInputData(cloudVTK);
-  vertexFilter->Update();
-
-  vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
-  polydata->ShallowCopy(vertexFilter->GetOutput());
-
-  // Create two points, P0 and P1
-  double p0[3] = {ptt1.x, ptt1.y, ptt1.z};
-  double p1[3] = {pt2.x, pt2.y, pt2.z};
-
-  vtkSmartPointer<vtkLineSource> lineSource = vtkSmartPointer<vtkLineSource>::New();
-  lineSource->SetPoint1(p0);
-  lineSource->SetPoint2(p1);
-  lineSource->Update();
-
-  // Create a mapper and actor
-  vtkSmartPointer<vtkPolyDataMapper> mapper1 = vtkSmartPointer<vtkPolyDataMapper>::New();
-  mapper1->SetInputData(polydata);
-
-  vtkSmartPointer<vtkActor> actor1 = vtkSmartPointer<vtkActor>::New();
-  actor1->SetMapper(mapper1);
-  actor1->GetProperty()->SetColor(1.0, 1.0, 1.0);
-  actor1->GetProperty()->SetPointSize(1);
-
-  // Create a mapper and actor
-  vtkSmartPointer<vtkPolyDataMapper> mapper2 = vtkSmartPointer<vtkPolyDataMapper>::New();
-  mapper2->SetInputConnection(lineSource->GetOutputPort());
-
-  vtkSmartPointer<vtkActor> actor2 = vtkSmartPointer<vtkActor>::New();
-  actor2->SetMapper(mapper2);
-  actor2->GetProperty()->SetColor(0.0, 1.0, 0.0);
-  actor2->GetProperty()->SetPointSize(1);
-
-  // Create a renderer, render window, and interactor
-  vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
-  renderer->SetBackground(0.0, 0.0, 0.0);
-  // Zoom in a little by accessing the camera and invoking its "Zoom" method.
-  renderer->ResetCamera();
-  vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
-
-  renderWindow->SetSize(800, 600);
-  renderWindow->AddRenderer(renderer);
-
-  vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
-  renderWindowInteractor->SetRenderWindow(renderWindow);
-
-  // Add the actor to the scene
-  renderer->AddActor(actor1);
-  renderer->AddActor(actor2);
-
-  // Render and interact
-  renderWindow->Render();
-  renderWindow->SetWindowName("VISUALIZER");
-
-  vtkSmartPointer<vtkInteractorStyleTrackballCamera> style = vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New(); //like paraview
-  renderWindowInteractor->SetInteractorStyle(style);
-  std::cout << "Press [q] to continue" << std::endl;
-  renderWindowInteractor->Start();
+  vtkVisualizer(Map3D,ptt1,pt2);
 
   double Ref_PCL = pcl::geometry::distance(ptt1,pt2);
   scale_factor = W_reference/Ref_PCL;
-  ROS_INFO("\nModel reference: %f",Ref_PCL);
-  ROS_INFO("scale_factor: %f",scale_factor);
+  PCL_INFO("\nModel reference: %f",Ref_PCL);
+  PCL_INFO("scale_factor: %f",scale_factor);
 
   auto end = std::chrono::high_resolution_clock::now();
   auto difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-  ROS_INFO("Scale factor time: %lu %s",difference,"seconds");
-
+  PCL_INFO("Scale factor time: %lu %s",difference,"seconds");
+/*
   pcl::PointCloud<pcl::PointXYZ>::Ptr invY (new pcl::PointCloud<pcl::PointXYZ>());
 
   for(int i=0;i<Map3D->points.size();i++){
@@ -737,7 +798,7 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
     Map3D->points[i].y=invY->points[i].y;
     Map3D->points[i].z=invY->points[i].z;
   }
-
+*/
   return true;
 
 }
@@ -1026,7 +1087,7 @@ bool Utilities::loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& pts3d/*
      */
 
   }else{
-    ROS_ERROR("Error: root of xml could not found. Must be: <cereal>");
+    PCL_ERROR("Error: root of xml could not found. Must be: <cereal>");
     return false;
   }
 
@@ -1063,15 +1124,14 @@ bool Utilities::createPMVS_Files(){
   int dont_care = std::system(command2.c_str());
 
   if(dont_care > 0){
-   ROS_ERROR("Failed. openMVG_main_openMVG2PMVS not found");
+   PCL_ERROR("Failed. openMVG_main_openMVG2PMVS not found");
    return false;
   }
 
   return true;
-
 }
 
-bool Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_cloud2){
+bool Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_cloud4){
 
   std::cout << "\n************************************************" << std::endl;
   std::cout << "              DENSIFICATION                      " << std::endl;
@@ -1097,148 +1157,90 @@ bool Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
   cloudPLY += "/PMVS/models/pmvs_options.txt.ply";
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr output_cloud (new pcl::PointCloud<pcl::PointXYZRGB>());
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr output_cloud2 (new pcl::PointCloud<pcl::PointXYZRGB>());
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr output_cloud3 (new pcl::PointCloud<pcl::PointXYZRGB>());
 
-  pcl::PLYReader inputPlyCloud;
-  inputPlyCloud.read(cloudPLY,*output_cloud);
-
-  pcl::PointCloud<pcl::PointXYZ>::Ptr invY (new pcl::PointCloud<pcl::PointXYZ>());
-
-
-
-  for(int i=0;i<output_cloud->points.size();i++){
-    pcl::PointXYZ pt;
-    pt.x = output_cloud->points[i].x;
-    pt.y = output_cloud->points[i].y*(-1);
-    pt.z = output_cloud->points[i].z;
-    invY->points.push_back(pt);
-  }
-
-  invY->width = invY->points.size ();
-  invY->height = 1;
-  invY->is_dense = true;
-
-  for(int i=0;i<invY->points.size();i++){
-    output_cloud->points[i].x=invY->points[i].x;
-    output_cloud->points[i].y=invY->points[i].y;
-    output_cloud->points[i].z=invY->points[i].z;
-  }
-
-  std::cout << "yeah0" << std::endl;
+  pcl::io::loadPLYFile(cloudPLY.c_str(),*output_cloud);
 
   // Find the planar coefficients for floor plane
-       pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
-       pcl::PointIndices::Ptr floor_inliers (new pcl::PointIndices);
-       pcl::SACSegmentation<pcl::PointXYZRGB> seg;
-       seg.setOptimizeCoefficients (true);
-       seg.setModelType (pcl::SACMODEL_PLANE);
-       seg.setMethodType (pcl::SAC_RANSAC);
-       seg.setDistanceThreshold (0.01);
-       seg.setInputCloud (output_cloud);
-       seg.segment (*floor_inliers, *coefficients);
-       std::cerr << "Floor Plane Model coefficients: " << coefficients->values[0] << " "
-                                         << coefficients->values[1] << " "
-                                         << coefficients->values[2] << " "
-                                         << coefficients->values[3] << std::endl;
+  pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+  pcl::PointIndices::Ptr floor_inliers (new pcl::PointIndices);
+  pcl::SACSegmentation<pcl::PointXYZRGB> seg;
+  seg.setOptimizeCoefficients (true);
+  seg.setModelType (pcl::SACMODEL_PLANE);
+  seg.setMethodType (pcl::SAC_RANSAC);
+  seg.setDistanceThreshold (0.01);
+  seg.setInputCloud (output_cloud);
+  seg.segment (*floor_inliers, *coefficients);
+  std::cout << "Floor Plane Model coefficients: " << coefficients->values[0] << " "
+            << coefficients->values[1] << " "
+            << coefficients->values[2] << " "
+            << coefficients->values[3] << std::endl;
 
-       Eigen::Matrix<float, 1, 3> floor_plane_normal_vector, xy_plane_normal_vector, rotation_vector;
+  Eigen::Matrix<float, 1, 3> floor_plane_normal_vector, xy_plane_normal_vector, rotation_vector;
+
+  floor_plane_normal_vector[0] = coefficients->values[0];
+  floor_plane_normal_vector[1] = coefficients->values[1];
+  floor_plane_normal_vector[2] = coefficients->values[2];
+
+  std::cout << floor_plane_normal_vector << std::endl;
+
+  xy_plane_normal_vector[0] = 0.0;
+  xy_plane_normal_vector[1] = 0.0;
+  xy_plane_normal_vector[2] = 1.0;
+
+  std::cout << xy_plane_normal_vector << std::endl;
+
+  rotation_vector = xy_plane_normal_vector.cross(floor_plane_normal_vector);
+  std::cout << "Rotation Vector: "<< rotation_vector << std::endl;
+
+  float theta = -atan2(rotation_vector.norm(), xy_plane_normal_vector.dot(floor_plane_normal_vector));
+
+  Eigen::Affine3f transform_2 = Eigen::Affine3f::Identity();
+  transform_2.rotate (Eigen::AngleAxisf (theta, rotation_vector));
+  std::cout << "Transformation matrix: " << std::endl << transform_2.matrix() << std::endl;
+  pcl::transformPointCloud (*output_cloud, *output_cloud2, transform_2);
+
+  //Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
+  Eigen::Affine3f transform_1 = Eigen::Affine3f::Identity();
 
 
-       floor_plane_normal_vector[0] = coefficients->values[0];
-       floor_plane_normal_vector[1] = coefficients->values[1];
-       floor_plane_normal_vector[2] = coefficients->values[2];
+  // Define a rotation matrix (see https://en.wikipedia.org/wiki/Rotation_matrix)
+  float betha = M_PI; // The angle of rotation in radians
+  transform_1.rotate (Eigen::AngleAxisf(betha, Eigen::Vector3f::UnitY()));
 
-       std::cout << floor_plane_normal_vector << std::endl;
+  std::cout << "Executing the transformation..." << std::endl;
+  pcl::transformPointCloud (*output_cloud2, *output_cloud3, transform_1);
 
-       xy_plane_normal_vector[0] = 0.0;
-       xy_plane_normal_vector[1] = 0.0;
-       xy_plane_normal_vector[2] = 1.0;
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB>());
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered2 (new pcl::PointCloud<pcl::PointXYZRGB>());
 
-       std::cout << xy_plane_normal_vector << std::endl;
-
-       rotation_vector = xy_plane_normal_vector.cross (floor_plane_normal_vector);
-       std::cout << "Rotation Vector: "<< rotation_vector << std::endl;
-
-       //Eigen::Vector3f rotation_vector = xy_plane_normal_vector.cross(floor_plane_normal_vector);
-       float theta = -atan2(rotation_vector.norm(), xy_plane_normal_vector.dot(floor_plane_normal_vector));
-
-       //float theta = acos(floor_plane_normal_vector.dot(xy_plane_normal_vector)/sqrt( pow(coefficients->values[0],2)+ pow(coefficients->values[1],2) + pow(coefficients->values[2],2)));
+  Eigen::Affine3f transform_3 = Eigen::Affine3f::Identity();
+  float ghama = M_PI/2; // The angle of rotation in radians
+  transform_3.rotate (Eigen::AngleAxisf(ghama, Eigen::Vector3f::UnitX()));
+  pcl::transformPointCloud (*output_cloud3, *cloud_filtered, transform_3);
 
 
-   Eigen::Affine3f transform_2 = Eigen::Affine3f::Identity();
-   //transform_2.translation() << 0, 0, 30;
-   transform_2.rotate (Eigen::AngleAxisf (theta, rotation_vector));
-   std::cout << "Transformation matrix: " << std::endl << transform_2.matrix() << std::endl;
-   pcl::transformPointCloud (*output_cloud, *output_cloud2, transform_2);
+  // Create the filtering object
+  pcl::PassThrough<pcl::PointXYZRGB> pass;
+  pass.setInputCloud(cloud_filtered);
+  pass.setFilterFieldName("z");
+  pass.setFilterLimits(-1000, 0);
+  pass.setFilterLimitsNegative(true);
+  pass.filter(*output_cloud4);
 /*
-  pcl::PointXYZ p1(0,1,0);
-  pcl::PointXYZRGB p2;
-  p2 = output_cloud->points[0];
-
-  std::cout << "yeah1" << std::endl;
-
-  Eigen::Vector3f pt1, pt2;
-  pt1 = p1.getVector3fMap();
-  //pt1[0] = p1.x;
-  //pt1[1] = p1.y;
-  //pt1[2] = p1.z;
-  //pcl::compute3DCentroid(*output_cloud,pt2);
-  pt2 = p2.getVector3fMap();
-  //pt2[0] = p2.x;
-  //pt2[1] = p2.y;
-  //pt2[2] = p2.z;
-
-  std::cout << "yeah2" << std::endl;
-
-  double angle1 = pcl::getAngle3D(pt1,pt2);
-  pcl::normAngle(angle1);
-  double angle = pcl::rad2deg(angle1);
-  std::cout << "angle" << angle << std::endl;
-  Eigen::MatrixXf rot_matrix(4,4);
-  Eigen::Affine3f trans;
-
-  pcl::getTransFromUnitVectorsZY(pt1,pt2,trans);
-
-  std::cout << "yeah3" << std::endl;
- rot_matrix << trans.matrix();
-/*
-  rot_matrix << 0,  0,   0,    0,
-                0,  cos(angle),   -sin(angle),    0,
-                0,  sin(angle),  cos(angle) ,    0,
-                0,     0,    0,    1;
+   // Create the filtering object
+   pcl::PassThrough<pcl::PointXYZRGB> pass2;
+   pass2.setInputCloud(cloud_filtered2);
+   pass2.setFilterFieldName("x");
+   pass2.setFilterLimits(-500, 500);
+   pass2.setFilterLimitsNegative(false);
+   pass2.filter(*output_cloud4);
 */
- std::cout << "Executing the transformation..." << std::endl;
-// pcl::transformPointCloud(*output_cloud, *output_cloud2, rot_matrix);
-/*
- boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("VISUALIZER",true));
-
- viewer->addPointCloud(output_cloud2,"cloud");
-
-
- viewer->setPosition(0,0);
- viewer->addCoordinateSystem();
-
- pcl::PointXYZ p11, p22, p33;
- p11.getArray3fMap() << 1, 0, 0;
- p22.getArray3fMap() << 0, 1, 0;
- p33.getArray3fMap() << 0,0.1,1;
-
- viewer->addText3D("x", p11, 0.2, 1, 0, 0, "x_");
- viewer->addText3D("y", p22, 0.2, 0, 1, 0, "y_");
- viewer->addText3D ("z", p33, 0.2, 0, 0, 1, "z_");
-
- viewer->initCameraParameters();
- viewer->resetCamera();
-
- std::cout << "Press [q] to exit" << std::endl;
-
- while(!viewer->wasStopped ()) {
-        viewer->spin();
- }
- */
 
   std::cout << "Densify proccess --> [OK]" << std::endl;
   std::cout << "Saving dense 3d mapping file with prefix --> MAP3D_dense.pcd" << std::endl;
-  std::cout << "Dense points:" << output_cloud2->points.size() << std::endl;
+  std::cout << "Dense points:" << output_cloud4->points.size() << std::endl;
 
   std::string prefix = output_dir;
   prefix += "/3D_Mapping/";
@@ -1248,25 +1250,25 @@ bool Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
   std::string prefix2 = prefix;
   prefix2 += "MAP3D_dense.ply";
 
-  pcl::io::savePCDFileBinary(prefix1.c_str(), *output_cloud2);
-  pcl::io::savePLYFileBinary(prefix2.c_str(), *output_cloud2);
+  pcl::io::savePCDFileBinary(prefix1.c_str(), *output_cloud4);
+  pcl::io::savePLYFileBinary(prefix2.c_str(), *output_cloud4);
 
   return true;
 
   std::cout << "\n------------------------------------------" << std::endl; 
 }
 
-void Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
+bool Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
                                pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,const double scale){
 
   std::cout << "\n************************************************" << std::endl;
   std::cout << "              UNIFORM SCALING                      " << std::endl;
   std::cout << "************************************************" << std::endl;
 
-  std::cout << "Scaling pointcloud to real measurements..." << std::endl;
+  PCL_INFO("Scaling pointcloud to real measurements...\n");
   if(cloud->points.size() <= 0){
-    std::cout << red << "Input point cloud has no data!" << reset << std::endl;
-    return std::exit(-1);
+    PCL_ERROR("Input point cloud has no data!\n");
+    return false;
   }
 
   Eigen::MatrixXf scale_matrix(4,4);
@@ -1280,7 +1282,7 @@ void Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
 
   std::cout << "Here is the matrix scale factor:\n" << scale_matrix << std::endl;
 
-  std::cout << "Executing the transformation..." << std::endl;
+  PCL_INFO("Executing the transformation...");
   pcl::transformPointCloud(*cloud, *cloud_scaled, scale_matrix);  
 
   std::string prefix1 = output_dir;
@@ -1296,12 +1298,245 @@ void Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   prefix2 += "/";
   prefix2 += "MAP3D_scaled.ply";
 
-  std::cout << "Saved in:" << prefix1 << " and "<< prefix2 << std::endl;
+  PCL_INFO("Saved in: %s %s %s",prefix1.c_str(),"and",prefix2.c_str());
 
   pcl::io::savePCDFileBinary(prefix1.c_str(), *cloud_scaled);
   pcl::io::savePLYFileBinary(prefix2.c_str(), *cloud_scaled); 
 
+  if(cloud_scaled->points.size()<=0){
+    PCL_ERROR("Could not scaled point cloud.");
+    return false;
+  }
+
+  return true;
 }
+
+bool Utilities::alignCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
+                           pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_align){
+                           
+  PCL_INFO("Aligning point cloud...");
+  if(cloud->points.size() <= 0){
+    PCL_ERROR("Input point cloud has no data!");
+    return false;
+  }
+
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_transform1 (new pcl::PointCloud<pcl::PointXYZRGB>());
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_transform2 (new pcl::PointCloud<pcl::PointXYZRGB>());
+
+  // Find the planar coefficients for floor plane
+  pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+  pcl::PointIndices::Ptr floor_inliers (new pcl::PointIndices);
+  pcl::SACSegmentation<pcl::PointXYZRGB> seg;
+  seg.setOptimizeCoefficients(true);
+  seg.setModelType(pcl::SACMODEL_PLANE);
+  seg.setMethodType(pcl::SAC_RANSAC);
+  seg.setDistanceThreshold(1);
+  seg.setInputCloud(cloud);
+  seg.segment(*floor_inliers, *coefficients);
+  PCL_INFO("Floor Plane Model coefficients: %f %f %f",coefficients->values[0],coefficients->values[1],
+                                                      coefficients->values[2],coefficients->values[3]);
+  
+  Eigen::Matrix<float, 1, 3> floor_plane_normal_vector, xy_plane_normal_vector, rotation_vector;
+  Eigen::Matrix<float, 4, 1> centroid_original,centroid_new,centroid_relative;
+  size_t success =  pcl::compute3DCentroid(*cloud,centroid_original);
+
+  floor_plane_normal_vector[0] = coefficients->values[0];
+  floor_plane_normal_vector[1] = coefficients->values[1];
+  floor_plane_normal_vector[2] = coefficients->values[2];
+
+  std::cout << floor_plane_normal_vector << std::endl;
+
+  xy_plane_normal_vector[0] = 0.0;
+  xy_plane_normal_vector[1] = 0.0;
+  xy_plane_normal_vector[2] = 1.0;
+
+  std::cout << xy_plane_normal_vector << std::endl;
+
+  rotation_vector = xy_plane_normal_vector.cross(floor_plane_normal_vector);
+  std::cout << "Rotation Vector: "<< rotation_vector << std::endl;
+
+  float theta = -atan2(rotation_vector.norm(), xy_plane_normal_vector.dot(floor_plane_normal_vector));
+
+  //-------------------------------
+  //TRANSFORM 1: X-Y Plane Z-depth
+  //-------------------------------
+  Eigen::Affine3f transform_1 = Eigen::Affine3f::Identity();
+  transform_1.rotate(Eigen::AngleAxisf (theta, rotation_vector));
+  std::cout << "Transformation matrix: " << "\n" << transform_1.matrix() << std::endl;
+  pcl::transformPointCloud(*cloud, *cloud_transform1, transform_1);
+
+  //-------------------------------
+  //TRANSFORM 2: Rotation in X (90°)
+  //-------------------------------
+  Eigen::Affine3f transform_2 = Eigen::Affine3f::Identity();
+  float betha = M_PI/2; // The angle of rotation in radians
+  transform_2.rotate(Eigen::AngleAxisf(betha, Eigen::Vector3f::UnitX()));
+
+  std::cout << "Executing the transformation..." << std::endl;
+  pcl::transformPointCloud (*cloud_transform1, *cloud_transform2, transform_2);
+  success =  pcl::compute3DCentroid(*cloud_transform2,centroid_new);
+
+  //-------------------------------
+  //TRANSFORM 3: Rotation in X (90°)
+  //-------------------------------
+  centroid_relative[0] = centroid_new[0] - centroid_original[0];
+  centroid_relative[1] = centroid_new[1] - centroid_original[1];
+  centroid_relative[2] = centroid_new[2] - centroid_original[2];
+  
+  Eigen::Affine3f transform_3 = Eigen::Affine3f::Identity();
+  transform_3.translation() << centroid_relative[0], centroid_relative[1], centroid_relative[2];
+  pcl::transformPointCloud (*cloud_transform2, *cloud_align, transform_3);
+
+  if(cloud_align->points.size()<=0){
+    PCL_ERROR("Could not align this cloud.");
+    return false;
+  }
+
+  PCL_INFO("Cloud aligned!");
+  return true;
+}
+
+void Utilities::create_mesh(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud,pcl::PolygonMesh &mesh){
+
+  pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> ne;
+  ne.setNumberOfThreads (8);
+  // ne.setInputCloud (cloud_smoothed);
+  ne.setInputCloud (cloud);
+  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ> ());
+  ne.setSearchMethod (tree);
+  ne.setKSearch (10); //20
+  //ne.setRadiusSearch (0.5); // no funciona
+  pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>());
+  ne.compute(*cloud_normals);
+
+  for(std::size_t i = 0; i < cloud_normals->size (); ++i){
+    cloud_normals->points[i].normal_x *= -1;
+    cloud_normals->points[i].normal_y *= -1;
+    cloud_normals->points[i].normal_z *= -1;
+  }
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud_smoothed_normals (new pcl::PointCloud<pcl::PointNormal> ());
+  pcl::concatenateFields (*cloud, *cloud_normals, *cloud_smoothed_normals);//x
+
+  pcl::Poisson<pcl::PointNormal> poisson;
+
+  poisson.setDepth(7);//9
+  poisson.setInputCloud (cloud_smoothed_normals);
+  poisson.setPointWeight(4);//4
+  //poisson.setDegree(5);
+  poisson.setSamplesPerNode(1.5);//1.5
+  poisson.setScale(1.1);//1.1
+  poisson.setIsoDivide(8);//8
+  poisson.setConfidence(1);
+  poisson.setOutputPolygons(true);
+  poisson.setManifold(0);
+  //poisson.setOutputPolygons(0);
+  poisson.setSolverDivide(8);//8
+  pcl::PolygonMesh mesh2;
+  poisson.reconstruct(mesh2);
+
+  pcl::surface::SimplificationRemoveUnusedVertices rem;
+  rem.simplify(mesh2,mesh);
+  
+}
+
+void Utilities::vizualizeMesh(pcl::PolygonMesh &mesh){
+
+  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("MAP3D MESH"));
+  viewer->setBackgroundColor (0, 0, 0);
+  viewer->addPolygonMesh(mesh,"meshes",0);
+  viewer->addCoordinateSystem (1.0);
+  viewer->initCameraParameters ();
+
+  std::cout << "Press q to finish 3D mapping and start segmentation process..." << std::endl;
+  while (!viewer->wasStopped ()){
+      viewer->spin();
+  }
+}
+
+void Utilities::vtkVisualizer(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,pcl::PointXYZ& pt1,pcl::PointXYZ& pt2){
+
+  if(cloud->points.size()<=0){
+    PCL_ERROR("Input point cloud has no data!");
+    return std::exit(-1);
+  }
+
+  vtkSmartPointer<vtkPolyData> cloudVTK = vtkSmartPointer<vtkPolyData>::New();
+  vtkSmartPointer<vtkPoints> pts = vtkSmartPointer<vtkPoints>::New();
+
+  for(int n=0;n<cloud->points.size();n++){
+    pcl::PointXYZRGB pt = cloud->points.at(n);
+    pts->InsertNextPoint(pt.x,pt.y,pt.z);
+  }
+
+  cloudVTK->SetPoints(pts);
+
+  vtkSmartPointer<vtkVertexGlyphFilter> vertexFilter = vtkSmartPointer<vtkVertexGlyphFilter>::New();
+  vertexFilter->SetInputData(cloudVTK);
+  vertexFilter->Update();
+
+  vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+  polydata->ShallowCopy(vertexFilter->GetOutput());
+
+  // Create two points, P0 and P1
+  double p0[3] = {pt1.x, pt1.y, pt1.z};
+  double p1[3] = {pt2.x, pt2.y, pt2.z};
+
+  vtkSmartPointer<vtkLineSource> lineSource = vtkSmartPointer<vtkLineSource>::New();
+  lineSource->SetPoint1(p0);
+  lineSource->SetPoint2(p1);
+  lineSource->Update();
+
+  // Create a mapper and actor
+  vtkSmartPointer<vtkPolyDataMapper> mapper1 = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper1->SetInputData(polydata);
+
+  vtkSmartPointer<vtkActor> actor1 = vtkSmartPointer<vtkActor>::New();
+  actor1->SetMapper(mapper1);
+  actor1->GetProperty()->SetColor(1.0, 1.0, 1.0);
+  actor1->GetProperty()->SetPointSize(1);
+
+  // Create a mapper and actor
+  vtkSmartPointer<vtkPolyDataMapper> mapper2 = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper2->SetInputConnection(lineSource->GetOutputPort());
+
+  vtkSmartPointer<vtkActor> actor2 = vtkSmartPointer<vtkActor>::New();
+  actor2->SetMapper(mapper2);
+  actor2->GetProperty()->SetColor(0.0, 1.0, 0.0);
+  actor2->GetProperty()->SetPointSize(1);
+
+  // Create a renderer, render window, and interactor
+  vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
+  renderer->SetBackground(0.0, 0.0, 0.0);
+  // Zoom in a little by accessing the camera and invoking its "Zoom" method.
+  renderer->ResetCamera();
+  vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
+
+  vtkSmartPointer<vtkAxesActor> axes = vtkSmartPointer<vtkAxesActor>::New();
+
+  renderWindow->SetSize(800, 600);
+  renderWindow->AddRenderer(renderer);
+
+  vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+  renderWindowInteractor->SetRenderWindow(renderWindow);
+
+  // Add the actor to the scene
+
+  renderer->AddActor(axes);
+  renderer->AddActor(actor1);
+  renderer->AddActor(actor2);
+
+  // Render and interact
+  renderWindow->Render();
+  renderWindow->SetWindowName("VTK VISUALIZER");
+
+  vtkSmartPointer<vtkInteractorStyleTrackballCamera> style = vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
+  renderWindowInteractor->SetInteractorStyle(style);
+
+  PCL_INFO("Press [q] to close visualizer");
+  renderWindowInteractor->Start();
+
+}
+
 
 
 
