@@ -61,9 +61,15 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   std::cout << "************************************************" << std::endl;
   std::cout << "              DENDROMETRY ESTIMATION            " << std::endl;
   std::cout << "************************************************" << std::endl;
-/*
-  std::string sal = output_dir;
-  sal += "/cloud_prueba.csv";
+
+  std::string sal = "/home/daniel/catkin_ws/src/iTree3DMap/programs/DBScan_Octrees-master/src/build/Resources/worldCloud15.csv";
+    
+  Eigen::Vector4f centroid1;
+ 
+  pcl::compute3DCentroid(*trunk_cloud,centroid1);
+  std::cout << "centroid trunk cloud:" << centroid1 << std::endl;
+  
+  std::cout << "Creating cloud for DBSCAN in:" << sal << std::endl;
 
   ofstream dbscan(sal.c_str());
   for(pcl::PointCloud<pcl::PointXYZ>::iterator it=crown_cloud->begin();it!=crown_cloud->end(); ++it){
@@ -73,40 +79,88 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
 
   }
   dbscan.close();
-
-  std::string command = "/home/daniel/Downloads/DBSCAN-master/build/bin/dbscan 200 0.5 1";
+  
+  std::cout << "File created." << std::endl;
+  std::string command = "/home/daniel/catkin_ws/src/iTree3DMap/programs/DBScan_Octrees-master/src/build/bin/dbscan ";
+  command += sal;
+  
+  std::cout << "Executing:" << command << std::endl;
 
   int dont_care = std::system(command.c_str());
 
   if(dont_care > 0){
     std::cout << red << "Failed. dbscan not found" << reset << std::endl;
 
+  }  
+
+  
+  std::string numCluster = "/home/daniel/catkin_ws/clusters_number.txt";
+  std::ifstream file(numCluster.c_str());
+      if(!file.is_open()){
+        std::cout << "Error: Could not find " << numCluster << std::endl;        
+        return exit(-1);
+
+      }
+      
+      unsigned int totalClusters;
+      
+       while(file >> totalClusters){
+        std::cout << "getting total clusters:" << totalClusters << std::endl;
+      }
+  file.close();
+  
+  
+  std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> clouds_vector;
+  
+  for(int i=0;i<totalClusters; i++){
+  
+      std::string feature_path="/home/daniel/catkin_ws/cloud_cluster_";
+      feature_path += std::to_string(i);
+      feature_path += ".xyz";  
+      std::cout << "Using file:" << feature_path << std::endl;
+
+      float x_, y_,z_;
+
+      std::ifstream file(feature_path.c_str());
+      if(!file.is_open()){
+        std::cout << "Error: Could not find " << feature_path << std::endl;
+        feature_path.clear();
+        return exit(-1);
+
+      }
+
+      pcl::PointCloud<pcl::PointXYZ>::Ptr crown_cloud_segmented (new pcl::PointCloud<pcl::PointXYZ>());
+      std::string coma1,coma2;
+      while(file >> x_ >> coma1 >> y_ >> coma2 >> z_){
+        pcl::PointXYZ pt = pcl::PointXYZ(x_,y_,z_);
+          crown_cloud_segmented->points.push_back(pt);
+      }
+
+      crown_cloud_segmented->width = crown_cloud_segmented->points.size();
+      crown_cloud_segmented->height = 1;
+      crown_cloud_segmented->is_dense = true;
+      
+      clouds_vector.push_back(crown_cloud_segmented);
+  
   }
+  
+  std::cout << "Crown cloud segmented with DBScan:" << clouds_vector.size() << " clusters" << std::endl;
+  std::map<double,pcl::PointCloud<pcl::PointXYZ>::Ptr> clusters_dbscan_map;
+  
+  pcl::PointXYZ pt1 = pcl::PointXYZ(centroid1[0],centroid1[1],centroid1[2]);
+  
+  
+  
+  
+  
 
-  std::string feature_path;
-  feature_path += output_dir;
-  feature_path += "/cloud_cluster_0.txt";
+  
+  std::string guardar= "/home/daniel/catkin_ws/src/iTree3DMap/programs/DBScan_Octrees-master/src_linux/build/bin/cloud_crown_segmented_DBScan.pcd";
+  
+  
+ // pcl::io::savePCDFileBinary(guardar.c_str(),clouds_vector.at(0));
 
-  float x_, y_,z_;
 
-  std::ifstream file(feature_path.c_str());
-  if(!file.is_open()){
-    ROS_ERROR_STREAM("Error: Could not find "<< feature_path );
-    feature_path.clear();
-
-  }
-
-  pcl::PointCloud<pcl::PointXYZ>::Ptr trunk_cloud (new pcl::PointCloud<pcl::PointXYZ>());
-  while(file >> x_ >> y_ >> z_){
-    pcl::PointXYZ pt = pcl::PointXYZ(x_,y_,z_);
-      trunk_cloud->points.push_back(pt);
-  }
-
-  trunk_cloud->width = trunk_cloud->points.size();
-  trunk_cloud->height = 1;
-  trunk_cloud->is_dense = true;
-
-*/
 
 
   std::string dendrometric_results = output_dir;
@@ -250,6 +304,37 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   std::cout << "MinTH: " << minTH << std::endl;
 
   height_trunk = pcl::geometry::distance(minTH,maxTH);
+  
+  
+  //-------------------------------------------------
+  //-------------------------------------------------
+  
+  
+  for(int i=0;i<clouds_vector.size(); i++){
+   
+  
+      Eigen::Vector4f centroid;
+     
+      pcl::compute3DCentroid(*clouds_vector.at(i),centroid);
+      pcl::PointXYZ pt2 = pcl::PointXYZ(centroid[0],centroid[1],centroid[2]);
+      std::cout << "centroid:" << pt2 << std::endl;
+      
+      
+      double error = pcl::geometry::distance(maxTH,pt2);
+      std::cout << "Error distance centroid trunk-crown:" << error << std::endl;
+      clusters_dbscan_map[error]= clouds_vector.at(i);  
+  
+  }
+  
+  std::map<double,pcl::PointCloud<pcl::PointXYZ>::Ptr>::iterator crown_better_segmented = clusters_dbscan_map.begin();
+  crown_cloud->points.clear();
+  pcl::copyPointCloud(*crown_better_segmented->second,*crown_cloud);
+  
+  
+  
+  //---------------------------------------------
+  //---------------------------------------------
+  
 
   std::cout << blue << "\nEstimating crown features..." << reset << std::endl;
   std::cout << "------------------------------------------" << std::endl;
