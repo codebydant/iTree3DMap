@@ -33,17 +33,16 @@ int main(int argc, char **argv){
   /*************************
   STEP 3: GET SCALE FACTOR
   **************************/
-  double scale;
+  double scale=0;
   std::string output_dir;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr Map3D (new pcl::PointCloud<pcl::PointXYZRGB>());
   success = Utilities::getScaleFactor(Map3D,scale,output_dir);
   if(not success or scale <=0){
-    PCL_WARN("Using scale factor = 120.128");
+    PCL_WARN("Using scale factor = 120.128\n");
     scale = 120.128;
   }
 
-  PCL_INFO("Map3D points: %lu",Map3D->points.size());
-  std::cout << std::endl;
+  std::cout << "\nMap3D points:" << Map3D->points.size() << std::endl;
 
   /*************************
   STEP 4: DENSIFICATION
@@ -58,18 +57,17 @@ int main(int argc, char **argv){
   }
   auto end = std::chrono::high_resolution_clock::now();
   auto difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-  PCL_INFO("Dense map time %li %s", difference, "seconds\n");
+  std::cout << "Dense map time: " << difference << " seconds" << std::endl;
 
   /*************************
   STEP 5: UNIFORM SCALING
   **************************/
-  //scale = 120.28;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_3dMap_scaled (new pcl::PointCloud<pcl::PointXYZRGB>());
   Utilities::uniformScaling(Map3DDense,cloud_3dMap_scaled,scale);
  
   /*************************
   STEP 6: SEGMENTATION
-  **************************/  
+  **************************/
   pcl::PointCloud<pcl::PointXYZ>::Ptr trunk_segmented (new pcl::PointCloud<pcl::PointXYZ>());
   pcl::PointCloud<pcl::PointXYZ>::Ptr tree_segmented (new pcl::PointCloud<pcl::PointXYZ>());
   pcl::PointCloud<pcl::PointXYZ>::Ptr crown_segmented (new pcl::PointCloud<pcl::PointXYZ>());
@@ -78,6 +76,7 @@ int main(int argc, char **argv){
   end = std::chrono::high_resolution_clock::now();
   difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
   std::cout << "Trunk segmentation time: " << difference << " seconds" << std::endl;
+  std::cout << std::endl;
 
   /*************************
   STEP 7: DENDROMETRY MEASUREMENTS
@@ -88,7 +87,7 @@ int main(int argc, char **argv){
   /*************************
   PCL VISUALIZER
   **************************/
-  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("VISUALIZER",true));
+  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("VISUALIZER"));
 
   Display* d = XOpenDisplay(NULL);
   Screen*  s = DefaultScreenOfDisplay(d);
