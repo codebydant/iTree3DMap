@@ -116,7 +116,7 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
 
   double height_trunk,DBH,height_crown,total_height,factor_morfico,crown_volume;
 
-  std::cout << blue << "\nEstimating trunk features..." << reset << std::endl;
+  std::cout << blue << "Estimating trunk features..." << reset << std::endl;
   std::cout << "------------------------------------------" << std::endl;
 
   std::cout << yellow << "\nDBH." << reset << std::endl;
@@ -135,12 +135,12 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   }
 
   if(pts_for_DBH.size()<=0){
-    ROS_ERROR("No points at 1.33m. Using random points!");
+    PCL_ERROR("\nNo points at 1.33m. Using random points!");
     pts_for_DBH.push_back(pcl::PointXYZ(-22.4977,161.408,128.112));
     pts_for_DBH.push_back(pcl::PointXYZ(21.1596,145.483,152.903));
   }
 
-  ROS_INFO("Points between 1.33+/-0.5cm: %lu", pts_for_DBH.size());
+  PCL_INFO("\nPoints between 1.33+/-0.5cm: %lu", pts_for_DBH.size());
 
   feature << "ANALYSIS" << std::endl;
   feature << "Points between 1.33m +/- 0.5cm:" << pts_for_DBH.size() << std::endl;
@@ -165,7 +165,7 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   std::map<double,pcl::PointXYZ>::iterator it2 = std::prev(min_max_DBH_inX.end());
   pcl::PointXYZ maxDBH_inX = it2->second;
 
-  std::cout << "MinDBH in X:" << minDBH_inX.x << std::endl;
+  std::cout << "\nMinDBH in X:" << minDBH_inX.x << std::endl;
   std::cout << "MaxDBH in X:" << maxDBH_inX.x << std::endl;
   
   std::cout << "MinDBH pt3d in X:" << minDBH_inX << std::endl;
@@ -288,8 +288,8 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   std::cout << "------------------------------------------" << std::endl;
 
   total_height = height_crown+height_trunk;
-  ROS_INFO("H1: %f",height_crown);
-  ROS_INFO("H2: %f",height_trunk);
+  PCL_INFO("H1: %f",height_crown);
+  PCL_INFO("\nH2: %f",height_trunk);
 
   std::cout << yellow << "\nCrown volume." << reset << std::endl;
   std::cout << "------------------------------------------" << std::endl;
@@ -308,7 +308,7 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   double DBH_5m=0;
 
   if(pts_for_DBH_5m.size()<=0){
-    ROS_WARN("No points at 5m, using morphic factor = 0.75\n");
+    PCL_WARN("No points at 5m, using morphic factor = 0.75\n");
     factor_morfico = 0.75;
 
   }else{
@@ -316,7 +316,7 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
     pts_for_DBH_5m.push_back(minDBH);
     pts_for_DBH_5m.push_back(maxDBH);
 
-    ROS_INFO("Points between 5.3+/-0.5cm: %lu",pts_for_DBH_5m.size());
+    PCL_INFO("\nPoints between 5.3+/-0.5cm: %lu",pts_for_DBH_5m.size());
     std::map<double,pcl::PointXYZ> min_max_DBH_5m;
 
     for(std::vector<pcl::PointXYZ>::iterator it=pts_for_DBH_5m.begin();it!=pts_for_DBH_5m.end(); ++it){
@@ -330,7 +330,7 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
     it2 = std::prev(min_max_DBH_5m.end());
     maxDBH5 = it2->second;
 
-    std::cout << "MinDBH5:" << minDBH5 << std::endl;
+    std::cout << "\nMinDBH5:" << minDBH5 << std::endl;
     std::cout << "MaxDBH5:" << maxDBH5 << std::endl;
 
     feature << "minDBH5m pt3d:" << minDBH5 << std::endl;

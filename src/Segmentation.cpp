@@ -14,10 +14,23 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   std::cout << "************************************************" << std::endl;
 
   if(cloud->points.size() <= 0){
-     PCL_ERROR("Input point cloud has no data!");
+     PCL_ERROR("Input point cloud has no data!\n");
      return false;
   }
 
+  cloud->header.frame_id = "principal_cloud";
+  trunk_cloud->header.frame_id = "trunk_cloud";
+  crown_segmented->header.frame_id = "crown_cloud";
+  tree_segmented->header.frame_id = "tree_without_trunk";
+  /*
+  ros::Time time_st = ros::Time::now();
+
+  cloud->header.stamp= time_st.toNSec()/1e3;  
+  //cloud->header.stamp = ros::Time::now().toNSec();
+  trunk_cloud->header.stamp = time_st.toNSec()/1e3;  
+  tree_segmented->header.stamp = time_st.toNSec()/1e3;  
+  crown_segmented->header.stamp = time_st.toNSec()/1e3;  
+*/
   /*CONVERT XYZRGB TO XYZ*/
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_xyz (new pcl::PointCloud<pcl::PointXYZ>());
   pcl::PointCloud<pcl::PointXYZ>::Ptr temp (new pcl::PointCloud<pcl::PointXYZ>());
@@ -30,12 +43,14 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   sor.filter(*cloud_xyz);
 
   /*TRUNK SEGMENTATION*/
-  std::cout << "Trunk cloud segmentation with cylinder segmentation plane..." << std::endl;
+  std::cout << "Trunk cloud segmentation with: Cylinder Model Segmentation..." << std::endl;
   trunkSegmentation(cloud_xyz,tree_segmented,trunk_cloud);
-  std::cout << "Crown cloud segmentation with SACSegmentationSphere..." << std::endl;
+
+  std::cout << "Crown cloud segmentation with: Euclidean Cluster Extraction..." << std::endl;
   crownSegmentation(tree_segmented,crown_segmented);
 
-  std::cout << "Saving 3D mapping segmented!" << std::endl;
+   pcl::console::TicToc tt2;
+  PCL_INFO("\nSaving 3D mapping segmented...");
 
   std::string prefix = output_path;
   prefix += "/";
@@ -64,8 +79,14 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   pcl::io::savePLYFileBinary(prefix2.c_str(), *trunk_cloud);
   pcl::io::savePCDFileBinary(prefix3.c_str(), *tree_segmented);
   pcl::io::savePLYFileBinary(prefix4.c_str(), *tree_segmented);
-  pcl::io::savePCDFileBinary(prefix5.c_str(), *tree_segmented);
-  pcl::io::savePLYFileBinary(prefix6.c_str(), *tree_segmented);
+  pcl::io::savePCDFileBinary(prefix5.c_str(), *crown_segmented);
+  pcl::io::savePLYFileBinary(prefix6.c_str(), *crown_segmented);
+
+  pcl::console::print_info ("[done, ");
+  pcl::console::print_value ("%g", tt2.toc ());
+  pcl::console::print_info (" ms : ");
+  pcl::console::print_value ("%d", trunk_cloud->points.size ());
+  pcl::console::print_info (" points]\n");
 
   std::cout << "Segmentation proccess --> [OK]" << std::endl;  
 
@@ -78,7 +99,7 @@ bool Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
                                      pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_trunk){
 
   if(cloud->points.size() <= 0){
-     PCL_ERROR("Input point cloud has no data!");
+     PCL_ERROR("Input point cloud has no data!\n");
      return false;
   }
 
@@ -177,11 +198,11 @@ bool Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   std::map<double,pcl::PointXYZ>::iterator it2 = std::prev(minMaxValues.end());
   maxH = it2->second;
 
-  std::cout << "min trunk it:" << minH << std::endl;
-  std::cout << "max trunk it:" << maxH << std::endl;
+  std::cout << "Min trunk it:" << minH << std::endl;
+  std::cout << "Max trunk it:" << maxH << std::endl;
 
   double offsetY = std::abs(minH.y - 0);
-  std::cout << "offset trunk Y:" << offsetY << std::endl;
+  std::cout << "Offset trunk Y:" << offsetY << std::endl;
 
   if(minH.y < 0){
 
@@ -200,10 +221,18 @@ bool Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
                    0,   0,    0,    1;
   }
 
-  std::cout << "Here is the translation matrix transform:\n" << align_cloud << "\n" << std::endl;
+  pcl::console::TicToc tt;
+  std::cout << "\nHere is the translation matrix transform:\n" << align_cloud << "\n" << std::endl;
   PCL_INFO("Executing the transformation...");
+
   pcl::transformPointCloud(*trunk_seg_filtered, *cloud_trunk, align_cloud);
   pcl::transformPointCloud(*rest_seg, *cloud_without_trunk, align_cloud);
+
+  pcl::console::print_info ("[done, ");
+  pcl::console::print_value ("%g", tt.toc ());
+  pcl::console::print_info (" ms : ");
+  pcl::console::print_value ("%d", cloud_trunk->points.size());
+  pcl::console::print_info (" points]\n");
 
   std::map<double,pcl::PointXYZ> minMaxValues2;
 
@@ -227,7 +256,7 @@ bool Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   trunkMin.x=trunkMax.x;
   trunkMin.z=trunkMax.z;
   double dist = pcl::geometry::distance(trunkMin,trunkMax);
-  std::cout << "mean:" << dist << std::endl;
+  std::cout << "Mean:" << dist << "\n" << std::endl;
 
   return true;
 
@@ -241,11 +270,15 @@ bool Segmentation::crownSegmentation(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_
     return false;
   }
 
-  PCL_INFO("PointCloud before filtering has %lu %s", cloud_without_trunk->points.size()," data points.");
+  std::cout << "Filtering points data with: PassThrough filter..." << std::endl;
+
+  PCL_INFO("PointCloud before filtering has %lu %s", cloud_without_trunk->points.size()," data points.\n");
 
   double meanMedian = pcl::geometry::distance(trunkMin,trunkMax);
-  PCL_INFO("Mean median: %f",meanMedian);
+  PCL_INFO("\nMean median: %f",meanMedian);
+  std::cout << std::endl;
   PCL_INFO("Mean median/2: %f",meanMedian/2);
+  std::cout << std::endl;
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>());
 
@@ -257,41 +290,34 @@ bool Segmentation::crownSegmentation(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_
   pass.setFilterLimitsNegative(true);
   pass.filter(*cloud_filtered);
 
-  std::cout << "PointCloud after filtering has: " << cloud_filtered->points.size ()
-            << " data points." << std::endl;
+  std::cout << "\nPointCloud after filtering has: " << cloud_filtered->points.size ()
+            << " data points." << std::endl;  
 
+  std::cout << "\nCreating the KdTree object for the search method of the extraction..." << std::endl;
 
-/*
+  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+  tree->setInputCloud (cloud_filtered);
 
-      for(int it =0; it< cloud_filtered->points.size(); it++){
+  std::vector<pcl::PointIndices> cluster_indices;
+  pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
+  ec.setClusterTolerance(14); // 2cm
+  ec.setMinClusterSize(30);
+  ec.setMaxClusterSize(25000);
+  ec.setSearchMethod(tree);
+  ec.setInputCloud(cloud_filtered);
+  ec.extract(cluster_indices);
 
-        cloud_crown->points.push_back(cloud_filtered->points.at(it));
+  std::cout << "Cluster tolerance:" << 14 << std::endl
+            << "Min cluster size:" << 30 << std::endl
+            << "Max cluster size:" << 25000 << std::endl
+            << "Search method: KdTree" << std::endl;
 
-      }
+  PCL_INFO("clusters:%lu", cluster_indices.size());
+  std::cout << std::endl;
 
-      cloud_crown->width = cloud_filtered->points.size ();
-      cloud_crown->height = 1;
-      cloud_crown->is_dense = true;
+  std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> vecClusters;
 
-*/
-
-    // Creating the KdTree object for the search method of the extraction
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
-    tree->setInputCloud (cloud_filtered);
-
-    std::vector<pcl::PointIndices> cluster_indices;
-    pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-    ec.setClusterTolerance(14); // 2cm
-    ec.setMinClusterSize(30);
-    ec.setMaxClusterSize(25000);
-    ec.setSearchMethod(tree);
-    ec.setInputCloud(cloud_filtered);
-    ec.extract(cluster_indices);
-
-    PCL_INFO("clusters:%lu", cluster_indices.size());
-    std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> vecClusters;
-
-    for(std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end(); ++it){
+  for(std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end(); ++it){
 
       pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
       for(std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit){

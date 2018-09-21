@@ -249,6 +249,7 @@ bool Utilities::run_openMVG(){
   auto end = std::chrono::high_resolution_clock::now();
   auto difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
   PCL_INFO("3D mapping time: %li %s",difference,"seconds");
+  std::cout << std::endl;
 
   return true;
 }
@@ -260,7 +261,7 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
   std::cout << "              SCALE FACTOR                      " << std::endl;
   std::cout << "************************************************" << std::endl;
 
-  std::cout << blue << "\nConverting sfm_data.bin to sfm_data.xml..." << reset << std::endl;
+  std::cout << blue << "Converting sfm_data.bin to sfm_data.xml..." << reset << std::endl;
   std::cout << "------------------------------------------" << std::endl;
   auto start = std::chrono::high_resolution_clock::now();
   output_path = output_dir;
@@ -308,7 +309,7 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
 
   bool success = Utilities::loadSFM_XML_Data(cloud_filtered,intrinsic,cameras_poses);
   if(not success){
-    PCL_ERROR("Could not get a scale factor.");
+    PCL_ERROR("Could not get a scale factor.\n");
     return false;
   }
 
@@ -320,10 +321,10 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
   pass.setFilterLimitsNegative(true);
   pass.filter(*Map3D);
   
-  PCL_INFO("Images: %lu",images_filenames.size());
-  PCL_INFO("Cloud xml: %lu %s",Map3D->points.size(),"pts");
-  PCL_INFO("Camera Poses: %lu %s",cameras_poses.size(),"cameras");
-  std::cout << "Intrinsic camera:\n" << intrinsic << std::endl;
+  PCL_INFO("\nImages: %lu",images_filenames.size());
+  PCL_INFO("\nCloud xml: %lu %s",Map3D->points.size(),"pts");
+  PCL_INFO("\nCamera Poses: %lu %s",cameras_poses.size(),"cameras");
+  std::cout << "\nIntrinsic camera:\n" << intrinsic << std::endl;
 
   std::cout << blue << "\nGetting scale factor..." << reset << std::endl;
   std::cout << "------------------------------------------";
@@ -457,8 +458,7 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
         std::cin.ignore(1000, '\n');
         bestImage = false;
         continue;
-      }else{
-        std::cout << "Using image #:" << numImg << std::endl;
+      }else{        
         bestImage = true;
         break;
       }
@@ -553,20 +553,20 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
 
             std::string image_pattern_path;
             image_pattern_path += images_path;
-            std::cout << "antes del pop back:" << image_pattern_path << std::endl;
+            //std::cout << "before pop back:" << image_pattern_path << std::endl;
             std::string backG = images_filenames.at(0);
-            std::cout << "string reference:" << backG << std::endl;
+            //std::cout << "string reference:" << backG << std::endl;
             for(int i=0;i<backG.size();i++){
               int j=i;
               image_pattern_path.pop_back();
             }
-            std::cout << "despues del pop back:" << image_pattern_path << std::endl;
+            //std::cout << "after pop back:" << image_pattern_path << std::endl;
             std::string img_feat_filename;
             for(int i=0;i<images_filenames.size();i++){
               std::string comp = image_pattern_path;
               comp += images_filenames.at(i);
               if(comp == images_path){
-                std::cout << "Found:" << comp << std::endl;
+                //std::cout << "Found:" << comp << std::endl;
                 img_feat_filename = images_filenames.at(i);
                 break;
               }
@@ -590,8 +590,8 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
             while(file >> x_ >> y_ >> s >> orientation){
                 image_points.push_back(cv::Point2f(x_,y_));
             }
-            std::cout << yellow << "\nFeature selected:" << feature_path << std::endl;
-            std::cout << "Image points: " << image_points.size() << " points" << reset << std::endl;
+            std::cout << yellow << "\nFeature selected:" << reset << feature_path << std::endl;
+            std::cout << yellow << "Image points: " << reset << image_points.size() << " points" << std::endl;
 
 
             for(size_t i=0;i<image_points.size();i++){
@@ -669,8 +669,8 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
   }
 
   PCL_INFO("Id pose: %i",numImg);
-  std::cout << "Filename: " << images_filenames.at(numImg) << std::endl;
-  std::cout << "Camera pose:\n" << cameras_poses[numImg] << std::endl;
+  //std::cout << "\nFilename: " << images_filenames.at(numImg) << std::endl;
+  std::cout << "\nCamera pose:\n" << cameras_poses[numImg] << std::endl;
 
   cv::Matx34d pose =cameras_poses[numImg];
   cv::Mat Rc = cv::Mat(pose.get_minor<3,3>(0,0));
@@ -695,14 +695,13 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
   }
 
   cv::projectPoints(points3d,rvec,tvec,intrinsic,cv::Mat(),projected_points);
-  std::cout << "Points projected:" << projected_points.size()<< std::endl;
+  std::cout << yellow << "\nPoints projected:" << reset << projected_points.size()<< std::endl;
   double error;
   pcl::PointXYZ ptt1,pt2;
 
   std::map<double,std::pair<std::pair<cv::Point2d,cv::Point2d>,cv::Point3d>> p1_map;
 
-  std::cout << "check if point reprojection error is small enough..." <<  std::endl;
-
+  std::cout << yellow << "\ncheck if point reprojection error is small enough..." << reset << std::endl;
 
   std::string dendrometric_results = output_dir;
   dendrometric_results += "/pts_for_circle1.txt";
@@ -772,33 +771,13 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
 
   double Ref_PCL = pcl::geometry::distance(ptt1,pt2);
   scale_factor = W_reference/Ref_PCL;
-  PCL_INFO("\nModel reference: %f",Ref_PCL);
-  PCL_INFO("scale_factor: %f",scale_factor);
+  PCL_INFO("\n\nModel reference: %f",Ref_PCL);
+  PCL_INFO("\nscale_factor: %f",scale_factor);
 
   auto end = std::chrono::high_resolution_clock::now();
   auto difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-  PCL_INFO("Scale factor time: %lu %s",difference,"seconds");
-/*
-  pcl::PointCloud<pcl::PointXYZ>::Ptr invY (new pcl::PointCloud<pcl::PointXYZ>());
+  PCL_INFO("\nScale factor time: %lu %s",difference,"seconds");
 
-  for(int i=0;i<Map3D->points.size();i++){
-    pcl::PointXYZ pt;
-    pt.x = Map3D->points[i].x;
-    pt.y = Map3D->points[i].y*(-1);
-    pt.z = Map3D->points[i].z;
-    invY->points.push_back(pt);
-  }
-
-  invY->width = invY->points.size ();
-  invY->height = 1;
-  invY->is_dense = true;
-
-  for(int i=0;i<invY->points.size();i++){
-    Map3D->points[i].x=invY->points[i].x;
-    Map3D->points[i].y=invY->points[i].y;
-    Map3D->points[i].z=invY->points[i].z;
-  }
-*/
   return true;
 
 }
@@ -1169,12 +1148,12 @@ bool Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
   seg.setOptimizeCoefficients (true);
   seg.setModelType (pcl::SACMODEL_PLANE);
   seg.setMethodType (pcl::SAC_RANSAC);
-  seg.setDistanceThreshold (0.01);
+  seg.setDistanceThreshold(100);
   seg.setInputCloud (output_cloud);
   seg.segment (*floor_inliers, *coefficients);
-  std::cout << "Floor Plane Model coefficients: " << coefficients->values[0] << " "
-            << coefficients->values[1] << " "
-            << coefficients->values[2] << " "
+  std::cout << "Floor Plane Model coefficients:\n" << coefficients->values[0] << "\n"
+            << coefficients->values[1] << "\n"
+            << coefficients->values[2] << "\n"
             << coefficients->values[3] << std::endl;
 
   Eigen::Matrix<float, 1, 3> floor_plane_normal_vector, xy_plane_normal_vector, rotation_vector;
@@ -1183,22 +1162,22 @@ bool Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
   floor_plane_normal_vector[1] = coefficients->values[1];
   floor_plane_normal_vector[2] = coefficients->values[2];
 
-  std::cout << floor_plane_normal_vector << std::endl;
+  std::cout << "\nFloor plane normal vector:\n" << floor_plane_normal_vector << std::endl;
 
   xy_plane_normal_vector[0] = 0.0;
   xy_plane_normal_vector[1] = 0.0;
   xy_plane_normal_vector[2] = 1.0;
 
-  std::cout << xy_plane_normal_vector << std::endl;
+  std::cout << "\nXY plane normal vector:\n" <<xy_plane_normal_vector << std::endl;
 
   rotation_vector = xy_plane_normal_vector.cross(floor_plane_normal_vector);
-  std::cout << "Rotation Vector: "<< rotation_vector << std::endl;
+  std::cout << "\nRotation Vector: "<< rotation_vector << std::endl;
 
   float theta = -atan2(rotation_vector.norm(), xy_plane_normal_vector.dot(floor_plane_normal_vector));
 
   Eigen::Affine3f transform_2 = Eigen::Affine3f::Identity();
   transform_2.rotate (Eigen::AngleAxisf (theta, rotation_vector));
-  std::cout << "Transformation matrix: " << std::endl << transform_2.matrix() << std::endl;
+  std::cout << "\nTransformation matrix: " << std::endl << transform_2.matrix() << std::endl;
   pcl::transformPointCloud (*output_cloud, *output_cloud2, transform_2);
 
   //Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
@@ -1213,14 +1192,41 @@ bool Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
   pcl::transformPointCloud (*output_cloud2, *output_cloud3, transform_1);
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB>());
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered2 (new pcl::PointCloud<pcl::PointXYZRGB>());
 
   Eigen::Affine3f transform_3 = Eigen::Affine3f::Identity();
   float ghama = M_PI/2; // The angle of rotation in radians
   transform_3.rotate (Eigen::AngleAxisf(ghama, Eigen::Vector3f::UnitX()));
   pcl::transformPointCloud (*output_cloud3, *cloud_filtered, transform_3);
+/*
+  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer2 (new pcl::visualization::PCLVisualizer ("PCL VISUALIZER2"));
+
+   viewer2->setPosition(0,0);
+   viewer2->setBackgroundColor(0.0, 0.0, 0.0, 0.0); // Setting background to a dark grey
+
+   viewer2->addCoordinateSystem();
+   pcl::PointXYZ p11, p22, p33;
+
+   p11.getArray3fMap() << 1, 0, 0;
+   p22.getArray3fMap() << 0, 1, 0;
+   p33.getArray3fMap() << 0,0.1,1;
+
+   viewer2->addText3D("x", p11, 0.2, 1, 0, 0, "x_");
+   viewer2->addText3D("y", p22, 0.2, 0, 1, 0, "y_");
+   viewer2->addText3D ("z", p33, 0.2, 0, 0, 1, "z_");
 
 
+   viewer2->addPointCloud(cloud_filtered,"POINTCLOUD");
+
+
+   viewer2->initCameraParameters();
+   viewer2->resetCamera();
+
+   pcl::console::print_info ("\npress [q] to exit!\n");
+
+   while(!viewer2->wasStopped()){
+       viewer2->spin();
+   }
+*/
   // Create the filtering object
   pcl::PassThrough<pcl::PointXYZRGB> pass;
   pass.setInputCloud(cloud_filtered);
@@ -1228,17 +1234,8 @@ bool Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
   pass.setFilterLimits(-1000, 0);
   pass.setFilterLimitsNegative(true);
   pass.filter(*output_cloud4);
-/*
-   // Create the filtering object
-   pcl::PassThrough<pcl::PointXYZRGB> pass2;
-   pass2.setInputCloud(cloud_filtered2);
-   pass2.setFilterFieldName("x");
-   pass2.setFilterLimits(-500, 500);
-   pass2.setFilterLimitsNegative(false);
-   pass2.filter(*output_cloud4);
-*/
 
-  std::cout << "Densify proccess --> [OK]" << std::endl;
+  std::cout << yellow <<"\nDensify proccess --> [OK]" << reset << std::endl;
   std::cout << "Saving dense 3d mapping file with prefix --> MAP3D_dense.pcd" << std::endl;
   std::cout << "Dense points:" << output_cloud4->points.size() << std::endl;
 
@@ -1298,7 +1295,8 @@ bool Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   prefix2 += "/";
   prefix2 += "MAP3D_scaled.ply";
 
-  PCL_INFO("Saved in: %s %s %s",prefix1.c_str(),"and",prefix2.c_str());
+  PCL_INFO("\nSaved in: %s %s %s",prefix1.c_str(),"and",prefix2.c_str());
+  std::cout << std::endl;
 
   pcl::io::savePCDFileBinary(prefix1.c_str(), *cloud_scaled);
   pcl::io::savePLYFileBinary(prefix2.c_str(), *cloud_scaled); 
@@ -1442,13 +1440,14 @@ void Utilities::create_mesh(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud,pcl
 void Utilities::vizualizeMesh(pcl::PolygonMesh &mesh){
 
   boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("MAP3D MESH"));
-  viewer->setBackgroundColor (0, 0, 0);
+  viewer->setBackgroundColor(0, 0, 0);
   viewer->addPolygonMesh(mesh,"meshes",0);
-  viewer->addCoordinateSystem (1.0);
-  viewer->initCameraParameters ();
+  viewer->addCoordinateSystem(1.0);
+  viewer->initCameraParameters();
+  viewer->resetCamera();
 
-  std::cout << "Press q to finish 3D mapping and start segmentation process..." << std::endl;
-  while (!viewer->wasStopped ()){
+  std::cout << "\nPress [q] to continue." << std::endl;
+  while(!viewer->wasStopped()){
       viewer->spin();
   }
 }
@@ -1532,7 +1531,7 @@ void Utilities::vtkVisualizer(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clou
   vtkSmartPointer<vtkInteractorStyleTrackballCamera> style = vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
   renderWindowInteractor->SetInteractorStyle(style);
 
-  PCL_INFO("Press [q] to close visualizer");
+  PCL_INFO("\nPress [q] to close visualizer");
   renderWindowInteractor->Start();
 
 }
