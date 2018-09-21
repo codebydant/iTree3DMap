@@ -33,6 +33,10 @@
 #include <pcl/search/search.h>
 #include <pcl/search/kdtree.h>
 
+#include <pcl/console/print.h>
+#include <pcl/console/parse.h>
+#include <pcl/console/time.h>
+
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/extract_indices.h>
