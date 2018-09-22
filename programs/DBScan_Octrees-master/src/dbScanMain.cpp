@@ -1,11 +1,30 @@
 #define _CRT_SECURE_NO_WARNINGS
 
-#include <GL/glut.h>
 #include <iostream>
 #include <algorithm>
+#include <random>
 #include <vector>
 #include <stdio.h>
 #include <chrono>
+#include <fstream>
+#include <pcl/common/common_headers.h>
+#include <pcl/features/normal_3d.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/io/ply_io.h>
+#include <pcl/io/vtk_io.h>
+#include <pcl/io/io.h>
+#include <pcl/io/vtk_lib_io.h>
+#include <pcl/io/file_io.h>
+#include <pcl/io/ply/ply_parser.h>
+#include <pcl/io/ply/ply.h>
+#include <pcl/console/print.h>
+#include <pcl/console/parse.h>
+#include <pcl/console/time.h>
+#include <pcl/range_image/range_image.h>
+#include <pcl/visualization/pcl_visualizer.h>
+#include <pcl/common/transforms.h>
+#include <pcl/common/geometry.h>
+#include <pcl/common/common.h>
 
 #include "OctreeGenerator.h"
 #include "mouseUtils.h"
@@ -19,53 +38,6 @@ pcl::PointXYZ centroid;
 
 dbScanSpace::dbscan *dbscan, dbscan2;
 
-bool togglePoints = false;
-
-float cameraDistance = 100;
-
-int frameCount = 0;
-float fps = 0;
-int currentTime = 0, previousTime = 0;
-
-void calculateFPS()
-{
-    //  Increase frame count
-    frameCount++;
-
-    //  Get the number of milliseconds since glutInit called
-    //  (or first call to glutGet(GLUT ELAPSED TIME)).
-    currentTime = glutGet(GLUT_ELAPSED_TIME);
-
-    //  Calculate time passed
-    int timeInterval = currentTime - previousTime;
-
-    if(timeInterval > 1000)
-    {
-        //  calculate the number of frames per second
-        fps = frameCount / (timeInterval / 1000.0f);
-
-        //  Set time
-        previousTime = currentTime;
-
-        //  Reset frame count
-        frameCount = 0;
-    }
-}
-
-// Colors to display the generated clusters
-float colors[] = {  1,0,0,
-                    0,1,0,
-                    0,0,1,
-                    0,1,1,
-					1, 1, 0,
-                    1,0,1,
-                    0,0,1,
-                    0,1,1,
-                    1,1,1,
-					0.5, 0, 0,
-					0, 0.5, 0,
-					0, 0, 0.5
-                    };
 
 void calculateCentroid(vector<htr::Point3D>& points)
 {
@@ -80,66 +52,134 @@ void calculateCentroid(vector<htr::Point3D>& points)
     centroid.z /= points.size();
 }
 
-void readCloudFromFile(const char* filename, vector<htr::Point3D>* points)
-{
-    FILE *ifp;
-    float x, y, z;
-    int aux = 0;
+void readCloudFromFile(int argc, char** argv, std::vector<htr::Point3D>& points){
 
-    if ((ifp = fopen(filename, "r")) == NULL)
-    {
-      fprintf(stderr, "Can't open input file!\n");
-      return;
-    }
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::PolygonMesh cl;
+  std::vector<int> filenames;
+  bool file_is_pcd = false;
+  bool file_is_ply = false;
+  bool file_is_txt = false;
+  bool file_is_xyz = false;
 
-	int rows = 0;
-    while ((aux = fscanf(ifp, "%f,%f,%f\n", &x, &y, &z)) != EOF)
-    {
-        if(aux == 3)
-        {
-            htr::Point3D aux;
-            aux.x = x;
-            aux.y = y;
-            aux.z = z;
-            points->push_back(aux);
+  pcl::console::TicToc tt;
+  pcl::console::print_highlight ("Loading ");
+
+  filenames = pcl::console::parse_file_extension_argument(argc, argv, ".ply");
+  if(filenames.size()<=0){
+      filenames = pcl::console::parse_file_extension_argument(argc, argv, ".pcd");
+      if(filenames.size()<=0){
+          filenames = pcl::console::parse_file_extension_argument(argc, argv, ".txt");
+          if(filenames.size()<=0){
+              filenames = pcl::console::parse_file_extension_argument(argc, argv, ".xyz");
+              if(filenames.size()<=0){
+                  std::cerr << "Usage: ./dbscan <file.txt> <eps> <minPts> <maxPts>" << std::endl;
+                  return std::exit(-1);
+              }else if(filenames.size() == 1){
+                  file_is_xyz = true;
+              }
+          }else if(filenames.size() == 1){
+             file_is_txt = true;
         }
-		//if (rows > 40000)
-		//	break;
-		rows++;
+    }else if(filenames.size() == 1){
+          file_is_pcd = true;
     }
+  }
+  else if(filenames.size() == 1){
+      file_is_ply = true;
+  }else{
+      std::cerr << "Usage: ./dbscan <file.txt> <eps> <minPts> <maxPts>" << std::endl;
+      return std::exit(-1);
+  }
 
-	fclose(ifp);
-    calculateCentroid(*points);
+  if(file_is_pcd){ 
+      if(pcl::io::loadPCDFile(argv[filenames[0]], *cloud) < 0){
+          std::cout << "Error loading point cloud " << argv[filenames[0]]  << "\n";
+          std::cerr << "Usage: ./dbscan <file.txt> <eps> <minPts> <maxPts>" << std::endl;
+          return std::exit(-1);
+      }
+      pcl::console::print_info("\nFound pcd file.\n");
+      pcl::console::print_info ("[done, ");
+      pcl::console::print_value ("%g", tt.toc ());
+      pcl::console::print_info (" ms : ");
+      pcl::console::print_value ("%d", cloud->size ());
+      pcl::console::print_info (" points]\n");
+    }else if(file_is_ply){
+      pcl::io::loadPLYFile(argv[filenames[0]],*cloud);
+      if(cloud->points.size()<=0){
+          pcl::console::print_warn("\nloadPLYFile could not read the cloud, attempting to loadPolygonFile...\n");
+          pcl::io::loadPolygonFile(argv[filenames[0]], cl);
+          pcl::fromPCLPointCloud2(cl.cloud, *cloud);
+          if(cloud->points.size()<=0){
+              pcl::console::print_warn("\nloadPolygonFile could not read the cloud, attempting to PLYReader...\n");
+              pcl::PLYReader plyRead;
+              plyRead.read(argv[filenames[0]],*cloud);
+              if(cloud->points.size()<=0){
+                  pcl::console::print_error("\nError. ply file is not compatible.\n");
+                  return std::exit(-1);
+              }
+          }
+       }
+
+      pcl::console::print_info("\nFound ply file.\n");
+      pcl::console::print_info ("[done, ");
+      pcl::console::print_value ("%g", tt.toc ());
+      pcl::console::print_info (" ms : ");
+      pcl::console::print_value ("%d", cloud->size ());
+      pcl::console::print_info (" points]\n");
+
+    }else if(file_is_txt or file_is_xyz){
+      std::ifstream file(argv[filenames[0]]);
+      if(!file.is_open()){
+          std::cout << "Error: Could not find "<< argv[filenames[0]] << std::endl;
+          return std::exit(-1);
+      }
+      double x_,y_,z_;
+      while(file >> x_ >> y_ >> z_){
+          pcl::PointXYZ pt;
+          pt.x = x_;
+          pt.y = y_;
+          pt.z= z_;
+          cloud->points.push_back(pt);
+      }
+
+      pcl::console::print_info("\nFound txt file.\n");
+      pcl::console::print_info ("[done, ");
+      pcl::console::print_value ("%g", tt.toc ());
+      pcl::console::print_info (" ms : ");
+      pcl::console::print_value ("%d", cloud->size ());
+      pcl::console::print_info (" points]\n");
+  }
+
+  cloud->width = (int) cloud->points.size();
+  cloud->height = 1;
+  cloud->is_dense = true;  
+  
+  for(int i =0; i<cloud->points.size();i++){
+       htr::Point3D aux;
+       aux.x = cloud->points[i].x;
+       aux.y = cloud->points[i].y;;
+       aux.z = cloud->points[i].z;
+       points.push_back(aux);  
+  }
+
+  calculateCentroid(points);
 }
 
-void init(char** argv)
-{
- /*
-    glClearColor (0.0, 0.0, 0.0, 0.0);
-    glShadeModel (GL_FLAT);
-    glEnable(GL_DEPTH_TEST);
+void init(int argc, char** argv,bool show){
 
-    mouseUtils::init(cameraDistance);
-*/
-//    dbscan = new dbScanSpace::dbscan("../Resources/worldCloud15.csv", 20, 25, 30, 50);
-    readCloudFromFile(argv[1], &groupA);
+    readCloudFromFile(argc, argv, groupA);
 
-//    dbscan2 = new dbScanSpace::dbscan(points, 20, 25, 30, 50);
-    //printf("Group A size %f\n", groupA.size()*0.001);
-	float eps = 40.0f;
-    dbscan2.init(groupA, eps, eps, 10, 1000);
+	float eps = std::atof(argv[2]); //40.0f
+	int minPts = std::atof(argv[3]); //10
+	int maxPts = std::atof(argv[4]); //1000
+    dbscan2.init(groupA, eps, eps, minPts, maxPts);
     
     /*
-    DBSCAN algorithm requires 2 parameters - epsilon , which specifies how close points should be to each other to be considered a part of a cluster; and minPts , which specifies how many neighbors a point should have to be included into a cluster. However, you may not know these values in advance.
-    
-    */
-    
-    
-//    dbscan2.init(groupA, 25, 25, 10, 100);
-
-  //  gluLookAt(0,0,0,dbscan2.getCentroid().x, dbscan2.getCentroid().y, dbscan2.getCentroid().z, 0,1,0);
-
-//    dbscan2.init(groupA, 20, 25, 30, 50);
+    DBSCAN algorithm requires 2 parameters - epsilon , which specifies how close points should be to each other to be considered
+    a part of a cluster; and minPts , which specifies how many neighbors a point should have to be included into a cluster. 
+    However, you may not know these values in advance.
+    */    
 
     std::chrono::time_point<std::chrono::system_clock> start, end;
     start = std::chrono::system_clock::now();
@@ -149,187 +189,107 @@ void init(char** argv)
 	//dbscan2.generateClusters_one_step();
 	
 	ofstream fout;
-    int j = 0;
-    int cont =0;
-   
+    int cont = 0;   
 
-	int i = 0;
-	for (auto& cluster : dbscan2.getClusters()){
-		std::cout << "cluster " << ++i << " size " << cluster.clusterPoints.size() << endl;
+	for(auto& cluster : dbscan2.getClusters()){
+		
+        std::cout << "cluster " << cont << " size " << cluster.clusterPoints.size() << endl;
 		    
-     std::string str1 = "cloud";
-     str1 += "_cluster_";
-     str1 += to_string(cont);
-     str1 += ".xyz";
+        std::string str1 = "cloud";
+        str1 += "_cluster_";
+        str1 += to_string(cont);
+        str1 += ".xyz";
 
-     fout.open(str1.c_str());            
+        fout.open(str1.c_str());            
             
         for(auto& point:cluster.clusterPoints){
-            glColor3f(colors[j], colors[j+1], colors[j+2]);
-
-           // glPointSize(3);
-           // glBegin(GL_POINTS);
            
-             //   glVertex3f(point.x, point.y, point.z);
-                fout << point.x << " " << point.y << " "<< point.z << endl;
-            //glEnd();
+            fout << point.x << " " << point.y << " "<< point.z << endl;            
         }
         
         fout.close();
-        cont +=1;
-      //  j+=3;
-       // if(j > 36) j = 0;
-      }		
+        cont +=1;   
+     }	
       
      ofstream fout2;      
      std::string str2 = "clusters_number.txt";   
      fout2.open(str2.c_str());  
      fout2 << cont << std::endl;
-     fout2.close();
-   
-    
-        //dbscan2.generateClusters();
-   //dbscan->generateClusters();
+     fout2.close();   
 
-    end = std::chrono::system_clock::now();
+     end = std::chrono::system_clock::now();
 
-    std::chrono::duration<double> elapsed_seconds = end-start;
-    std::cout << "elapsed time: " << elapsed_seconds.count() << "s\n";
-//
- //  std::cout << "#clusters: "<< dbscan->getClusters().size() << endl;
-}
+     std::chrono::duration<double> elapsed_seconds = end-start;
+     std::cout << "\nelapsed time: " << elapsed_seconds.count() << "s\n";
+     
+     if(show){
+     
+         std::cout << "\nPrinting clusters..." << std::endl;
+         
+         boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("DBSCAN CLUSTERS"));
 
-void displayPoints(){
-    // Displays de points in the found clusters
-    ofstream fout;
-    int j = 0;
-    int cont =0;
-    for(dbScanSpace::cluster cluster:dbscan2.getClusters())
-    {
-    
-     std::string str1 = "cloud";
-            str1 += "_cluster_";
-            str1 += to_string(cont);
-            str1 += ".xyz";
-
-            fout.open(str1.c_str());            
+         viewer->setPosition(0,0);
+         viewer->setBackgroundColor(0.0, 0.0, 0.0, 0.0); // Setting background to a dark 
+         
+         int numClust = 0;
+         
+         for(auto& cluster : dbscan2.getClusters()){       
+         
+            pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_rgb (new pcl::PointCloud<pcl::PointXYZRGB>());
+            //uint8_t r(255), g(15), b(15); 
+            uint8_t r = (uint8_t) rand();
+            uint8_t g = (uint8_t) rand();
+            uint8_t b = (uint8_t) rand();        
+                        
+            for(auto& pointCluster:cluster.clusterPoints){                             
+                
+                  pcl::PointXYZRGB point;
+                  point.x = pointCluster.x;
+                  point.y = pointCluster.y;
+                  point.z = pointCluster.z;
+                  
+                  uint32_t rgb = (static_cast<uint32_t>(r) << 16 |
+                          static_cast<uint32_t>(g) << 8 | static_cast<uint32_t>(b));
+                  point.rgb = *reinterpret_cast<float*>(&rgb);
+                  cluster_rgb->points.push_back(point);              
+            }
             
-        for(auto& point:cluster.clusterPoints)
-        {
-            glColor3f(colors[j], colors[j+1], colors[j+2]);
+            std::string nameId = "cluster_";
+            nameId += std::to_string(numClust);
+            
+            std::cout << "Adding: " << nameId << " to pcl visualizer" << std::endl;        
+            viewer->addPointCloud(cluster_rgb,nameId.c_str());        
+            numClust += 1;                                             
+        }  
 
-            glPointSize(3);
-            glBegin(GL_POINTS);
-           
-                glVertex3f(point.x, point.y, point.z);
-                fout << point.x << " " << point.y << " "<< point.z << endl;
-            glEnd();
-        }
+        viewer->initCameraParameters();
+        viewer->resetCamera();
+       
+        pcl::console::print_info ("\npress [q] to exit!\n");    
         
-        fout.close();
-         cont +=1;
-        j+=3;
-        if(j > 36) j = 0;
-    }
-
-    // Displays the original point cloud points
-    if(togglePoints)
-        for(pcl::PointXYZ point:dbscan2.getCloudPoints()->points)
-        {
-            glColor3f(0,1,1);
-
-            glPointSize(3);
-            glBegin(GL_POINTS);
-                glVertex3f(point.x, point.y, point.z);
-            glEnd();
-        }
-
-    // Displays the cloud and clusters centroids
-    glColor3f(1,1,0);
-
-    glPointSize(5);
-    glBegin(GL_POINTS);
-        glVertex3f(dbscan2.getCentroid().x, dbscan2.getCentroid().y, dbscan2.getCentroid().z);
-    glEnd();
-
-    for(dbScanSpace::cluster cluster:dbscan2.getClusters())
-    {
-        glBegin(GL_POINTS);
-            glVertex3f(cluster.centroid3D.x, cluster.centroid3D.y, cluster.centroid3D.z);
-        glEnd();
-    }
+        while(!viewer->wasStopped()){
+           viewer->spin();
+        } 
+             
+     }           	 
 }
 
-void display(void)
-{
-   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-   glPushMatrix();
-       mouseUtils::applyMouseTransform(dbscan2.getCentroid().x, dbscan2.getCentroid().y, dbscan2.getCentroid().z);
-       displayPoints();
-   glPopMatrix();
+int main(int argc, char** argv){
 
-   glutSwapBuffers();
-}
+   if(argc < 5 or argc > 5){
+   
+      std::cerr << "Usage: ./dbscan <file.txt> <eps> <minPts> <maxPts>" << std::endl;
+      return -1;
+   }
+   
+   std::cout << "\n*************************************" << std::endl;
+   std::cout << "*** DBSCAN Cluster Segmentation *** " << std::endl;
+   std::cout << "*************************************" << std::endl;
+   
+   bool showClusters = true;
 
-void reshape (int w, int h)
-{
-   glViewport (0, 0, (GLsizei) w, (GLsizei) h);
-   glMatrixMode (GL_PROJECTION);
-   glLoadIdentity ();
-   gluPerspective(90.0, (GLfloat) w/(GLfloat) h, 1.0, 10000.0);
-   glMatrixMode (GL_MODELVIEW);
-}
+   init(argc,argv,showClusters);
 
-void keyboard(unsigned char key, int x, int y)
-{
-    switch(key)
-    {
-    case 27: // ESCAPE
-        exit(0);
-        break;
-    case 'a':
-        togglePoints = !togglePoints;
-        break;
-    default:
-        break;
-    }
-}
-
-void idle()
-{
-//    dbscan2.init(groupA, 20, 25, 30, 50);
-//    dbscan2.generateClusters();
-    //dbscan2.init(groupA, groupA.size()*0.001, groupA.size()*0.001, 10, 100);
-//    dbscan2.init(groupA, 25, 25, 10, 100);
-    //dbscan2.generateClusters_fast();
-    //dbscan2.generateClusters_fast();
-//    calculateFPS();
-//    printf("%f\n", fps);
-    glutPostRedisplay();
-}
-
-int main(int argc, char** argv)
-{
-/*
-   glutInit(&argc, argv);
-   glutInitDisplayMode (GLUT_DOUBLE| GLUT_RGB | GLUT_DEPTH);
-   glutInitWindowSize (500, 500);
-   glutInitWindowPosition (100, 100);
-   glutCreateWindow (argv[0]);
-   */
-   std::cout << "total arguments:" << argc << std::endl;
-   std::cout << "arg1:" << argv[0] << std::endl;
-   std::cout << "arg2:" << argv[1] << std::endl;
-   init(argv);
-   /*
-   glutDisplayFunc(display);
-   glutReshapeFunc(reshape);
-   glutMouseFunc(mouseUtils::mouse);
-   glutMotionFunc(mouseUtils::mouseMotion);
-   glutKeyboardFunc(keyboard);
-   glutIdleFunc(idle);
-   glutMainLoop();
-   */
    return 0;
 }
