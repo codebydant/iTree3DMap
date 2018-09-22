@@ -82,7 +82,7 @@ int main(int argc, char **argv){
   STEP 7: DENDROMETRY MEASUREMENTS
   **************************/
   pcl::PointXYZ minDBH,maxDBH,minTH,maxTH,minCH,maxCH,minDBH5,maxDBH5;
-  Dendrometry::estimate(trunk_segmented,crown_segmented,output_dir,minDBH,maxDBH,minTH,maxTH,minCH,maxCH,minDBH5,maxDBH5);
+  Dendrometry::estimate(trunk_segmented,crown_segmented,output_dir,minDBH,maxDBH,minTH,maxTH,minCH,maxCH,minDBH5,maxDBH5,output_dir);
 
   /*************************
   PCL VISUALIZER
