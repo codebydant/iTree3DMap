@@ -29,6 +29,7 @@
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/surface/poisson.h>
 #include <pcl/surface/simplification_remove_unused_vertices.h>
+#include <pcl/surface/vtk_smoothing/vtk_utils.h>
 
 #include <pcl/search/search.h>
 #include <pcl/search/kdtree.h>
@@ -52,6 +53,7 @@
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
 #include <vtkPolyData.h>
+#include <vtkCamera.h>
 #include <vtkLineSource.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkSmartPointer.h>
@@ -66,8 +68,11 @@
 #include <vtkCaptionActor2D.h>
 #include <vtkNamedColors.h>
 #include <vtkTransform.h>
+#include <vtkInteractorStyleSwitch.h>
+#include <vtkInteractorStyleUser.h>
+#include <vtkInteractorStyleTrackballActor.h>
+#include <vtkInteractorStyleTrackballCamera.h>
 
-#include <ros/ros.h>
 #include <tinyxml2.h>
 #include <X11/Xlib.h>
 
@@ -87,23 +92,23 @@ public:
      std::map<const int,std::map<const int,cv::Point2d>> feat_ref;// [id image,[id pt2d, pt2d]]
    };
 
-   static bool run_openMVG();
+   static bool run_openMVG(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D, std::string& output_path);
    static bool createPMVS_Files();
    static bool densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_cloud);
    static bool uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
                                   pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,const double scale=2);
    static void help();
-   static bool getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D, double& scale_factor,std::string& output_path);
+   static bool getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,double& scale_factor);
 
-   static bool loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& pts3d,
-                                cv::Mat_<double>& intrinsic,
+   static bool loadSFM_XML_Data(cv::Mat_<double>& intrinsic,
                                 std::vector<cv::Matx34d>& cameras_poses);
    static bool alignCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
                               pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_align);
                               
    static void create_mesh(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud,pcl::PolygonMesh &mesh);
-   static void vizualizeMesh(pcl::PolygonMesh &mesh);
+   static void vizualizeMesh(vtkSmartPointer<vtkPolyData>& vtkCloud);
    static void vtkVisualizer(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,pcl::PointXYZ& pt1,pcl::PointXYZ& pt2);
+   static bool is_number(const std::string& s);
 
 };
 
