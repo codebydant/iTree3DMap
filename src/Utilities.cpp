@@ -1,4 +1,4 @@
-#include "include/Utilities.h"
+﻿#include "include/Utilities.h"
 
 std::string output_dir;
 std::string input_dir;
@@ -12,7 +12,7 @@ const std::string green("\033[0;32m");
 // This function displays the help
 void Utilities::help(){
   std::cout << green << "===============================================\n"
-               "The program estimate dendrometric features of individual tree from a 3D real scale mapping using "
+               "The program estimate dendrometric features of an individual tree from a 3D real scale mapping using "
                "a images sequence with:openMVG and PMVS2."
             << std::endl << "Enter:\n" << "<project name> and press \"Enter\"." << "\n"
             << "<path image sequence> and press \"Enter\"." << "\n"
@@ -21,7 +21,7 @@ void Utilities::help(){
             << "===============================================" << reset << std::endl;
 }
 
-bool Utilities::run_openMVG(){
+bool Utilities::run_openMVG(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D, std::string& output_path){
 
   std::cout << "\n************************************************" << std::endl;
   std::cout << "              3D MAPPING                      " << std::endl;
@@ -44,19 +44,29 @@ bool Utilities::run_openMVG(){
       std::cout << "------------------------------------------" << "\n" << "->" << std::flush;
       std::getline(std::cin, project_name);
       if(project_name.empty()){
-        PCL_ERROR("Nothing entered.");
+        PCL_ERROR("Nothing entered.\n");
+        project_name.clear();
+        continue;
+      }else if(project_name.size()<=1){
+        PCL_ERROR("The input name is not valid. Please enter at least 2 characters!\n");
         project_name.clear();
         continue;
       }
+
+      if(project_name.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890_")!= std::string::npos){
+            PCL_ERROR("%s %s",project_name.c_str(),"is not a valid project name.\n");
+            project_name.clear();
+            continue;
+        }
     }
 
     if(project_name.size()>0){
 
-      std::cout << yellow << "\nproject name = " << project_name << " are you sure? (yes/no)" << reset << std::endl;
+      std::cout << "\nproject name = " << yellow << project_name << reset << " are you sure? (yes/no)" << std::endl;
       std::cout << "->" << std::flush;
       std::getline(std::cin, answer);
       if(answer.empty()){
-        PCL_ERROR("Nothing entered.");
+        PCL_ERROR("Nothing entered.\n");
         answer.clear();
         continue;
       }
@@ -77,7 +87,7 @@ bool Utilities::run_openMVG(){
     }
 
     if(nameOk){
-      std::cout << "Using project name as:" << project_name << std::endl;
+      std::cout << yellow << "Using project name as:" << project_name << reset << std::endl;
       break;
     }
   }
@@ -92,7 +102,7 @@ bool Utilities::run_openMVG(){
       std::cout << "------------------------------------------" << "\n" << "->" << std::flush;
       std::getline(std::cin, input_dir);
       if(input_dir.empty()){
-        PCL_ERROR("Nothing entered.");
+        PCL_ERROR("Nothing entered.\n");
         input_dir.clear();
         continue;
       }
@@ -176,37 +186,74 @@ bool Utilities::run_openMVG(){
 
   /*FOCAL LENGTH*/
 /*
-  double n=-1;
-  while(n<=0){
+  double n=-1;  
+  while(true){
 
-    std::cout << blue << "\nEnter the focal length:\n" << reset
-              << "------------------------------------------" << "\n" << "->" << std::flush;
-    std::cin >> n;
+    if(focal_length.size()<=0){
 
-    if(std::cin.fail()){
-      std::getline(std::cin, focal_length);
-      std::cout << red << "I am sorry, but '" << focal_length << "' is not a number" << reset
-                << std::endl;
-      focal_length.clear();
-      n = -1;
-      std::cin.clear();
-      std::cin.ignore(1000, '\n');
-      continue;
-    }else if(n<=0){
-      ROS_ERROR("Error: insert a valid focal_length");
-      n = -1;
-      focal_length.clear();
-      std::cin.clear();
-      std::cin.ignore(1000, '\n');
-      continue;
-    }else{
-      std::ostringstream strs;
-      strs << n;
-      focal_length = strs.str();
-      std::cout << "Using focal length:" << focal_length << std::endl;
+        std::cout << blue << "\nEnter the focal length:\n" << reset
+                  << "------------------------------------------" << "\n" << "->" << std::flush;
+        std::string f;
+        std::getline(std::cin,f);
+        n = std::strtod(f.c_str(),NULL);
+
+        if(not is_number(f)){
+            PCL_ERROR("Error: enter a valid focal length\n");
+            f.clear();
+            n = -1;
+            continue;
+        }
+
+        if(n<=0){
+            PCL_ERROR("Error: enter a valid focal_length\n");
+            n = -1;
+            f.clear();
+            continue;
+          }else{
+            //std::ostringstream strs;
+            //strs << n;
+            //focal_length = strs.str();
+            focal_length = f;
+            //std::cout << "Using focal length:" << yellow << focal_length << reset << std::endl;
+          }
+   }
+
+    if(focal_length.size()>0){
+
+      std::string answer;
+      bool focalOk = false;
+
+      std::cout << "\nfocal length = " << yellow << focal_length << reset << " are you sure? (yes/no)" << std::endl;
+      std::cout << "->" << std::flush;
+      std::getline(std::cin, answer);
+      if(answer.empty()){
+        PCL_ERROR("Nothing entered.\n");
+        answer.clear();
+        continue;
+      }
+
+      if(answer == "yes"){
+        focalOk = true;
+      }else if(answer == "no"){
+        focalOk = false;
+        focal_length.clear();
+        n = -1;
+        answer.clear();
+        continue;
+      }else{
+        PCL_ERROR("%s %s",answer.c_str(),"is not a valid answer.\n");
+        focalOk = false;
+        n = -1;
+        answer.clear();
+        continue;
+      }
+
+    if(focalOk){
+      std::cout << yellow << "Using focal length:" << focal_length << reset << std::endl;
       break;
     }
-  }
+   }
+ }
 
   int dont_care;
   std::string folder_name = "mkdir ";
@@ -215,9 +262,10 @@ bool Utilities::run_openMVG(){
   folder_name += project_name;
 
   dont_care = std::system(folder_name.c_str());
-*/
+*/  
   output_dir += "/";
   output_dir += project_name;
+  output_path = output_dir;
 /*
   std::string output_pcd_files = "3D_Mapping";
   std::string folder_name2 = "mkdir ";
@@ -228,7 +276,8 @@ bool Utilities::run_openMVG(){
   dont_care = std::system(folder_name2.c_str());
 
   std::string command = "python ";
-  std::string openMVG = "~/catkin_ws/src/iTree3DMap/openMVG/openMVG_Build/software/SfM/SfM_SequentialPipeline.py ";
+  std::string openMVG = "/home/daniel/Documents/iTree3DMap/libraries/openMVG/build/software/SfM/SfM_SequentialPipeline.py ";
+ // std::string openMVG = "/home/daniel/Documents/iTree3DMap/libraries/openMVG/build/software/SfM/SfM_GlobalPipeline.py ";
 
   command += openMVG;
   command += input_dir;
@@ -241,21 +290,71 @@ bool Utilities::run_openMVG(){
   dont_care = std::system(command.c_str());
 
   if(dont_care > 0){
-    std::cout << red << "Failed. SfM_SequentialPipeline.py not found" << reset << std::endl;
+    PCL_ERROR("Failed. SfM_SequentialPipeline.py not found\n");
     return false;
   }
-  ROS_INFO("\n3D Mapping --> [COMPLETE].");
-*/
+
+  */
+
+  PCL_INFO("\n3D Mapping --> [COMPLETE].");
   auto end = std::chrono::high_resolution_clock::now();
   auto difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-  PCL_INFO("3D mapping time: %li %s",difference,"seconds");
+  PCL_INFO("\n3D mapping time: %li %s",difference,"seconds");
   std::cout << std::endl;
+
+  pcl::console::TicToc tt;
+
+  std::string prefix = output_dir;
+  prefix += "/3D_Mapping/";
+  std::string prefix1 = prefix;
+  prefix1 +="MAP3D.pcd";
+
+  std::string prefix2 = prefix;
+  prefix2 += "MAP3D.ply";
+
+  std::string polyFile = output_dir;
+  polyFile += "/reconstruction_sequential/colorized.ply";
+
+  pcl::PolygonMesh polyMesh;
+  //pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>());
+
+  std::cout << "\nGetting cloud from 3D reconstruction..." << std::endl;
+
+  pcl::io::loadPLYFile(polyFile.c_str(),*Map3D);
+  if(Map3D->points.size()<=0 or Map3D->points.at(0).x <=0 and Map3D->points.at(0).y <=0 and Map3D->points.at(0).z <=0){
+      pcl::console::print_warn("\nloadPLYFile could not read the cloud, attempting to loadPolygonFile...");
+      pcl::io::loadPolygonFile(polyFile.c_str(), polyMesh);
+      pcl::fromPCLPointCloud2(polyMesh.cloud, *Map3D);
+      if(Map3D->points.size()<=0 or Map3D->points.at(0).x <=0 and Map3D->points.at(0).y <=0 and Map3D->points.at(0).z <=0){
+          pcl::console::print_warn("\nloadPolygonFile could not read the cloud, attempting to PLYReader...");
+          pcl::PLYReader plyRead;
+          plyRead.read(polyFile.c_str(),*Map3D);
+          if(Map3D->points.size()<=0 or Map3D->points.at(0).x <=0 and Map3D->points.at(0).y <=0 and Map3D->points.at(0).z <=0){
+              pcl::console::print_error("\nError. ply file is not compatible.\n");
+              return -1;
+            }
+        }
+    }
+
+  if(Map3D->points.size()<=0){
+    PCL_ERROR("Could not load: colorized.ply\n");
+    return false;
+  }
+
+  pcl::console::print_info ("[done, ");
+  pcl::console::print_value ("%g", tt.toc ());
+  pcl::console::print_info (" ms : ");
+  pcl::console::print_value ("%d", Map3D->points.size ());
+  pcl::console::print_info (" points]\n");
+
+  pcl::io::savePCDFileBinary(prefix1.c_str(), *Map3D);
+  pcl::PLYWriter writer;
+  writer.write(prefix2.c_str(), *Map3D, false, false);
 
   return true;
 }
 
-bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
-                               double& scale_factor,std::string& output_path){
+bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,double& scale_factor){
 
   std::cout << "\n************************************************" << std::endl;
   std::cout << "              SCALE FACTOR                      " << std::endl;
@@ -264,7 +363,6 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
   std::cout << blue << "Converting sfm_data.bin to sfm_data.xml..." << reset << std::endl;
   std::cout << "------------------------------------------" << std::endl;
   auto start = std::chrono::high_resolution_clock::now();
-  output_path = output_dir;
 
   /*
   ./openMVG_main_ConvertSfM_DataFormat
@@ -282,8 +380,8 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
   [-S|--STRUCTURE] export structure
   [-C|--CONTROL_POINTS] export control points
   */
-  /*
-  std::string command = "~/catkin_ws/src/iTree3DMap/openMVG/openMVG_Build/Linux-x86_64-RELEASE/openMVG_main_ConvertSfM_DataFormat -i ";
+/*
+  std::string command = "/home/daniel/Documents/iTree3DMap/libraries/openMVG/build/Linux-x86_64-Release/openMVG_main_ConvertSfM_DataFormat -i ";
   command += output_dir;
   command += "/reconstruction_sequential/sfm_data.bin -o ";
   command += output_dir;
@@ -291,386 +389,372 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
 
   int dont_care = std::system(command.c_str());
   if(dont_care > 0){
-   std::cout << "Failed. Could not convert sfm_data.bin to xml" << std::endl;
+   PCL_ERROR("Failed. Could not convert sfm_data.bin to xml\n");
    return false;
   }
 
-  std::cout << yellow << "Created xml file in:" << reset << output_dir
-            << "/reconstruction_sequential/sfm_data.xml" <<  std::endl;
-  */
-
+  std::cout << "Created xml file in:" << yellow << output_dir
+            << "/reconstruction_sequential/sfm_data.xml" << reset << std::endl;
+*/
   cv::Mat_<double> intrinsic;
   std::vector<cv::Matx34d> cameras_poses;
 
   std::cout << blue << "\nGetting data from sfm_data.xml..." << reset << std::endl;
   std::cout << "------------------------------------------" << std::endl;
 
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB>());
+  //pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB>());
 
-  bool success = Utilities::loadSFM_XML_Data(cloud_filtered,intrinsic,cameras_poses);
+  bool success = Utilities::loadSFM_XML_Data(intrinsic,cameras_poses);
   if(not success){
     PCL_ERROR("Could not get a scale factor.\n");
     return false;
   }
-
+  /*
   // Create the filtering object
   pcl::PassThrough<pcl::PointXYZRGB> pass;
-  pass.setInputCloud(cloud_filtered);
+  pass.setInputCloud(Map3D);
   pass.setFilterFieldName("z");
   pass.setFilterLimits(-900, 0);
   pass.setFilterLimitsNegative(true);
-  pass.filter(*Map3D);
-  
+  pass.filter(*cloud_filtered);
+  */
   PCL_INFO("\nImages: %lu",images_filenames.size());
-  PCL_INFO("\nCloud xml: %lu %s",Map3D->points.size(),"pts");
   PCL_INFO("\nCamera Poses: %lu %s",cameras_poses.size(),"cameras");
   std::cout << "\nIntrinsic camera:\n" << intrinsic << std::endl;
 
   std::cout << blue << "\nGetting scale factor..." << reset << std::endl;
   std::cout << "------------------------------------------";
 
-  double W_reference;
   std::string world_reference;
+
   double n=-1;
+  while(true){
 
-  while(n<=0){
+    if(world_reference.size()<=0){
 
-    while(std::cout << blue << "\nEnter the world reference (mm/cm/m/) etc!\n" << reset <<
-            "------------------------------------------\n" << "->" << std::flush
-            && !(std::cin >> n)){
-              std::getline(std::cin, world_reference);
-              std::cout << yellow << "I am sorry, but '" << world_reference << "' is not a number" << reset
-                        << std::endl;
-              std::cin.clear();
-              std::cin.ignore(1000, '\n');
-    }
+        std::cout << blue << "\nEnter the world reference (cm):\n" << reset
+                  << "------------------------------------------" << "\n" << "->" << std::flush;
+        std::string f;
+        std::getline(std::cin,f);
+        n = std::strtod(f.c_str(),NULL);
 
-    if(n<=0){
-        std::cout << red << "Error: insert a valid world reference" << reset << std::endl;
-        n = -1;
-        world_reference.clear();
+        if(not is_number(f)){
+            PCL_ERROR("Error: enter a valid world reference\n");
+            f.clear();
+            n = -1;
+            continue;
+        }
+
+        if(n<=0){
+            PCL_ERROR("Error: enter a valid world reference\n");
+            n = -1;
+            f.clear();
+            continue;
+          }else{
+            world_reference = f;
+          }
+   }
+
+   if(world_reference.size()>0){
+
+        std::string answer;
+        bool WRefOk = false;
+
+      std::cout << "\nworld reference = " << yellow << world_reference << reset << " are you sure? (yes/no)" << std::endl;
+      std::cout << "->" << std::flush;
+      std::getline(std::cin, answer);
+      if(answer.empty()){
+        PCL_ERROR("Nothing entered.\n");
+        answer.clear();
         continue;
+      }
+
+      if(answer == "yes"){
+        WRefOk = true;
+      }else if(answer == "no"){
+        WRefOk = false;
+        world_reference.clear();
+        n = -1;
+        answer.clear();
+        continue;
+      }else{
+        PCL_ERROR("%s %s",answer.c_str(),"is not a valid answer.\n");
+        WRefOk = false;
+        n = -1;
+        answer.clear();
+        continue;
+      }
+
+    if(WRefOk){
+      std::cout << yellow << "Using world reference:" << world_reference << reset << std::endl;
+      break;
     }
-  }
+   }
+  }  
 
-  W_reference = n;
-  std::cout <<yellow << "Using world reference:" << reset << W_reference << "\n" << std::endl;
-  PCL_INFO("Choose a image pattern reference");
+  std::string img_selected;
+  int im_ID = -1;
 
-  double image_pixel_reference=-1;
-  int numImg = -1;
   cv::Point2d img_p1,img_p2;
   std::vector<cv::Point2d> pts_for_circle1;
   std::vector<cv::Point2d> pts_for_circle2;
+  int numImg = -1;
 
-  while(image_pixel_reference<=0){
+  while(true){
 
-    std::string answer;
-    bool bestImage = false;
-     std::string imageChoose;
+      bool bestImage = false;
 
-    int inter = std::round(images_filenames.size()/4);
-    int cont =0;
-    //----------------------------------------------------
-/*
-    for(int i=0;i<images_filenames.size();i++){
+      if(img_selected.size() <= 0){
 
-      std::string images_path = input_dir;
-      images_path += "/";
-      images_path += images_filenames.at(i);
+          PCL_INFO("\nChoose a image pattern reference\n");
 
-      std::cout << "Image #:" << i << std::endl;
+          std::string command2 = "/home/daniel/Documents/iTree3DMap/libraries/control_Image_Registration/build/control_point_Reg ";
+          command2 += output_dir;
+          command2 += "/reconstruction_sequential/sfm_data.xml ";
+          command2 += output_dir;
 
-      cv::Mat img = cv::imread(images_path.c_str(),1);
-      if(!img.data ){
-        std::cout << red <<"Could not open or find the image" << reset << std::endl;
-        continue;
-      }
-
-      cv::namedWindow("images",CV_WINDOW_NORMAL);
-      cv::resizeWindow("images",cv::Size(640,480));
-      cv::imshow("images",img);
-      cv::waitKey(0);
-      cont +=1;
-
-      if(cont == inter or cont == 2*inter or cont == 3*inter){
-        cv::destroyAllWindows();
-        while(true){
-
-          std::cout << yellow << "\nWhich one?" << "\n" << reset << "------------------------------------------\n"
-                    << "->" << std::flush;
-
-          std::cin >> numImg;
-
-          if(std::cin.fail()){
-            std::getline(std::cin, imageChoose);
-            std::cout << red << "I am sorry, but '" << numImg << "' is not a number" << reset
-                      << std::endl;
-            imageChoose.clear();
-            numImg = -1;
-            std::cin.clear();
-            std::cin.ignore(1000, '\n');
-            bestImage = false;
-            continue;
-          }else if(numImg<0){
-            std::cout << yellow << "Continue!" << reset << std::endl;
-            numImg = -1;
-            imageChoose.clear();
-            std::cin.clear();
-            bestImage = false;
-            break;
-          }else{
-            bestImage = true;
-            break;
-          }
-        }
-        if(bestImage){
-          break;
-        }
-
-      }
-
-    }
-*/
-    cv::destroyAllWindows();
-//----------------------------------------------------
-    while(numImg<0){
-
-      std::cout << yellow << "\nWhich one?" << "\n" << reset << "------------------------------------------\n"
-                << "->" << std::flush;
-
-      std::cin >> numImg;
-
-      if(std::cin.fail()){
-        std::getline(std::cin, imageChoose);
-        PCL_ERROR("I am sorry, but '%ui %s",numImg,"' is not a number");
-        imageChoose.clear();
-        numImg = -1;
-        std::cin.clear();
-        std::cin.ignore(1000, '\n');
-        bestImage = false;
-        continue;
-      }else if(numImg<0){
-        std::cout << red << "Skip." << reset << std::endl;
-        numImg = -1;
-        imageChoose.clear();
-        std::cin.clear();
-        std::cin.ignore(1000, '\n');
-        bestImage = false;
-        continue;
-      }else{        
-        bestImage = true;
-        break;
-      }
-    }
-
-    while(numImg > -1){
-
-      bool foundBestImage = false;
-      std::cout << yellow << "Image selected:" << reset << numImg << " filename:" << images_filenames.at(numImg)
-                << std::endl;
-
-      std::string images_path = input_dir;
-      images_path += "/";
-      images_path += images_filenames.at(numImg);
-
-      //------------------------------------------------------
-      // CIRCLE PATTERN DETECTION
-      //------------------------------------------------------
-
-      cv::Mat img = cv::imread(images_path.c_str(),1);
-      if(!img.data ){
-        std::cout << red <<"Could not open or find the image" << reset << std::endl;
-        return false;
-      }
-
-      cv::Mat img_copy = img.clone();
-      cv::Mat gray;
-
-      cv::cvtColor(img_copy,gray,CV_BGR2GRAY);
-      std::vector<cv::Vec3f> circles(2);
-
-      std::cout << "\nFiltering...Canny!" << std::endl;
-      cv::Canny(gray, gray, 100, 100*2, 3 );
-      std::cout << "Filtering...GaussianBlur!" << std::endl;
-      cv::GaussianBlur(gray,gray,cv::Size(7,7),2,2);
-
-      std::cout << "Detecting circles in image..." << std::endl;
-      cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT,1, gray.rows/16, 200, 100, 0, 150);
-
-      cv::Point2d center_pattern1,center_pattern2;
-      int radius = 0;
-
-      for(size_t i = 0; i < circles.size(); i++ ){
-
-        cv::Point2d center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-        center_pattern2 = center_pattern1;
-        center_pattern1 = cv::Point2d(center.x,center.y);
-        radius = cvRound(circles[i][2]);
-        // circle center
-        cv::circle(img_copy, center, 1, cv::Scalar(0,255,0),10);
-        // circle outline
-        cv::circle(img_copy, center, radius,cv::Scalar(0,255,0),30);
-      }
-
-      double pixel_length = cv::norm(center_pattern1 - center_pattern2);
-
-      std::cout << "\nNum of circles detect:" << circles.size() << std::endl;
-      std::cout << "Circle 1 center:" << center_pattern1 << std::endl;
-      std::cout << "Circle 2 center:" << center_pattern2 << std::endl;
-
-      std::cout << "Image #:"<< numImg << " Num rows:" << gray.rows << " Num cols:" << gray.cols << std::endl;
-      std::cout << "Pixels length:" << pixel_length << std::endl;
-      cv::line(img_copy,center_pattern1,center_pattern2,cv::Scalar(0,255,0),30);
-
-      Display* d = XOpenDisplay(NULL);
-      Screen*  s = DefaultScreenOfDisplay(d);
-
-      int x = s->width;
-
-      cv::namedWindow("pattern",CV_WINDOW_NORMAL);
-      cv::resizeWindow("pattern",640,480);
-      cv::moveWindow("pattern",std::round(x/2),0);
-      cv::imshow("pattern",img_copy);
-      cv::waitKey(0);
-      cv::destroyAllWindows();
-
-      while(true){
-
-        std::cout << yellow << "\nIs this lenght OK? (yes/no):" << reset << std::endl;
-        std::cout << "------------------------------------------\n" << "->" << std::flush;
-        std::cin.clear();
-        std::cin.ignore();
-        std::getline(std::cin, answer);
-        if(answer.empty()){
-          std::cout << red << "Nothing entered." << reset << std::endl;
-          answer.clear();
-          std::cin.clear();
-          continue;
-        }
-
-        if(answer == "yes"){
-
-            std::string image_pattern_path;
-            image_pattern_path += images_path;
-            //std::cout << "before pop back:" << image_pattern_path << std::endl;
-            std::string backG = images_filenames.at(0);
-            //std::cout << "string reference:" << backG << std::endl;
-            for(int i=0;i<backG.size();i++){
-              int j=i;
-              image_pattern_path.pop_back();
-            }
-            //std::cout << "after pop back:" << image_pattern_path << std::endl;
-            std::string img_feat_filename;
-            for(int i=0;i<images_filenames.size();i++){
-              std::string comp = image_pattern_path;
-              comp += images_filenames.at(i);
-              if(comp == images_path){
-                //std::cout << "Found:" << comp << std::endl;
-                img_feat_filename = images_filenames.at(i);
-                break;
-              }
-            }
-            img_feat_filename.pop_back();
-            img_feat_filename.pop_back();
-            img_feat_filename.pop_back();
-            std::string feature_path;
-            feature_path += output_dir;
-            feature_path += "/matches/";
-            feature_path += img_feat_filename;
-            feature_path += "feat";
-            float x_, y_,s,orientation;
-            std::vector<cv::Point2d> image_points;
-            std::ifstream file(feature_path.c_str());
-            if(!file.is_open()){
-              std::cout << red << "Error: Could not find "<< feature_path << reset << std::endl;
-              feature_path.clear();
+          int dont_care = std::system(command2.c_str());
+          if(dont_care > 0){
+              PCL_ERROR("Failed. Could not find control_point_Reg.bin\n");
               return false;
             }
-            while(file >> x_ >> y_ >> s >> orientation){
-                image_points.push_back(cv::Point2f(x_,y_));
-            }
-            std::cout << yellow << "\nFeature selected:" << reset << feature_path << std::endl;
-            std::cout << yellow << "Image points: " << reset << image_points.size() << " points" << std::endl;
 
+          std::string image_path = output_dir;
+          image_path += "/image_selected.txt";
 
-            for(size_t i=0;i<image_points.size();i++){
+          std::ifstream img_path(image_path.c_str());
+          if(!img_path.is_open()){
+              std::cout << red << "Error: Could not find "<< image_path << reset << std::endl;
+          }
 
-              cv::Point2d pt = image_points.at(i);
-              double error = cv::norm(cv::Mat(pt),cv::Mat(center_pattern1));
-              if(error < 100){
-                pts_for_circle1.push_back(pt);
-              }else{
-                continue;
+          int img_id;
+          std::string path;
+
+          while(img_path >> path >> img_id){}
+
+          std::string answer;
+          bool WRefOk = false;
+
+          while(true){
+
+              std::cout << "\nimage selected = " << yellow << img_id << reset << " are you sure? (yes/no)" << std::endl;
+              std::cout << "->" << std::flush;
+              std::getline(std::cin, answer);
+              if(answer.empty()){
+                  PCL_ERROR("Nothing entered.\n");
+                  answer.clear();
+                  continue;
+                }
+
+              if(answer == "yes"){
+                  im_ID = img_id;
+                  img_selected = path;
+                  WRefOk = true;
+                }else if(answer == "no"){
+                  WRefOk = false;
+                  img_selected.clear();
+                  im_ID = -1;
+                  n = -1;
+                  answer.clear();
+                  break;
+                }else{
+                  PCL_ERROR("%s %s",answer.c_str(),"is not a valid answer.\n");
+                  WRefOk = false;
+                  n = -1;
+                  answer.clear();
+                  continue;
+                }
+
+              if(WRefOk){
+                  //std::cout << yellow << "Using image reference:" << img_selected << reset << std::endl;
+                  bestImage = true;
+                  break;
               }
+          }
+
+      }
+
+      if(img_selected.size() > 0){
+
+          numImg = im_ID;
+
+          bool foundBestImage = false;
+
+          std::string images_path = input_dir;
+          images_path += "/";
+          images_path += images_filenames.at(numImg);
+
+          //------------------------------------------------------
+          // CIRCLE PATTERN DETECTION
+          //------------------------------------------------------
+
+          cv::Mat img = cv::imread(images_path.c_str(),1);
+          if(!img.data ){
+            std::cout << red <<"Could not open or find the image" << reset << std::endl;
+            return false;
+          }
+
+          cv::Mat img_copy = img.clone();
+          cv::Mat gray;
+
+          cv::cvtColor(img_copy,gray,CV_BGR2GRAY);
+          std::vector<cv::Vec3f> circles(2);
+
+          std::cout << "\nFiltering...Canny!" << std::endl;
+          cv::Canny(gray, gray, 100, 100*2, 3 );
+          std::cout << "Filtering...GaussianBlur!" << std::endl;
+          cv::GaussianBlur(gray,gray,cv::Size(7,7),2,2);
+
+          std::cout << "Detecting circles in image..." << std::endl;
+          cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT,1, gray.rows/16, 200, 100, 0, 150);
+
+          cv::Point2d center_pattern1,center_pattern2;
+          int radius = 0;
+
+          for(size_t i = 0; i < circles.size(); i++ ){
+
+            cv::Point2d center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+            center_pattern2 = center_pattern1;
+            center_pattern1 = cv::Point2d(center.x,center.y);
+            radius = cvRound(circles[i][2]);
+            // circle center
+            cv::circle(img_copy, center, 1, cv::Scalar(0,255,0),10);
+            // circle outline
+            cv::circle(img_copy, center, radius,cv::Scalar(0,255,0),30);
+          }
+
+          std::cout << "\nNum of circles detect:" << circles.size() << std::endl;
+          std::cout << "Circle 1 center:" << center_pattern1 << std::endl;
+          std::cout << "Circle 2 center:" << center_pattern2 << std::endl;
+
+          cv::line(img_copy,center_pattern1,center_pattern2,cv::Scalar(0,255,0),30);
+
+          Display* d = XOpenDisplay(NULL);
+          Screen*  s = DefaultScreenOfDisplay(d);
+
+          int x = s->width;
+
+          cv::namedWindow("pattern",CV_WINDOW_NORMAL);
+          cv::resizeWindow("pattern",640,480);
+          cv::moveWindow("pattern",std::round(x/2),0);
+          cv::imshow("pattern",img_copy);
+          cv::waitKey(0);
+          cv::destroyAllWindows();
+
+          while(true){
+
+            std::string answer;
+
+            std::cout << yellow << "\nIs this lenght OK? (yes/no):" << reset << std::endl;
+            std::cout << "------------------------------------------\n" << "->" << std::flush;
+            std::getline(std::cin, answer);
+            if(answer.empty()){
+              std::cout << red << "Nothing entered." << reset << std::endl;
+              answer.clear();
+              std::cin.clear();
+              continue;
             }
 
-            pts_for_circle1.push_back(center_pattern1);
+            if(answer == "yes"){
 
-            for(size_t i=0;i<image_points.size();i++){
+                std::string image_pattern_path = images_path;
+                //std::cout << "before pop back:" << image_pattern_path << std::endl;
+                std::string backG = images_filenames.at(0);
+                //std::cout << "string reference:" << backG << std::endl;
+                for(int i=0;i<backG.size();i++){
+                  int j=i;
+                  image_pattern_path.pop_back();
+                }
+                //std::cout << "after pop back:" << image_pattern_path << std::endl;
+                std::string img_feat_filename;
+                for(int i=0;i<images_filenames.size();i++){
+                  std::string comp = image_pattern_path;
+                  comp += images_filenames.at(i);
+                  if(comp == images_path){
+                    //std::cout << "Found:" << comp << std::endl;
+                    img_feat_filename = images_filenames.at(i);
+                    break;
+                  }
+                }
 
-              cv::Point2d pt = image_points.at(i);
-              double error = cv::norm(pt - center_pattern2);
-              if(error < 100){
-                pts_for_circle2.push_back(pt);
-              }else{
-                continue;
-              }
+                img_feat_filename.pop_back();
+                img_feat_filename.pop_back();
+                img_feat_filename.pop_back();
 
+                std::string feature_path = output_dir;
+                feature_path += "/matches/";
+                feature_path += img_feat_filename;
+                feature_path += "feat";
+
+                float x_, y_,s,orientation;
+                std::vector<cv::Point2d> image_points;
+
+                std::ifstream file(feature_path.c_str());
+                if(!file.is_open()){
+                  std::cout << red << "Error: Could not find "<< feature_path << reset << std::endl;
+                  feature_path.clear();
+                  break;
+                }
+
+                while(file >> x_ >> y_ >> s >> orientation){
+                    image_points.push_back(cv::Point2f(x_,y_));
+                }
+
+                std::cout << yellow << "\nFeature selected:" << reset << feature_path << std::endl;
+                std::cout << yellow << "Image points: " << reset << image_points.size() << " points" << std::endl;
+
+                for(size_t i=0;i<image_points.size();i++){
+
+                  cv::Point2d pt = image_points.at(i);
+                  double error = cv::norm(cv::Mat(pt),cv::Mat(center_pattern1));
+                  if(error < 30){
+                    pts_for_circle1.push_back(pt);
+                  }else{
+                    continue;
+                  }
+                }
+
+                pts_for_circle1.push_back(center_pattern1);
+
+                for(size_t i=0;i<image_points.size();i++){
+
+                  cv::Point2d pt = image_points.at(i);
+                  double error = cv::norm(pt - center_pattern2);
+                  if(error < 30){
+                    pts_for_circle2.push_back(pt);
+                  }else{
+                    continue;
+                  }
+
+                }
+
+                pts_for_circle2.push_back(center_pattern2);
+
+              foundBestImage = true;
+              break;
+            }else if(answer == "no"){
+              answer.clear();
+              foundBestImage = false;
+              img_selected.clear();
+              break;
+            }else{
+              std::cout << red << "Is not a valid answer" << reset << std::endl;
+              answer.clear();
+              continue;
             }
-
-            pts_for_circle2.push_back(center_pattern2);
-
-
-            std::cout << "pts for cicle 1:" << pts_for_circle1.size()<< std::endl;
-            std::cout << "pts for cicle 2:" << pts_for_circle2.size()<< std::endl;
+          }
 
 
-          foundBestImage = true;
-          break;
-        }else if(answer == "no"){
-          image_pixel_reference = -1;
-          answer.clear();
-          foundBestImage = false;
-        }else{
-          std::cout << red << "Is not a valid answer" << reset << std::endl;
-          answer.clear();
-          continue;
-        }
-
-        if(not foundBestImage){
-          std::cout << yellow << "\nWhich one?" << "\n" << reset << "------------------------------------------\n"
-                    << "->" << std::flush;
-          std::cin >> numImg;
-          break;
-        }
-      }
-
-      if(foundBestImage){
-        std::cout << yellow << "\nUsing pixels reference length: " << pixel_length << reset << std::endl;
-        image_pixel_reference = pixel_length;
-        bestImage = true;
-        break;
-      }
-
-      if(not foundBestImage){
-        continue;
-      }
+          if(foundBestImage){
+              PCL_INFO("Id pose: %i",numImg);
+              //std::cout << "\nFilename: " << images_filenames.at(numImg) << std::endl;
+              std::cout << "\nCamera pose:\n" << cameras_poses[numImg] << std::endl;
+              break;
+          }
+       }
     }
 
-    if(not bestImage){
-      std::cout << red << "No image selected." << reset << std::endl;
-      continue;
-    }
-
-    if(bestImage){
-      break;
-    }
-  }
-
-  PCL_INFO("Id pose: %i",numImg);
-  //std::cout << "\nFilename: " << images_filenames.at(numImg) << std::endl;
-  std::cout << "\nCamera pose:\n" << cameras_poses[numImg] << std::endl;
+  cv::destroyAllWindows();
 
   cv::Matx34d pose =cameras_poses[numImg];
   cv::Mat Rc = cv::Mat(pose.get_minor<3,3>(0,0));
@@ -691,8 +775,8 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
   std::vector<cv::Point3d> points3d;
 
   for(pcl::PointCloud<pcl::PointXYZRGB>::iterator it=Map3D->begin(); it!=Map3D->end(); ++it){
-    points3d.push_back(cv::Point3d(it->x,it->y,it->z));
-  }
+      points3d.push_back(cv::Point3d(it->x,it->y,it->z));
+    }
 
   cv::projectPoints(points3d,rvec,tvec,intrinsic,cv::Mat(),projected_points);
   std::cout << yellow << "\nPoints projected:" << reset << projected_points.size()<< std::endl;
@@ -716,40 +800,32 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
   //check if point reprojection error is small enough
   for(std::vector<cv::Point2d>::iterator it = pts_for_circle1.begin();it!=pts_for_circle1.end();++it){
 
-    cv::Point2d pt2d_circle1 = cv::Point2d(it->x,it->y);
-    cir << "ptss:" << pt2d_circle1 << std::endl;
+      cv::Point2d pt2d_circle1 = cv::Point2d(it->x,it->y);
+      cir << "ptss:" << pt2d_circle1 << std::endl;
 
-    for(int i=0;i<projected_points.size();i++){
+      for(int i=0;i<projected_points.size();i++){
 
-      error = cv::norm(projected_points.at(i) - pt2d_circle1);
-      p1_map[error] = std::make_pair(std::make_pair(pt2d_circle1,projected_points[i]),points3d.at(i));
+          error = cv::norm(projected_points.at(i) - pt2d_circle1);
+          p1_map[error] = std::make_pair(std::make_pair(pt2d_circle1,projected_points[i]),points3d.at(i));
+        }
     }
-  }
   cir.close();
 
   std::map<double,std::pair<std::pair<cv::Point2d,cv::Point2d>,cv::Point3d>> p2_map;
 
   for(std::vector<cv::Point2d>::iterator it = pts_for_circle2.begin();it!=pts_for_circle2.end();++it){
 
-    cv::Point2d pt2d_circle2 = cv::Point2d(it->x,it->y);
-     cir2 << "ptss:" << pt2d_circle2 << std::endl;
+      cv::Point2d pt2d_circle2 = cv::Point2d(it->x,it->y);
+      cir2 << "ptss:" << pt2d_circle2 << std::endl;
 
-    for(int i=0;i<projected_points.size();i++){
+      for(int i=0;i<projected_points.size();i++){
 
-      error = cv::norm(projected_points.at(i) - pt2d_circle2);
-      p2_map[error] = std::make_pair(std::make_pair(pt2d_circle2,projected_points.at(i)),points3d.at(i));
+          error = cv::norm(projected_points.at(i) - pt2d_circle2);
+          p2_map[error] = std::make_pair(std::make_pair(pt2d_circle2,projected_points.at(i)),points3d.at(i));
 
+        }
     }
-  }
 
-
-/*
-  //check if point reprojection error is small enough
-  for(int i=0;i<points3d.size();i++){
-    error = cv::norm(projected_points[i] - img_p2);
-    p2_map[error] = std::make_pair(projected_points[i],points3d.at(i));
-  }
-*/
   std::map<double,std::pair<std::pair<cv::Point2d,cv::Point2d>,cv::Point3d>>::iterator it1 = p1_map.begin();
   ptt1 = pcl::PointXYZ(it1->second.second.x,it1->second.second.y,it1->second.second.z);
   std::cout << "\nOriginal point1:" << it1->second.first.first << " projected point1:" << it1->second.first.second
@@ -763,13 +839,15 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
             << std::endl;
   std::cout << "Error: " << it2->first << std::endl;
   std::cout << "Point3D:" << it2->second.second << std::endl;
-  
+
   ptt1.z = pt2.z;
   ptt1.x = pt2.x;
 
   vtkVisualizer(Map3D,ptt1,pt2);
 
   double Ref_PCL = pcl::geometry::distance(ptt1,pt2);
+  double W_reference = std::stold(world_reference);
+
   scale_factor = W_reference/Ref_PCL;
   PCL_INFO("\n\nModel reference: %f",Ref_PCL);
   PCL_INFO("\nscale_factor: %f",scale_factor);
@@ -782,18 +860,15 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,
 
 }
 
-bool Utilities::loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& pts3d/*std::vector<Point3DInMap>& pts3d*/,
-                                 cv::Mat_<double>& intrinsic,
+bool Utilities::loadSFM_XML_Data(cv::Mat_<double>& intrinsic,
                                  std::vector<cv::Matx34d>& cameras_poses){
 
   // Empty document
-  tinyxml2::XMLDocument xml_doc;  
-  pcl::PolygonMesh polyMesh;
+  tinyxml2::XMLDocument xml_doc;
+  //pcl::PolygonMesh polyMesh;
 
   /*READING FILE*/
-  std::cout << blue <<"Reading sfm_data.xml file. Please wait." << reset << std::endl;
-  std::string sfm_data;
-  sfm_data += output_dir;
+  std::string sfm_data = output_dir;
   sfm_data += "/reconstruction_sequential/sfm_data.xml";
 
   // Load xml document
@@ -807,7 +882,7 @@ bool Utilities::loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& pts3d/*
   std::cout << yellow << "sfm_data.xml:" << std::endl;
   std::cout << "<views>" << std::endl;
   std::cout << "<intrinsics>" << std::endl;
-  std::cout << "<extrinsics>" << std::endl;
+  std::cout << "<extrinsics>" << reset << std::endl;
   //std::cout << "<structure>" << reset << std::endl;
 
   std::cout << "\nFounding root tag <cereal> ..." << std::endl;
@@ -1070,23 +1145,6 @@ bool Utilities::loadSFM_XML_Data(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& pts3d/*
     return false;
   }
 
-  std::string polyFile = output_dir;
-  polyFile += "/reconstruction_sequential/colorized.ply";
-
-  pcl::io::loadPolygonFile(polyFile.c_str(),polyMesh);
-  pcl::fromPCLPointCloud2(polyMesh.cloud, *pts3d);
-
-  std::string prefix = output_dir;
-  prefix += "/3D_Mapping/";
-  std::string prefix1 = prefix;
-  prefix1 +="MAP3D.pcd";
-
-  std::string prefix2 = prefix;
-  prefix2 += "MAP3D.ply";
-
-  pcl::io::savePCDFileBinary(prefix1.c_str(), *pts3d);
-  pcl::io::savePLYFileBinary(prefix2.c_str(), *pts3d);
-
   return true;
 }
 
@@ -1095,7 +1153,7 @@ bool Utilities::createPMVS_Files(){
   std::cout << "\n------------------------------------------" << std::endl;
   std::cout << blue <<"Creating files for PMVS2..." << reset << std::endl;
 
-  std::string command2 = "~/catkin_ws/src/iTree3DMap/openMVG/openMVG_Build/Linux-x86_64-RELEASE/openMVG_main_openMVG2PMVS -i ";
+  std::string command2 = "../libraries/openMVG/openMVG_Build/Linux-x86_64-RELEASE/openMVG_main_openMVG2PMVS -i ";
   command2 += output_dir;
   command2 += "/reconstruction_sequential/sfm_data.bin -o ";
   command2 += output_dir;
@@ -1116,15 +1174,15 @@ bool Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
   std::cout << "              DENSIFICATION                      " << std::endl;
   std::cout << "************************************************" << std::endl;
 
-  std::cout << "\n------------------------------------------" << std::endl;
+  std::cout << "------------------------------------------" << std::endl;
   std::cout << blue << "Densify cloud process initializing..." << reset << std::endl;
   /*
-  std::string command3 = "~/catkin_ws/src/iTree3DMap/programs/pmvs2 ";
+  std::string command3 = "../libraries/pmvs2 ";
   command3 += output_dir;
   command3 += "/PMVS/ ";
   command3 += "pmvs_options.txt";
 
-  int dont_care = std::system("chmod 771 ~/catkin_ws/src/iTree3DMap/programs/pmvs2");
+  int dont_care = std::system("chmod 771 ../libraries/pmvs2");
   dont_care = std::system(command3.c_str());
 
   if(dont_care > 0){
@@ -1197,36 +1255,7 @@ bool Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
   float ghama = M_PI/2; // The angle of rotation in radians
   transform_3.rotate (Eigen::AngleAxisf(ghama, Eigen::Vector3f::UnitX()));
   pcl::transformPointCloud (*output_cloud3, *cloud_filtered, transform_3);
-/*
-  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer2 (new pcl::visualization::PCLVisualizer ("PCL VISUALIZER2"));
 
-   viewer2->setPosition(0,0);
-   viewer2->setBackgroundColor(0.0, 0.0, 0.0, 0.0); // Setting background to a dark grey
-
-   viewer2->addCoordinateSystem();
-   pcl::PointXYZ p11, p22, p33;
-
-   p11.getArray3fMap() << 1, 0, 0;
-   p22.getArray3fMap() << 0, 1, 0;
-   p33.getArray3fMap() << 0,0.1,1;
-
-   viewer2->addText3D("x", p11, 0.2, 1, 0, 0, "x_");
-   viewer2->addText3D("y", p22, 0.2, 0, 1, 0, "y_");
-   viewer2->addText3D ("z", p33, 0.2, 0, 0, 1, "z_");
-
-
-   viewer2->addPointCloud(cloud_filtered,"POINTCLOUD");
-
-
-   viewer2->initCameraParameters();
-   viewer2->resetCamera();
-
-   pcl::console::print_info ("\npress [q] to exit!\n");
-
-   while(!viewer2->wasStopped()){
-       viewer2->spin();
-   }
-*/
   // Create the filtering object
   pcl::PassThrough<pcl::PointXYZRGB> pass;
   pass.setInputCloud(cloud_filtered);
@@ -1434,22 +1463,104 @@ void Utilities::create_mesh(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud,pcl
 
   pcl::surface::SimplificationRemoveUnusedVertices rem;
   rem.simplify(mesh2,mesh);
+
+  std::string out = output_dir;
+  out += "/3D_Mapping/mesh.ply";
+
+  std::cout << "\nSaving mesh:" << out << std::endl;
+
+  pcl::io::savePolygonFilePLY(out.c_str(),mesh);
   
 }
 
-void Utilities::vizualizeMesh(pcl::PolygonMesh &mesh){
+void Utilities::vizualizeMesh(vtkSmartPointer<vtkPolyData>& vtkCloud){
 
-  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("MAP3D MESH"));
-  viewer->setBackgroundColor(0, 0, 0);
-  viewer->addPolygonMesh(mesh,"meshes",0);
-  viewer->addCoordinateSystem(1.0);
-  viewer->initCameraParameters();
-  viewer->resetCamera();
+//  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("MAP3D MESH"));
+//  viewer->setBackgroundColor(0, 0, 0);
+//  viewer->addPolygonMesh(mesh,"meshes",0);
+//  viewer->addCoordinateSystem(1.0);
+//  viewer->initCameraParameters();
+//  viewer->resetCamera();
 
-  std::cout << "\nPress [q] to continue." << std::endl;
-  while(!viewer->wasStopped()){
-      viewer->spin();
-  }
+//  std::cout << "\nPress [q] to continue." << std::endl;
+//  while(!viewer->wasStopped()){
+//      viewer->spin();
+//  }
+
+  vtkSmartPointer<vtkVertexGlyphFilter> vertexFilter = vtkSmartPointer<vtkVertexGlyphFilter>::New();
+  vertexFilter->SetInputData(vtkCloud);
+  vertexFilter->Update();
+
+  vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+  polydata->ShallowCopy(vertexFilter->GetOutput());
+
+  // Create a mapper and actor
+  vtkSmartPointer<vtkPolyDataMapper> mapper1 = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper1->SetInputData(polydata);
+
+  vtkSmartPointer<vtkActor> actor1 = vtkSmartPointer<vtkActor>::New();
+  actor1->SetMapper(mapper1);
+  actor1->GetProperty()->SetColor(1.0, 1.0, 1.0);
+  actor1->GetProperty()->SetPointSize(1);
+
+  // Create a renderer, render window, and interactor
+  vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
+  renderer->SetBackground(0.0, 0.0, 0.0);
+  // Zoom in a little by accessing the camera and invoking its "Zoom" method.
+  renderer->ResetCamera();
+  vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
+
+  renderWindow->SetSize(800, 600);
+  renderWindow->AddRenderer(renderer);
+
+  vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+  renderWindowInteractor->SetRenderWindow(renderWindow);
+
+  // Add the actor to the scene
+  renderer->AddActor(actor1);
+  renderer->ResetCamera();
+  renderer->SetViewPoint(0,0,0);
+
+
+  // Render and interact
+  renderWindow->Render();
+  renderWindow->SetWindowName("VTK VISUALIZER");
+
+
+
+  vtkSmartPointer<vtkInteractorStyleTrackballCamera> style = vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
+  renderWindowInteractor->SetInteractorStyle(style);
+
+
+
+  PCL_INFO("\nPress [q] to close visualizer");
+  renderWindowInteractor->Start();
+
+
+/*
+  vtkSmartPointer<vtkPLYReader> reader = vtkSmartPointer<vtkPLYReader>::New();
+  reader->SetFileName ( inputFilename.c_str() );
+
+  // Visualize
+  vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper->SetInputConnection(reader->GetOutputPort());
+
+  vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+  actor->SetMapper(mapper);
+
+  vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
+  vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
+  renderWindow->AddRenderer(renderer);
+  vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor =
+      vtkSmartPointer<vtkRenderWindowInteractor>::New();
+  renderWindowInteractor->SetRenderWindow(renderWindow);
+
+  renderer->AddActor(actor);
+  renderer->SetBackground(0.0,0.0,0.0); // Sea green
+
+  renderWindow->Render();
+  renderWindowInteractor->Start();
+  */
 }
 
 void Utilities::vtkVisualizer(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,pcl::PointXYZ& pt1,pcl::PointXYZ& pt2){
@@ -1523,19 +1634,36 @@ void Utilities::vtkVisualizer(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clou
   renderer->AddActor(axes);
   renderer->AddActor(actor1);
   renderer->AddActor(actor2);
+  renderer->ResetCamera();
+  renderer->SetViewPoint(0,0,0);
+
 
   // Render and interact
   renderWindow->Render();
   renderWindow->SetWindowName("VTK VISUALIZER");
 
+
+
   vtkSmartPointer<vtkInteractorStyleTrackballCamera> style = vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
   renderWindowInteractor->SetInteractorStyle(style);
+
+
 
   PCL_INFO("\nPress [q] to close visualizer");
   renderWindowInteractor->Start();
 
 }
 
+bool Utilities::is_number(const std::string& s){
+
+  std::string::const_iterator it = s.begin();
+      while (it != s.end() && std::isdigit(*it)) ++it;
+      return !s.empty() && it == s.end();
+  /*
+    return !s.empty() && std::find_if(s.begin(),
+        s.end(), [](char c) { return !std::isdigit(c); }) == s.end();
+        */
+}
 
 
 

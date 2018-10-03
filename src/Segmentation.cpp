@@ -49,13 +49,11 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   std::cout << "Crown cloud segmentation with: Euclidean Cluster Extraction..." << std::endl;
   crownSegmentation(tree_segmented,crown_segmented);
 
-   pcl::console::TicToc tt2;
+  pcl::console::TicToc tt2;
   PCL_INFO("\nSaving 3D mapping segmented...");
 
   std::string prefix = output_path;
-  prefix += "/";
-  prefix += "3D_Mapping";
-  prefix += "/";
+  prefix += "/3D_Mapping/";
 
   std::string prefix1 = prefix;
   prefix1 += "MAP3D_trunk_segmented.pcd";
@@ -74,6 +72,8 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
 
   std::string prefix6 = prefix;
   prefix6 += "MAP3D_crown_segmented.ply";
+
+  std::cout << "prefix1:" << prefix1 << std::endl;
 
   pcl::io::savePCDFileBinary(prefix1.c_str(), *trunk_cloud);
   pcl::io::savePLYFileBinary(prefix2.c_str(), *trunk_cloud);

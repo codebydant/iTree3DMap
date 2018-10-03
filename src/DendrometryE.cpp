@@ -56,45 +56,29 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
                            const pcl::PointCloud<pcl::PointXYZ>::Ptr& crown_cloud,
                            const std::string output_dir,
                            pcl::PointXYZ& minDBH,pcl::PointXYZ& maxDBH,pcl::PointXYZ& minTH,pcl::PointXYZ& maxTH,
-                           pcl::PointXYZ& minCH,pcl::PointXYZ& maxCH,pcl::PointXYZ& minDBH5,pcl::PointXYZ& maxDBH5){
+                           pcl::PointXYZ& minCH,pcl::PointXYZ& maxCH,pcl::PointXYZ& minDBH5,pcl::PointXYZ& maxDBH5
+                           ){
 
   std::cout << "************************************************" << std::endl;
   std::cout << "              DENDROMETRY ESTIMATION            " << std::endl;
   std::cout << "************************************************" << std::endl;
 
-  std::string sal = "/home/daniel/catkin_ws/src/iTree3DMap/programs/DBScan_Octrees-master/src/build/Resources/worldCloud15.csv";
-    
-  Eigen::Vector4f centroid1;
- 
-  pcl::compute3DCentroid(*trunk_cloud,centroid1);
-  std::cout << "centroid trunk cloud:" << centroid1 << std::endl;
+  std::string command = "../../libraries/DBScan_Octrees-master/src/build/bin/dbscan ";
+  command += output_dir;
+  command += "/3D_Mapping/MAP3D_crown_segmented.pcd 40 10 1000 ";
+  command += output_dir;
   
-  std::cout << "Creating cloud for DBSCAN in:" << sal << std::endl;
-
-  ofstream dbscan(sal.c_str());
-  for(pcl::PointCloud<pcl::PointXYZ>::iterator it=crown_cloud->begin();it!=crown_cloud->end(); ++it){
-
-    pcl::PointXYZ pt = pcl::PointXYZ(it->x,it->y,it->z);
-    dbscan << pt.x << "," << pt.y << "," << pt.z << std::endl;
-
-  }
-  dbscan.close();
-  
-  std::cout << "File created." << std::endl;
-  std::string command = "/home/daniel/catkin_ws/src/iTree3DMap/programs/DBScan_Octrees-master/src/build/bin/dbscan ";
-  command += sal;
-  
-  std::cout << "Executing:" << command << std::endl;
+  std::cout << "Applying DBSCAN..." << std::endl;
 
   int dont_care = std::system(command.c_str());
 
   if(dont_care > 0){
     std::cout << red << "Failed. dbscan not found" << reset << std::endl;
-
-  }  
-
+    return std::exit(-1);
+  } 
   
-  std::string numCluster = "/home/daniel/catkin_ws/clusters_number.txt";
+  std::string numCluster = output_dir;
+  numCluster += "/clusters_number.txt";
   std::ifstream file(numCluster.c_str());
       if(!file.is_open()){
         std::cout << "Error: Could not find " << numCluster << std::endl;        
@@ -107,14 +91,14 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
        while(file >> totalClusters){
         std::cout << "getting total clusters:" << totalClusters << std::endl;
       }
-  file.close();
-  
+  file.close();  
   
   std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> clouds_vector;
   
   for(int i=0;i<totalClusters; i++){
   
-      std::string feature_path="/home/daniel/catkin_ws/cloud_cluster_";
+      std::string feature_path=output_dir;
+      feature_path +="/cloud_cluster_";
       feature_path += std::to_string(i);
       feature_path += ".xyz";  
       std::cout << "Using file:" << feature_path << std::endl;
@@ -122,7 +106,7 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
       float x_, y_,z_;
 
       std::ifstream file(feature_path.c_str());
-      if(!file.is_open()){
+      if(!file.is_open() ){
         std::cout << "Error: Could not find " << feature_path << std::endl;
         feature_path.clear();
         return exit(-1);
@@ -130,8 +114,8 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
       }
 
       pcl::PointCloud<pcl::PointXYZ>::Ptr crown_cloud_segmented (new pcl::PointCloud<pcl::PointXYZ>());
-      std::string coma1,coma2;
-      while(file >> x_ >> coma1 >> y_ >> coma2 >> z_){
+
+      while(file >> x_ >> y_ >> z_){
         pcl::PointXYZ pt = pcl::PointXYZ(x_,y_,z_);
           crown_cloud_segmented->points.push_back(pt);
       }
@@ -146,22 +130,6 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   
   std::cout << "Crown cloud segmented with DBScan:" << clouds_vector.size() << " clusters" << std::endl;
   std::map<double,pcl::PointCloud<pcl::PointXYZ>::Ptr> clusters_dbscan_map;
-  
-  pcl::PointXYZ pt1 = pcl::PointXYZ(centroid1[0],centroid1[1],centroid1[2]);
-  
-  
-  
-  
-  
-
-  
-  std::string guardar= "/home/daniel/catkin_ws/src/iTree3DMap/programs/DBScan_Octrees-master/src_linux/build/bin/cloud_crown_segmented_DBScan.pcd";
-  
-  
- // pcl::io::savePCDFileBinary(guardar.c_str(),clouds_vector.at(0));
-
-
-
 
   std::string dendrometric_results = output_dir;
   dendrometric_results += "/dendrometric.txt";
@@ -307,11 +275,9 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   
   
   //-------------------------------------------------
-  //-------------------------------------------------
+  //-------------------------------------------------  
   
-  
-  for(int i=0;i<clouds_vector.size(); i++){
-   
+  for(int i=0;i<clouds_vector.size(); i++){   
   
       Eigen::Vector4f centroid;
      
@@ -330,6 +296,12 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   crown_cloud->points.clear();
   pcl::copyPointCloud(*crown_better_segmented->second,*crown_cloud);
   
+  std::cout << "Crown DBScan segmented:" << crown_cloud->points.size() << std::endl;
+  
+  std::string guardar= output_dir;
+  guardar += "/3D_Mapping/cloud_crown_segmented_DBScan.pcd";
+   
+  pcl::io::savePCDFileBinary(guardar.c_str(),*crown_cloud); 
   
   
   //---------------------------------------------
@@ -433,7 +405,15 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   pcl::PolygonMesh mesh;
 
   Utilities::create_mesh(crown_cloud,mesh);
-  Utilities::vizualizeMesh(mesh);
+
+  std::string mesh_path = output_dir;
+  mesh_path += "3D_Mapping/mesh.ply";
+
+  vtkSmartPointer<vtkPolyData> vtkCloud = vtkSmartPointer<vtkPolyData>::New();
+  pcl::VTKUtils::convertToVTK(mesh,vtkCloud);
+
+
+  Utilities::vizualizeMesh(vtkCloud);
 
   float volume = volumeOfMesh(mesh);
 
@@ -455,7 +435,7 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   std::cout << green << "OTHERS FEATURES" << reset << std::endl;
   std::cout << "---------------------------------------" << std::endl;
   std::cout << "------ Total height:" << total_height << " cm" << std::endl;
-  std::cout << "------ Factor morfico:" << factor_morfico << std::endl;
+  std::cout << "------ Morphic factor:" << factor_morfico << std::endl;
   std::cout << "************************************************" << std::endl;
   std::cout << "************************************************" << std::endl;
 
@@ -466,10 +446,11 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   feature << "DBH 5m:" << DBH_5m << " cm" << std::endl;
   feature << "--------------------------" << std::endl;
   feature << "CROWN" << "\n" << "Height:" << height_crown << " cm" << std::endl;
-  feature << "Volume:" << crown_volume << " cm^3" << std::endl;
+  feature << "Volume (MESH):" << volume << " cm^3" << std::endl;
+  feature << "Volume (Eq):" << crown_volume << " cm^3" << std::endl;
   feature << "--------------------------" << std::endl;
   feature << "Total height:" << total_height << std::endl;
-  feature << "Factor morfico:" << factor_morfico << std::endl;
+  feature << "Morphic factor:" << factor_morfico << std::endl;
   feature.close();
 
 }
