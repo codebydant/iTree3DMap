@@ -6,37 +6,28 @@
 /*********************************
       MAIN FUNCTION
 **********************************/
-int main(int argc, char **argv){
+int main(void){
 
   Utilities::help();
 
   /*************************
-  STEP 1: ROS INTERFACE
+  STEP 1: 3D MAPPING
   **************************/
-  /*
-  ros::init(argc, argv, "listener");
-  ros::NodeHandle n;
-
-  ros::Subscriber sub = n.subscribe("input", 1000, subscriberCallback);
-  ros::spinOnce();
-  */
-
-  /*************************
-  STEP 2: 3D MAPPING
-  **************************/
-  bool success = Utilities::run_openMVG();
+  std::string output_dir;
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr Map3D (new pcl::PointCloud<pcl::PointXYZRGB>());
+  bool success = Utilities::run_openMVG(Map3D,output_dir);
   if(not success){
-    PCL_ERROR("Could not get 3D Model. Failed dendrometric estimation.");
+    PCL_ERROR("Could not get 3D Model. Failed dendrometric estimation.\n");
     return -1;
   }
 
+  std::cout << "firts output dir:" << output_dir << std::endl;
+
   /*************************
-  STEP 3: GET SCALE FACTOR
+  STEP 2: GET SCALE FACTOR
   **************************/
   double scale=0;
-  std::string output_dir;
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr Map3D (new pcl::PointCloud<pcl::PointXYZRGB>());
-  success = Utilities::getScaleFactor(Map3D,scale,output_dir);
+  success = Utilities::getScaleFactor(Map3D,scale);
   if(not success or scale <=0){
     PCL_WARN("Using scale factor = 120.128\n");
     scale = 120.128;
@@ -45,7 +36,7 @@ int main(int argc, char **argv){
   std::cout << "\nMap3D points:" << Map3D->points.size() << std::endl;
 
   /*************************
-  STEP 4: DENSIFICATION
+  STEP 3: DENSIFICATION
   **************************/
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr Map3DDense (new pcl::PointCloud<pcl::PointXYZRGB>());
   auto start = std::chrono::high_resolution_clock::now();
@@ -60,13 +51,13 @@ int main(int argc, char **argv){
   std::cout << "Dense map time: " << difference << " seconds" << std::endl;
 
   /*************************
-  STEP 5: UNIFORM SCALING
+  STEP 4: UNIFORM SCALING
   **************************/
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_3dMap_scaled (new pcl::PointCloud<pcl::PointXYZRGB>());
   Utilities::uniformScaling(Map3DDense,cloud_3dMap_scaled,scale);
  
   /*************************
-  STEP 6: SEGMENTATION
+  STEP 5: SEGMENTATION
   **************************/
   pcl::PointCloud<pcl::PointXYZ>::Ptr trunk_segmented (new pcl::PointCloud<pcl::PointXYZ>());
   pcl::PointCloud<pcl::PointXYZ>::Ptr tree_segmented (new pcl::PointCloud<pcl::PointXYZ>());
@@ -79,10 +70,10 @@ int main(int argc, char **argv){
   std::cout << std::endl;
 
   /*************************
-  STEP 7: DENDROMETRY MEASUREMENTS
+  STEP 6: DENDROMETRY MEASUREMENTS
   **************************/
   pcl::PointXYZ minDBH,maxDBH,minTH,maxTH,minCH,maxCH,minDBH5,maxDBH5;
-  Dendrometry::estimate(trunk_segmented,crown_segmented,output_dir,minDBH,maxDBH,minTH,maxTH,minCH,maxCH,minDBH5,maxDBH5,output_dir);
+  Dendrometry::estimate(trunk_segmented,crown_segmented,output_dir,minDBH,maxDBH,minTH,maxTH,minCH,maxCH,minDBH5,maxDBH5);
 
   /*************************
   PCL VISUALIZER
