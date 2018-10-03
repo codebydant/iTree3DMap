@@ -42,31 +42,26 @@ Images dataset in Google Drive:
 
 This is a ros package project and depends of openMVG and Pmvs2.
 * Download the src code and Unpack .zip
-* Copy the package to ROS catkin_ws/src
-* Compile openMVG as: openMVG_Build
-* Copy the openMVG_Build folder to same level directory of package eg:
 
 catkin_ws/src:
   	
 	iTree3DMap - src 
 		   - include
-		   - programs
-		   - openMVG
+		   - libraries
+		   - build
 		   
 * replace the "SfM_SequentialPipeline.py" in openMVG/openMVG_Build/software/SfM/ for "SfM_SequentialPipeline.py" of repository   
 * If pmvs2 binary file is not working, download and compile cmvs-pmvs library and replace the pmvs2 bin to /programs folder of the package 
 
-Compile with catkin:
+Compile with cmake:
 
-    cd ~/catkin_ws
-	catkin_make
+    cmake ../
+    make
  	 
 ### Test
 
-	cd ~/catkin_ws
-	source devel/setup.bash
-	roscore  --> optional
-	rosrun itree_3dmap itree_3dmap		
+	cd /build/bin
+	./itree_3dmap		
 
 *Note:*
 If OpenCV are not install. just compiled. please set the path to the current build directory in CMakeList.txt file.
