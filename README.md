@@ -10,7 +10,6 @@
 * openMVG --> incremental structure from motion.
 * pmvs2 --> densify cloud process
 * PCL --> segmentation cloud process
-* ROS --> package project
 
 ## Build 
 
@@ -29,7 +28,6 @@ Images dataset in Google Drive:
 
 - OpenCV 3.4.1: https://github.com/opencv
 - PCL 1.8.1: https://github.com/PointCloudLibrary/pcl
-- ROS Kinetic: http://wiki.ros.org/kinetic/Installation/Ubuntu
 - OpenMVG:https://github.com/openMVG/openMVG
 - PMVS: https://github.com/pmoulon/CMVS-PMVS
 
