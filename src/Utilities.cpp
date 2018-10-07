@@ -1,4 +1,4 @@
-﻿#include "include/Utilities.h"
+#include "include/Utilities.h"
 
 std::string output_dir;
 std::string input_dir;
@@ -842,9 +842,46 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,dou
 
   ptt1.z = pt2.z;
   ptt1.x = pt2.x;
+/*
+  Eigen::Affine3f transform_1 = Eigen::Affine3f::Identity();
+  Eigen::Affine3f transform_2 = Eigen::Affine3f::Identity();
+  Eigen::Affine3f transform_3 = Eigen::Affine3f::Identity();
+  std::cout << "trans1:" << transform_1.matrix() << std::endl;
+  std::cout << "trans2:" << transform_2.matrix() << std::endl;
+  std::cout << "trans3:" << transform_3.matrix() << std::endl;
 
-  vtkVisualizer(Map3D,ptt1,pt2);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_trans (new pcl::PointCloud<pcl::PointXYZ>());
+  //alignCloudSFM(Map3D,cloud_trans,transform_1,transform_2,transform_3);
 
+  Eigen::Affine3f T = Eigen::Affine3f::Identity();
+  T = transform_1*transform_2*transform_3;
+
+  std::cout << "trans1:" << transform_1.matrix() << std::endl;
+  std::cout << "trans2:" << transform_2.matrix() << std::endl;
+  std::cout << "trans3:" << transform_3.matrix() << std::endl;
+
+  std::cout << "ptt1 before:" << ptt1 << std::endl;
+
+  Eigen::Vector3f point1 (ptt1.x, ptt1.y, ptt1.z);
+  Eigen::Vector3f point2 (pt2.x, pt2.y, pt2.z);
+
+  point1 = T*point1;
+  point2 = T*point2;
+
+  std::cout << "pt1 after:" << point1 << std::endl;
+  std::cout << "pt1 after:" << point2 << std::endl;
+
+  ptt1.x = point1[0];
+  ptt1.y = point1[1];
+  ptt1.z = point1[2];
+
+  pt2.x = point2[0];
+  pt2.y = point2[1];
+  pt2.z = point2[2];
+
+
+  vtkVisualizer(cloud_trans,ptt1,pt2);
+*/
   double Ref_PCL = pcl::geometry::distance(ptt1,pt2);
   double W_reference = std::stold(world_reference);
 
@@ -1423,85 +1460,199 @@ bool Utilities::alignCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
   return true;
 }
 
-void Utilities::create_mesh(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud,pcl::PolygonMesh &mesh){
+void Utilities::create_mesh(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud,pcl::PolygonMesh &mesh,int nThreads,int setKsearch, int depth, float pointWeight,float samplePNode, float scale, int isoDivide, bool confidence, bool outputPolygons, bool manifold, int solverDivide){
+/*
+  Eigen::Vector4f centroid;
+  pcl::compute3DCentroid(*cloud, centroid);
+  std::cout << centroid << std::endl;
 
-  pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> ne;
-  ne.setNumberOfThreads (8);
-  // ne.setInputCloud (cloud_smoothed);
-  ne.setInputCloud (cloud);
+  Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+  transform.translation() << -centroid[0], -centroid[1], -centroid[2];
+
+  std::cout << transform.matrix() << std::endl;
+
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloudTranslated(new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::transformPointCloud(*cloud, *cloudTranslated, transform);
+
+*/
   pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ> ());
-  ne.setSearchMethod (tree);
-  ne.setKSearch (10); //20
-  //ne.setRadiusSearch (0.5); // no funciona
-  pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>());
-  ne.compute(*cloud_normals);
 
-  for(std::size_t i = 0; i < cloud_normals->size (); ++i){
-    cloud_normals->points[i].normal_x *= -1;
-    cloud_normals->points[i].normal_y *= -1;
-    cloud_normals->points[i].normal_z *= -1;
-  }
+//  pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> ne;
+//  ne.setNumberOfThreads(nThreads);
+//  ne.setInputCloud(cloud);
+
+//  ne.setSearchMethod (tree);
+//  ne.setKSearch(setKsearch); //20
+//  //ne.setRadiusSearch (0.5); // no funciona
+//  pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>());
+//  ne.compute(*cloud_normals);
+
+//  pcl::PointCloud<pcl::PointXYZ>::Ptr smooth_mls (new pcl::PointCloud<pcl::PointXYZ>());
+//  const double radius;
+
+
+    // Output has the PointNormal type in order to store the normals calculated by MLS
+    pcl::PointCloud<pcl::PointNormal>::Ptr mls_points (new pcl::PointCloud<pcl::PointNormal>());
+
+    // Init object (second point type is for the normals, even if unused)
+    pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal> mls;
+
+    mls.setComputeNormals (true);
+
+    // Set parameters
+    mls.setInputCloud (cloud);
+   // mls.setPolynomialFit (true);
+    mls.setSearchMethod(tree);
+    mls.setSearchRadius(10);
+
+    // Reconstruct
+    mls.process (*mls_points);
+
+//    pcl::MovingLeastSquares<T, T> mls;
+//    mls.setComputeNormals(false);
+//    mls.setInputCloud(cloud);
+//    mls.setPolynomialFit(true);
+//    mls.setSearchMethod(get_search_kdtree<T>(cloud));
+//    mls.setSearchRadius(radius);
+//    mls.process(*smoothed);
+
+//  for(std::size_t i = 0; i < mls_points->size (); ++i){
+//    cloud_normals->points[i].normal_x *= -1;
+//    cloud_normals->points[i].normal_y *= -1;
+//    cloud_normals->points[i].normal_z *= -1;
+//  }
+
   pcl::PointCloud<pcl::PointNormal>::Ptr cloud_smoothed_normals (new pcl::PointCloud<pcl::PointNormal> ());
-  pcl::concatenateFields (*cloud, *cloud_normals, *cloud_smoothed_normals);//x
+  pcl::concatenateFields (*cloud, *mls_points, *cloud_smoothed_normals);//x
 
   pcl::Poisson<pcl::PointNormal> poisson;
 
-  poisson.setDepth(7);//9
-  poisson.setInputCloud (cloud_smoothed_normals);
-  poisson.setPointWeight(4);//4
-  //poisson.setDegree(5);
-  poisson.setSamplesPerNode(1.5);//1.5
-  poisson.setScale(1.1);//1.1
-  poisson.setIsoDivide(8);//8
-  poisson.setConfidence(1);
-  poisson.setOutputPolygons(true);
-  poisson.setManifold(0);
-  //poisson.setOutputPolygons(0);
-  poisson.setSolverDivide(8);//8
+  poisson.setDepth(depth);//9
+  poisson.setInputCloud(cloud_smoothed_normals);
+  poisson.setPointWeight(pointWeight);//4
+  poisson.setDegree(2);
+  poisson.setSamplesPerNode(samplePNode);//1.5
+  poisson.setScale(scale);//1.1
+  poisson.setIsoDivide(isoDivide);//8
+  poisson.setConfidence(confidence);
+  poisson.setOutputPolygons(outputPolygons);
+  poisson.setManifold(manifold);
+  poisson.setSolverDivide(solverDivide);//8
+
   pcl::PolygonMesh mesh2;
   poisson.reconstruct(mesh2);
 
   pcl::surface::SimplificationRemoveUnusedVertices rem;
   rem.simplify(mesh2,mesh);
-
+/*
   std::string out = output_dir;
   out += "/3D_Mapping/mesh.ply";
 
   std::cout << "\nSaving mesh:" << out << std::endl;
 
   pcl::io::savePolygonFilePLY(out.c_str(),mesh);
+  */
   
 }
 
-void Utilities::vizualizeMesh(vtkSmartPointer<vtkPolyData>& vtkCloud){
+void Utilities::createMeshFromCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,pcl::PolygonMesh& triangles){
 
-//  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("MAP3D MESH"));
-//  viewer->setBackgroundColor(0, 0, 0);
-//  viewer->addPolygonMesh(mesh,"meshes",0);
-//  viewer->addCoordinateSystem(1.0);
-//  viewer->initCameraParameters();
-//  viewer->resetCamera();
+    pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> n;
+    pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal>);
 
-//  std::cout << "\nPress [q] to continue." << std::endl;
-//  while(!viewer->wasStopped()){
-//      viewer->spin();
-//  }
+    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+/*
+    Eigen::Vector4f centroid;
+    pcl::compute3DCentroid(*cloud, centroid);
+    std::cout << centroid << std::endl;
 
-  vtkSmartPointer<vtkVertexGlyphFilter> vertexFilter = vtkSmartPointer<vtkVertexGlyphFilter>::New();
-  vertexFilter->SetInputData(vtkCloud);
-  vertexFilter->Update();
+    Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+    transform.translation() << -centroid[0], -centroid[1], -centroid[2];
 
-  vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
-  polydata->ShallowCopy(vertexFilter->GetOutput());
+    std::cout << transform.matrix() << std::endl;
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloudTranslated(new pcl::PointCloud<pcl::PointXYZ>());
+    pcl::transformPointCloud(*cloud, *cloudTranslated, transform);
+*/
+    tree->setInputCloud (cloud);
+    n.setInputCloud (cloud);
+    n.setSearchMethod (tree);
+    n.setKSearch (100);        //It was 20
+    n.compute (*normals);                //Normals are estimated using standard method.
+
+    pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals (new pcl::PointCloud<pcl::PointNormal> ());
+    pcl::concatenateFields (*cloud, *normals, *cloud_with_normals);//x
+
+    // Create search tree*
+    pcl::search::KdTree<pcl::PointNormal>::Ptr tree2 (new pcl::search::KdTree<pcl::PointNormal>);
+    tree2->setInputCloud (cloud_with_normals);
+
+    // Initialize objects
+    pcl::GreedyProjectionTriangulation<pcl::PointNormal> gp3;
+
+    std::cout << "Applying surface meshing...";
+
+    // Set the maximum distance between connected points (maximum edge length)
+    gp3.setSearchRadius(10);           //It was 0.025
+
+    // Set typical values for the parameters
+    gp3.setMu (5); //It was 2.5
+    gp3.setMaximumNearestNeighbors (100);    //It was 100
+    //gp3.setMaximumSurfaceAngle(M_PI/4); // 45 degrees    //it was 4
+    //gp3.setMinimumAngle(M_PI/18); // 10 degrees //It was 18
+    //gp3.setMaximumAngle(M_PI/1.5); // 120 degrees        //it was 1.5
+    gp3.setNormalConsistency(false); //It was false
+
+    // Get result
+    gp3.setInputCloud (cloud_with_normals);
+    gp3.setSearchMethod (tree2);
+    gp3.reconstruct (triangles);
+
+    vtkSmartPointer<vtkPolyData> polydata= vtkSmartPointer<vtkPolyData>::New();
+
+    pcl::PolygonMesh mms2;
+
+    pcl::VTKUtils::convertToVTK(triangles,polydata);
+    pcl::VTKUtils::convertToPCL(polydata,mms2);
+
+    pcl::io::savePolygonFilePLY("mesh2.ply", mms2);
+
+}
+
+
+void Utilities::vizualizeMesh(vtkSmartPointer<vtkPolyData>& vtkCloud1,vtkSmartPointer<vtkPolyData>& vtkCloud2){
+
+  vtkSmartPointer<vtkVertexGlyphFilter> vertexFilter1 = vtkSmartPointer<vtkVertexGlyphFilter>::New();
+  vertexFilter1->SetInputData(vtkCloud1);
+  vertexFilter1->Update();
+
+  vtkSmartPointer<vtkPolyData> polydata1 = vtkSmartPointer<vtkPolyData>::New();
+  polydata1->ShallowCopy(vertexFilter1->GetOutput());
 
   // Create a mapper and actor
   vtkSmartPointer<vtkPolyDataMapper> mapper1 = vtkSmartPointer<vtkPolyDataMapper>::New();
-  mapper1->SetInputData(polydata);
+  mapper1->SetInputData(polydata1);
 
   vtkSmartPointer<vtkActor> actor1 = vtkSmartPointer<vtkActor>::New();
   actor1->SetMapper(mapper1);
-  actor1->GetProperty()->SetColor(1.0, 1.0, 1.0);
+  actor1->GetProperty()->SetColor(1.0, 0.0, 0.0);
   actor1->GetProperty()->SetPointSize(1);
+
+  vtkSmartPointer<vtkVertexGlyphFilter> vertexFilter2 = vtkSmartPointer<vtkVertexGlyphFilter>::New();
+  vertexFilter2->SetInputData(vtkCloud2);
+  vertexFilter2->Update();
+
+  vtkSmartPointer<vtkPolyData> polydata2= vtkSmartPointer<vtkPolyData>::New();
+  polydata2->ShallowCopy(vertexFilter2->GetOutput());
+
+  // Create a mapper and actor
+  vtkSmartPointer<vtkPolyDataMapper> mapper2 = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper2->SetInputData(polydata2);
+
+  vtkSmartPointer<vtkActor> actor2 = vtkSmartPointer<vtkActor>::New();
+  actor2->SetMapper(mapper2);
+  actor2->GetProperty()->SetColor(0.0, 1.0, 0.0);
+  actor2->GetProperty()->SetPointSize(1);
 
   // Create a renderer, render window, and interactor
   vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
@@ -1518,52 +1669,23 @@ void Utilities::vizualizeMesh(vtkSmartPointer<vtkPolyData>& vtkCloud){
 
   // Add the actor to the scene
   renderer->AddActor(actor1);
+  renderer->AddActor(actor2);
   renderer->ResetCamera();
   renderer->SetViewPoint(0,0,0);
 
-
   // Render and interact
   renderWindow->Render();
-  renderWindow->SetWindowName("VTK VISUALIZER");
-
-
+  renderWindow->SetWindowName("CROWN MESH");
 
   vtkSmartPointer<vtkInteractorStyleTrackballCamera> style = vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
   renderWindowInteractor->SetInteractorStyle(style);
 
-
-
   PCL_INFO("\nPress [q] to close visualizer");
   renderWindowInteractor->Start();
 
-
-/*
-  vtkSmartPointer<vtkPLYReader> reader = vtkSmartPointer<vtkPLYReader>::New();
-  reader->SetFileName ( inputFilename.c_str() );
-
-  // Visualize
-  vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-  mapper->SetInputConnection(reader->GetOutputPort());
-
-  vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
-  actor->SetMapper(mapper);
-
-  vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
-  vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
-  renderWindow->AddRenderer(renderer);
-  vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor =
-      vtkSmartPointer<vtkRenderWindowInteractor>::New();
-  renderWindowInteractor->SetRenderWindow(renderWindow);
-
-  renderer->AddActor(actor);
-  renderer->SetBackground(0.0,0.0,0.0); // Sea green
-
-  renderWindow->Render();
-  renderWindowInteractor->Start();
-  */
 }
 
-void Utilities::vtkVisualizer(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,pcl::PointXYZ& pt1,pcl::PointXYZ& pt2){
+void Utilities::vtkVisualizer(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,pcl::PointXYZ& pt1,pcl::PointXYZ& pt2){
 
   if(cloud->points.size()<=0){
     PCL_ERROR("Input point cloud has no data!");
@@ -1574,7 +1696,7 @@ void Utilities::vtkVisualizer(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clou
   vtkSmartPointer<vtkPoints> pts = vtkSmartPointer<vtkPoints>::New();
 
   for(int n=0;n<cloud->points.size();n++){
-    pcl::PointXYZRGB pt = cloud->points.at(n);
+    pcl::PointXYZ pt = cloud->points.at(n);
     pts->InsertNextPoint(pt.x,pt.y,pt.z);
   }
 
@@ -1637,17 +1759,12 @@ void Utilities::vtkVisualizer(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clou
   renderer->ResetCamera();
   renderer->SetViewPoint(0,0,0);
 
-
   // Render and interact
   renderWindow->Render();
   renderWindow->SetWindowName("VTK VISUALIZER");
 
-
-
   vtkSmartPointer<vtkInteractorStyleTrackballCamera> style = vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
   renderWindowInteractor->SetInteractorStyle(style);
-
-
 
   PCL_INFO("\nPress [q] to close visualizer");
   renderWindowInteractor->Start();
@@ -1663,6 +1780,103 @@ bool Utilities::is_number(const std::string& s){
     return !s.empty() && std::find_if(s.begin(),
         s.end(), [](char c) { return !std::isdigit(c); }) == s.end();
         */
+}
+
+void Utilities::alignCloudSFM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_transformed,Eigen::Affine3f& transform_1,Eigen::Affine3f& transform_2,Eigen::Affine3f& transform_3){
+
+
+
+  pcl::PointCloud<pcl::PointXYZ>::Ptr  cloud_xyz (new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::copyPointCloud(*cloud,*cloud_xyz);
+
+  pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> ne;
+  pcl::SACSegmentationFromNormals<pcl::PointXYZ, pcl::Normal> seg;
+
+  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ> ());
+
+  pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>());
+  pcl::ModelCoefficients::Ptr coefficients_plane (new pcl::ModelCoefficients);
+  pcl::PointIndices::Ptr inliers_plane (new pcl::PointIndices);
+
+//  // Estimate point normals
+//  ne.setSearchMethod(tree);
+//  ne.setInputCloud(cloud_xyz);
+//  ne.setKSearch(50);
+//  ne.compute(*cloud_normals);
+
+  //Create the segmentation object for the planar model and set all the parameters
+  seg.setOptimizeCoefficients(true);
+  seg.setModelType(pcl::SACMODEL_NORMAL_PLANE);
+  seg.setNormalDistanceWeight(0.5);
+  seg.setMethodType(pcl::SAC_RANSAC);
+  seg.setMaxIterations(1000);
+  seg.setDistanceThreshold(0.5);
+  seg.setInputCloud(cloud_xyz);
+  seg.setInputNormals(cloud_normals);
+
+  // Obtain the plane inliers and coefficients
+  seg.segment(*inliers_plane, *coefficients_plane);
+  std::cout << "Plane coefficients: " << *coefficients_plane << std::endl;
+
+  std::cout << "Finding planar normal..." << std::endl;
+
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr transf1 (new pcl::PointCloud<pcl::PointXYZRGB>());
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr transf2 (new pcl::PointCloud<pcl::PointXYZRGB>());
+/*
+  // Find the planar coefficients for floor plane
+  pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+  pcl::PointIndices::Ptr floor_inliers (new pcl::PointIndices);
+  pcl::SACSegmentation<pcl::PointXYZ> segP;
+  segP.setOptimizeCoefficients(true);
+  segP.setModelType(pcl::SACMODEL_PLANE);
+  segP.setMethodType(pcl::SAC_RANSAC);
+  segP.setDistanceThreshold(100);
+  segP.setInputCloud(trunk_seg);
+
+  segP.segment(*floor_inliers, *coefficients);
+
+  std::cout << "Floor Plane Model coefficients:\n" << coefficients->values[0] << "\n"
+            << coefficients->values[1] << "\n"
+            << coefficients->values[2] << "\n"
+            << coefficients->values[3] << std::endl;
+*/
+  Eigen::Matrix<float, 1, 3> floor_plane_normal_vector, xy_plane_normal_vector, rotation_vector;
+
+  floor_plane_normal_vector[0] = coefficients_plane->values[0];
+  floor_plane_normal_vector[1] = coefficients_plane->values[1];
+  floor_plane_normal_vector[2] = coefficients_plane->values[2];
+
+  std::cout << "\nFloor plane normal vector:\n" << floor_plane_normal_vector << std::endl;
+
+  xy_plane_normal_vector[0] = 0.0;
+  xy_plane_normal_vector[1] = 0.0;
+  xy_plane_normal_vector[2] = 1.0;
+
+  std::cout << "\nXY plane normal vector:\n" <<xy_plane_normal_vector << std::endl;
+
+  rotation_vector = xy_plane_normal_vector.cross(floor_plane_normal_vector);
+  std::cout << "\nRotation Vector: "<< rotation_vector << std::endl;
+
+  float theta = -atan2(rotation_vector.norm(), xy_plane_normal_vector.dot(floor_plane_normal_vector));
+
+  transform_1.rotate (Eigen::AngleAxisf (theta, rotation_vector));
+  std::cout << "\nTransformation matrix: " << std::endl << transform_1.matrix() << std::endl;
+  pcl::transformPointCloud (*cloud_xyz, *cloud_transformed, transform_1);
+
+  /*
+
+  // Define a rotation matrix (see https://en.wikipedia.org/wiki/Rotation_matrix)
+  float betha = M_PI; // The angle of rotation in radians
+  transform_2.rotate (Eigen::AngleAxisf(betha, Eigen::Vector3f::UnitY()));
+
+  std::cout << "Executing the transformation..." << std::endl;
+  pcl::transformPointCloud (*transf1, *transf2, transform_2);
+
+  float ghama = M_PI/2; // The angle of rotation in radians
+  transform_3.rotate (Eigen::AngleAxisf(ghama, Eigen::Vector3f::UnitX()));
+  pcl::transformPointCloud (*transf2, *cloud_transformed, transform_3);
+  */
+
 }
 
 

@@ -1,7 +1,15 @@
-﻿#include "include/Segmentation.h"
+#include "include/Segmentation.h"
 
 pcl::PointXYZ trunkMin;
 pcl::PointXYZ trunkMax;
+
+const std::string red("\033[0;31m");
+const std::string blue("\033[0;34m");
+const std::string yellow("\033[0;33m");
+const std::string reset("\033[0m");
+const std::string green("\033[0;32m");
+
+std::string output_dir_path;
 
 bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
                                const std::string& output_path,
@@ -22,19 +30,16 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   trunk_cloud->header.frame_id = "trunk_cloud";
   crown_segmented->header.frame_id = "crown_cloud";
   tree_segmented->header.frame_id = "tree_without_trunk";
-  /*
-  ros::Time time_st = ros::Time::now();
 
-  cloud->header.stamp= time_st.toNSec()/1e3;  
-  //cloud->header.stamp = ros::Time::now().toNSec();
-  trunk_cloud->header.stamp = time_st.toNSec()/1e3;  
-  tree_segmented->header.stamp = time_st.toNSec()/1e3;  
-  crown_segmented->header.stamp = time_st.toNSec()/1e3;  
-*/
+  output_dir_path = output_path;
+
   /*CONVERT XYZRGB TO XYZ*/
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_xyz (new pcl::PointCloud<pcl::PointXYZ>());
   pcl::PointCloud<pcl::PointXYZ>::Ptr temp (new pcl::PointCloud<pcl::PointXYZ>());
   pcl::copyPointCloud(*cloud,*temp);
+
+  std::cout << "Applying:" << yellow << "StatisticalOutlierRemoval filter..." << reset << std::endl;
+  std::cout << "Points before filter:" << yellow << temp->points.size() << reset<< std::endl;
 
   pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
   sor.setInputCloud(temp);
@@ -42,11 +47,68 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   sor.setStddevMulThresh(1.0);
   sor.filter(*cloud_xyz);
 
-  /*TRUNK SEGMENTATION*/
-  std::cout << "Trunk cloud segmentation with: Cylinder Model Segmentation..." << std::endl;
-  trunkSegmentation(cloud_xyz,tree_segmented,trunk_cloud);
+  std::cout << "Points after filter:" << yellow << cloud_xyz->points.size() << reset<< std::endl;
 
-  std::cout << "Crown cloud segmentation with: Euclidean Cluster Extraction..." << std::endl;
+  /*TRUNK SEGMENTATION*/
+  std::cout << "Trunk cloud segmentation with:" << yellow << "Cylinder Model Segmentation..." << reset << std::endl;
+
+  bool trunkGood = false;
+  std::string answer;
+  bool setGui = false;
+
+  while(true){
+
+      if(trunk_cloud->points.size()<=0){
+
+          trunkSegmentation(cloud_xyz,tree_segmented,trunk_cloud,setGui);
+          pcl::PointXYZ pt1(0,0,0);
+          pcl::PointXYZ pt2(0,0,0);
+          Utilities::vtkVisualizer(trunk_cloud,pt1,pt2);
+      }
+
+      if(trunk_cloud->points.size()>0){
+
+        std::cout << "\nTrunk segmentation Good?(yes/no)" << std::endl;
+        std::cout << "->" << std::flush;
+        std::getline(std::cin, answer);
+        if(answer.empty()){
+          PCL_ERROR("Nothing entered.\n");
+          answer.clear();
+          continue;
+        }
+        if(answer == "yes"){
+          trunkGood = true;
+        }else if(answer == "no"){
+          trunkGood = false;
+          trunk_cloud->points.clear();          
+          answer.clear();
+
+          std::cout << "Trunk cloud segmentation with:" << yellow << "Cylinder Model Segmentation..." << reset << std::endl;
+
+          setGui = true;
+
+          int dont_care;
+          std::string callParametersGui = "/home/daniel/Documents/interfaz/build/interfaz ";
+          callParametersGui += output_dir_path;
+          callParametersGui += "/trunk_parameters.txt ";
+          callParametersGui += output_dir_path;
+
+          dont_care = std::system(callParametersGui.c_str());
+          continue;
+        }else{
+          PCL_ERROR("%s %s",answer.c_str(),"is not a valid answer.\n");
+          trunkGood = false;
+          answer.clear();
+          continue;
+        }
+      }
+
+      if(trunkGood){
+        break;
+      }
+  }
+
+  std::cout << "Crown cloud segmentation with:" << yellow <<  "Euclidean Cluster Extraction..." << reset << std::endl;
   crownSegmentation(tree_segmented,crown_segmented);
 
   pcl::console::TicToc tt2;
@@ -75,12 +137,14 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
 
   std::cout << "prefix1:" << prefix1 << std::endl;
 
+  pcl::PLYWriter writer;
+  writer.write(prefix2.c_str(), *trunk_cloud, false, false);
+  writer.write(prefix4.c_str(), *tree_segmented, false, false);
+  writer.write(prefix6.c_str(), *crown_segmented, false, false);
+
   pcl::io::savePCDFileBinary(prefix1.c_str(), *trunk_cloud);
-  pcl::io::savePLYFileBinary(prefix2.c_str(), *trunk_cloud);
   pcl::io::savePCDFileBinary(prefix3.c_str(), *tree_segmented);
-  pcl::io::savePLYFileBinary(prefix4.c_str(), *tree_segmented);
   pcl::io::savePCDFileBinary(prefix5.c_str(), *crown_segmented);
-  pcl::io::savePLYFileBinary(prefix6.c_str(), *crown_segmented);
 
   pcl::console::print_info ("[done, ");
   pcl::console::print_value ("%g", tt2.toc ());
@@ -96,14 +160,29 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
 
 bool Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                                      pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_without_trunk,
-                                     pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_trunk){
+                                     pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_trunk,bool setGUI,int K,double distanceWeight, int maxIterations,double distanceThreshold, double distanceWeight_cylinder,int maxIterations_cylinder,double distanceThreshold_cylinder, double minRadius, double maxRadius){
 
   if(cloud->points.size() <= 0){
      PCL_ERROR("Input point cloud has no data!\n");
      return false;
   }
 
-  pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
+  if(setGUI){
+
+      std::string trunkParameters = output_dir_path;
+      trunkParameters += "/trunk_parameters.txt";
+
+      std::ifstream file(trunkParameters.c_str());
+
+      while(file >> K >> distanceWeight >> maxIterations >> distanceThreshold
+            >> distanceWeight_cylinder >> maxIterations_cylinder >> distanceThreshold_cylinder
+            >> minRadius >> maxRadius){
+      }
+
+      file.close();
+  }
+
+  pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> ne;
   pcl::SACSegmentationFromNormals<pcl::PointXYZ, pcl::Normal> seg;
 
   pcl::ExtractIndices<pcl::PointXYZ> extract;
@@ -116,22 +195,23 @@ bool Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   pcl::PointCloud<pcl::PointXYZ>::Ptr trunk_seg (new pcl::PointCloud<pcl::PointXYZ>());
   pcl::PointCloud<pcl::PointXYZ>::Ptr rest_seg (new pcl::PointCloud<pcl::PointXYZ>());
   pcl::PointCloud<pcl::Normal>::Ptr cloud_normals2 (new pcl::PointCloud<pcl::Normal>());
-  pcl::ModelCoefficients::Ptr coefficients_plane (new pcl::ModelCoefficients), coefficients_cylinder (new pcl::ModelCoefficients);
+  pcl::ModelCoefficients::Ptr coefficients_plane (new pcl::ModelCoefficients);
+  pcl::ModelCoefficients::Ptr coefficients_cylinder (new pcl::ModelCoefficients);
   pcl::PointIndices::Ptr inliers_plane (new pcl::PointIndices), inliers_cylinder (new pcl::PointIndices);
 
   // Estimate point normals
   ne.setSearchMethod(tree);
   ne.setInputCloud(cloud);
-  ne.setKSearch(50);
+  ne.setKSearch(K);//50
   ne.compute(*cloud_normals);
 
   //Create the segmentation object for the planar model and set all the parameters
   seg.setOptimizeCoefficients(true);
   seg.setModelType(pcl::SACMODEL_NORMAL_PLANE);
-  seg.setNormalDistanceWeight(0.1);
+  seg.setNormalDistanceWeight(distanceWeight);//0.1
   seg.setMethodType(pcl::SAC_RANSAC);
-  seg.setMaxIterations(500);
-  seg.setDistanceThreshold(0.5);
+  seg.setMaxIterations(maxIterations);//500
+  seg.setDistanceThreshold(distanceThreshold);//0.5
   seg.setInputCloud(cloud);
   seg.setInputNormals(cloud_normals);
 
@@ -156,10 +236,10 @@ bool Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   seg.setOptimizeCoefficients(true);
   seg.setModelType(pcl::SACMODEL_CYLINDER);
   seg.setMethodType(pcl::SAC_RANSAC);
-  seg.setNormalDistanceWeight(0.5);
-  seg.setMaxIterations(10000);
-  seg.setDistanceThreshold(8);
-  seg.setRadiusLimits(0, 60);
+  seg.setNormalDistanceWeight(distanceWeight_cylinder);//0.5
+  seg.setMaxIterations(maxIterations_cylinder);//10000
+  seg.setDistanceThreshold(distanceThreshold_cylinder);//8
+  seg.setRadiusLimits(minRadius,maxRadius);//(0,60)
   seg.setInputCloud(cloud_filtered2);
   seg.setInputNormals(cloud_normals2);
 
@@ -174,20 +254,22 @@ bool Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
 
   extract.setNegative(true);
   extract.filter(*rest_seg);
-  
+
+  /*
   pcl::PointCloud<pcl::PointXYZ>::Ptr trunk_seg_filtered (new pcl::PointCloud<pcl::PointXYZ>());  
   pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor2;
   sor2.setInputCloud(trunk_seg);
   sor2.setMeanK(80);
   sor2.setStddevMulThresh(1.0);
   sor2.filter(*trunk_seg_filtered);
+  */
 
   Eigen::Matrix4f align_cloud = Eigen::Matrix4f::Identity();
 
   pcl::PointXYZ minH,maxH;
   std::map<double,pcl::PointXYZ> minMaxValues;
 
-  for(pcl::PointCloud<pcl::PointXYZ>::iterator it=trunk_seg_filtered->begin(); it!=trunk_seg_filtered->end(); ++it){
+  for(pcl::PointCloud<pcl::PointXYZ>::iterator it=trunk_seg->begin(); it!=trunk_seg->end(); ++it){
     pcl::PointXYZ p = pcl::PointXYZ(it->x,it->y,it->z);
     minMaxValues[p.y] = p;
   }
@@ -225,7 +307,7 @@ bool Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   std::cout << "\nHere is the translation matrix transform:\n" << align_cloud << "\n" << std::endl;
   PCL_INFO("Executing the transformation...");
 
-  pcl::transformPointCloud(*trunk_seg_filtered, *cloud_trunk, align_cloud);
+  pcl::transformPointCloud(*trunk_seg, *cloud_trunk, align_cloud);
   pcl::transformPointCloud(*rest_seg, *cloud_without_trunk, align_cloud);
 
   pcl::console::print_info ("[done, ");
@@ -257,6 +339,24 @@ bool Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   trunkMin.z=trunkMax.z;
   double dist = pcl::geometry::distance(trunkMin,trunkMax);
   std::cout << "Mean:" << dist << "\n" << std::endl;
+
+  std::string trunkParameters = output_dir_path;
+  trunkParameters += "/trunk_parameters.txt";
+
+  std::ofstream ofs(trunkParameters.c_str());
+  ofs << K << std::endl
+
+      << distanceWeight << std::endl
+      << maxIterations << std::endl
+      << distanceThreshold << std::endl
+
+      << distanceWeight_cylinder << std::endl
+      << maxIterations_cylinder << std::endl
+      << distanceThreshold_cylinder << std::endl
+      << minRadius << std::endl
+      << maxRadius << std::endl;
+
+  ofs.close();
 
   return true;
 
@@ -350,7 +450,7 @@ bool Segmentation::crownSegmentation(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_
 
     }
 
-    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;    
     sor.setInputCloud(temp3);
     sor.setMeanK(100);
     sor.setStddevMulThresh(0.2);

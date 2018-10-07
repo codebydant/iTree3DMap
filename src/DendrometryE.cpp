@@ -20,13 +20,11 @@ static float signedVolumeOfTriangle(pcl::PointXYZ p1, pcl::PointXYZ p2, pcl::Poi
 static float volumeOfMesh(pcl::PolygonMesh mesh){
     float vols = 0.0;
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>());
-     vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+    vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
     pcl::io::mesh2vtk(mesh,polydata);
     pcl::io::vtkPolyDataToPointCloud(polydata,*cloud);
-    
 
-    for(int triangle=0;triangle<mesh.polygons.size();triangle++)
-    {
+    for(int triangle=0;triangle<mesh.polygons.size();triangle++){
         pcl::PointXYZ pt1 = cloud->points[mesh.polygons[triangle].vertices[0]];
         pcl::PointXYZ pt2 = cloud->points[mesh.polygons[triangle].vertices[1]];
         pcl::PointXYZ pt3 = cloud->points[mesh.polygons[triangle].vertices[2]];
@@ -83,7 +81,6 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
       if(!file.is_open()){
         std::cout << "Error: Could not find " << numCluster << std::endl;        
         return exit(-1);
-
       }
       
       unsigned int totalClusters;
@@ -242,9 +239,22 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   //------------------------------------------
   //------------------------------------------
   
-
   std::cout << yellow << "\nHeight." << reset << std::endl;
   std::cout << "------------------------------------------" << std::endl;
+
+  pcl::PointCloud<pcl::PointXYZ>::Ptr tree_cloud (new pcl::PointCloud<pcl::PointXYZ>());
+
+  //Add trunk cloud
+  for(pcl::PointCloud<pcl::PointXYZ>::iterator it=trunk_cloud->begin();it!=trunk_cloud->end(); ++it){
+    pcl::PointXYZ pt = pcl::PointXYZ(it->x,it->y,it->z);
+    tree_cloud->points.push_back(pt);
+  }
+
+  //Add crown cloud
+  for(pcl::PointCloud<pcl::PointXYZ>::iterator it=crown_cloud->begin();it!=crown_cloud->end(); ++it){
+    pcl::PointXYZ pt = pcl::PointXYZ(it->x,it->y,it->z);
+    tree_cloud->points.push_back(pt);
+  }
 
   std::map<double,pcl::PointXYZ> min_max_trunkHeight;
 
@@ -272,7 +282,25 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   std::cout << "MinTH: " << minTH << std::endl;
 
   height_trunk = pcl::geometry::distance(minTH,maxTH);
-  
+
+  std::map<double,pcl::PointXYZ> min_max_totalHeight;
+
+  for(pcl::PointCloud<pcl::PointXYZ>::iterator it=tree_cloud->begin();it!=tree_cloud->end(); ++it){
+    pcl::PointXYZ pt = pcl::PointXYZ(it->x,it->y,it->z);
+    min_max_totalHeight[pt.y]=pt;
+  }
+
+  it1 = min_max_totalHeight.begin();
+  pcl::PointXYZ minTotalH = it1->second;
+
+  it2 = std::prev(min_max_totalHeight.end());
+  pcl::PointXYZ maxTotalH = it2->second;
+
+  feature << "minTotalH pt3d:" << minTotalH << std::endl;
+  feature << "maxTotalH pt3d:" << maxTotalH << std::endl;
+
+  maxTotalH.x = minTotalH.x;
+  maxTotalH.z = minTotalH.z;
   
   //-------------------------------------------------
   //-------------------------------------------------  
@@ -283,11 +311,10 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
      
       pcl::compute3DCentroid(*clouds_vector.at(i),centroid);
       pcl::PointXYZ pt2 = pcl::PointXYZ(centroid[0],centroid[1],centroid[2]);
-      std::cout << "centroid:" << pt2 << std::endl;
-      
-      
+      //std::cout << "centroid:" << pt2 << std::endl;
+            
       double error = pcl::geometry::distance(maxTH,pt2);
-      std::cout << "Error distance centroid trunk-crown:" << error << std::endl;
+      //std::cout << "Error distance centroid trunk-crown:" << error << std::endl;
       clusters_dbscan_map[error]= clouds_vector.at(i);  
   
   }
@@ -305,8 +332,7 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   
   
   //---------------------------------------------
-  //---------------------------------------------
-  
+  //---------------------------------------------  
 
   std::cout << blue << "\nEstimating crown features..." << reset << std::endl;
   std::cout << "------------------------------------------" << std::endl;
@@ -314,29 +340,31 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   std::cout << yellow << "\nHeight." << reset << std::endl;
   std::cout << "------------------------------------------" << std::endl;
 
-  std::map<double,pcl::PointXYZ> min_max_crownHeight;
+//  std::map<double,pcl::PointXYZ> min_max_crownHeight;
 
-  for(pcl::PointCloud<pcl::PointXYZ>::iterator it=crown_cloud->begin();it!=crown_cloud->end(); ++it){
-    pcl::PointXYZ pt = pcl::PointXYZ(it->x,it->y,it->z);
-    min_max_crownHeight[pt.y]=pt;
-  }
+//  for(pcl::PointCloud<pcl::PointXYZ>::iterator it=crown_cloud->begin();it!=crown_cloud->end(); ++it){
+//    pcl::PointXYZ pt = pcl::PointXYZ(it->x,it->y,it->z);
+//    min_max_crownHeight[pt.y]=pt;
+//  }
 
-  it1 = min_max_crownHeight.begin();
-  minCH = it1->second;
+//  it1 = min_max_crownHeight.begin();
+//  minCH = it1->second;
 
-  it2 = std::prev(min_max_crownHeight.end());
-  maxCH = it2->second;
+//  it2 = std::prev(min_max_crownHeight.end());
+//  maxCH = it2->second;
 
-  feature << "minCH pt3d:" << minCH << std::endl;
-  feature << "maxCH pt3d:" << maxCH << std::endl;
+//  feature << "minCH pt3d:" << minCH << std::endl;
+//  feature << "maxCH pt3d:" << maxCH << std::endl;
 
-  minCH.x = maxCH.x;
-  minCH.z = maxCH.z;
+//  minCH.x = maxCH.x;
+//  minCH.z = maxCH.z;
 
-  height_crown = pcl::geometry::distance(minCH,maxCH);
+  total_height = pcl::geometry::distance(minTotalH,maxTotalH);
+  height_crown = std::abs(total_height-height_trunk);
+  std::cout << "Crown height:" << height_crown << " cm" << std::endl;
 
-  std::cout << "MaxCH: " << maxCH << std::endl;
-  std::cout << "MinCH: " << minCH << std::endl;
+  //std::cout << "MaxCH: " << maxCH << std::endl;
+  //std::cout << "MinCH: " << minCH << std::endl;
 
   std::cout << blue << "\nEstimating other features..." << reset << std::endl;
   std::cout << "------------------------------------------" << std::endl;
@@ -344,7 +372,6 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   std::cout << yellow << "\nTotal height." << reset << std::endl;
   std::cout << "------------------------------------------" << std::endl;
 
-  total_height = height_crown+height_trunk;
   PCL_INFO("H1: %f",height_crown);
   PCL_INFO("\nH2: %f",height_trunk);
 
@@ -402,20 +429,27 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
 
   crown_volume = (DBH*DBH)*(M_PI/4)*total_height*factor_morfico;
 
-  pcl::PolygonMesh mesh;
+  pcl::PolygonMesh mesh1,mesh2;
 
-  Utilities::create_mesh(crown_cloud,mesh);
+  //Utilities::create_mesh(crown_cloud,mesh1);
+  Utilities::createMeshFromCloud(crown_cloud,mesh1);
+  Utilities::create_mesh(crown_cloud,mesh2,8,10,6,4.0,1.5,1.1,8,true,true,false,8);
 
   std::string mesh_path = output_dir;
   mesh_path += "3D_Mapping/mesh.ply";
 
-  vtkSmartPointer<vtkPolyData> vtkCloud = vtkSmartPointer<vtkPolyData>::New();
-  pcl::VTKUtils::convertToVTK(mesh,vtkCloud);
+  vtkSmartPointer<vtkPolyData> vtkCloud1 = vtkSmartPointer<vtkPolyData>::New();
+  pcl::VTKUtils::convertToVTK(mesh1,vtkCloud1);
 
+  vtkSmartPointer<vtkPolyData> vtkCloud2 = vtkSmartPointer<vtkPolyData>::New();
+  pcl::VTKUtils::convertToVTK(mesh2,vtkCloud2);
 
-  Utilities::vizualizeMesh(vtkCloud);
+  Utilities::vizualizeMesh(vtkCloud1,vtkCloud2);
 
-  float volume = volumeOfMesh(mesh);
+  float volume1 = volumeOfMesh(mesh1);
+  float volume2 = volumeOfMesh(mesh2);
+
+  int crown_percentage = (int)std::abs(((volume1 -volume2)/volume1)*100);
 
   std::cout << "\n*** Measurements ***" << std::endl;
   std::cout << "---------------------------------------" << std::endl;
@@ -430,7 +464,8 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   std::cout << "------ Crown height:" << height_crown << " cm" << std::endl;
   std::cout<< std::fixed;
   std::cout << "------ Crown volume (eq method):" << crown_volume << " cm^3" << std::endl;
-  std::cout << "------ Crown volume (mesh):" << volume << " cm^3" << std::endl;
+  std::cout << "------ Crown volume (mesh):" << volume1 << " cm^3" << std::endl;
+  std::cout << "------ Crown percentage:" << crown_percentage << "%" << std::endl;
   std::cout << "---------------------------------------" << std::endl;
   std::cout << green << "OTHERS FEATURES" << reset << std::endl;
   std::cout << "---------------------------------------" << std::endl;
@@ -441,15 +476,16 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
 
   std::cout << "Saving results in:" << output_dir << std::endl;
 
-  feature << "TRUNK" << "\n" << "Height:" << height_trunk << " cm" << std::endl;
+  feature << "\nTRUNK" << "\n" << "Height:" << height_trunk << " cm" << std::endl;
   feature << "DBH:" << DBH << " cm" << std::endl;
   feature << "DBH 5m:" << DBH_5m << " cm" << std::endl;
   feature << "--------------------------" << std::endl;
   feature << "CROWN" << "\n" << "Height:" << height_crown << " cm" << std::endl;
-  feature << "Volume (MESH):" << volume << " cm^3" << std::endl;
+  feature << "Volume (MESH):" << volume1 << " cm^3" << std::endl;
   feature << "Volume (Eq):" << crown_volume << " cm^3" << std::endl;
+  feature << "Crown percentage: " << crown_percentage << "%" << std::endl;
   feature << "--------------------------" << std::endl;
-  feature << "Total height:" << total_height << std::endl;
+  feature << "Total height:" << total_height << " cm" << std::endl;
   feature << "Morphic factor:" << factor_morfico << std::endl;
   feature.close();
 
