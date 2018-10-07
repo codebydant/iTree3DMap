@@ -1,4 +1,4 @@
-﻿/*********************************
+/*********************************
            HEADERS
 **********************************/
 #include "include/DendrometryE.h"
@@ -75,6 +75,39 @@ int main(void){
   pcl::PointXYZ minDBH,maxDBH,minTH,maxTH,minCH,maxCH,minDBH5,maxDBH5;
   Dendrometry::estimate(trunk_segmented,crown_segmented,output_dir,minDBH,maxDBH,minTH,maxTH,minCH,maxCH,minDBH5,maxDBH5);
 
+  pcl::PointCloud<pcl::PointXYZ>::Ptr tree_cloud (new pcl::PointCloud<pcl::PointXYZ>());
+
+  //Add trunk cloud
+  for(pcl::PointCloud<pcl::PointXYZ>::iterator it=trunk_segmented->begin();it!=trunk_segmented->end(); ++it){
+    pcl::PointXYZ pt = pcl::PointXYZ(it->x,it->y,it->z);
+    tree_cloud->points.push_back(pt);
+  }
+
+  //Add crown cloud
+  for(pcl::PointCloud<pcl::PointXYZ>::iterator it=crown_segmented->begin();it!=crown_segmented->end(); ++it){
+    pcl::PointXYZ pt = pcl::PointXYZ(it->x,it->y,it->z);
+    tree_cloud->points.push_back(pt);
+  }
+
+  tree_segmented->points.clear();
+  pcl::copyPointCloud(*tree_cloud,*tree_segmented);
+
+  std::map<double,pcl::PointXYZ> min_max_totalHeight;
+
+  for(pcl::PointCloud<pcl::PointXYZ>::iterator it=tree_segmented->begin();it!=tree_segmented->end(); ++it){
+    pcl::PointXYZ pt = pcl::PointXYZ(it->x,it->y,it->z);
+    min_max_totalHeight[pt.y]=pt;
+  }
+
+  std::map<double,pcl::PointXYZ>::iterator it1 = min_max_totalHeight.begin();
+  pcl::PointXYZ minTotalH = it1->second;
+
+  std::map<double,pcl::PointXYZ>::iterator it2 = std::prev(min_max_totalHeight.end());
+  pcl::PointXYZ maxTotalH = it2->second;
+
+  maxTotalH.x = minTotalH.x;
+  maxTotalH.z = minTotalH.z;
+
   /*************************
   PCL VISUALIZER
   **************************/
@@ -91,33 +124,33 @@ int main(void){
   int PORT1 = 0;
   viewer->createViewPort(0.0, 0.5, 0.33, 1.0, PORT1);
   viewer->setBackgroundColor (0, 0, 0, PORT1);
-  viewer->addText("MAPPING", 10, 10, "PORT1", PORT1);
+  viewer->addText("3D MAP", 10, 10, "PORT1", PORT1);
 
   int PORT2 = 0;
   viewer->createViewPort(0.33, 0.5, 0.66, 1.0, PORT2);
   viewer->setBackgroundColor (0, 0, 0, PORT2);
-  viewer->addText("DENSE MAPPING", 10, 10, "PORT2", PORT2);
+  viewer->addText("3D MAP DENSE", 10, 10, "PORT2", PORT2);
 
   int PORT3 = 0;
   viewer->createViewPort(0.66, 0.5, 1.0, 1.0, PORT3);
   viewer->setBackgroundColor (0, 0, 0, PORT3);
   //viewer->addLine(ptt1,pt2,0,255,0 ,"lenght",PORT3);
-  viewer->addText("SCALE MAPPING", 10, 10, "PORT3", PORT3);
+  viewer->addText("3D MAP SCALED", 10, 10, "PORT3", PORT3);
 
   int PORT4 = 0;
   viewer->createViewPort(0.0, 0.0, 0.33, 0.5, PORT4);
   viewer->setBackgroundColor (0, 0, 0, PORT4);
-  viewer->addText("CROWN", 10, 10, "PORT4", PORT4);
+  viewer->addText("TREE SEGMENTED", 10, 10, "PORT4", PORT4);
 
   int PORT5 = 0;
   viewer->createViewPort(0.33, 0.0, 0.66, 0.5, PORT5);
   viewer->setBackgroundColor (0, 0, 0, PORT5);
-  viewer->addText("TREE SEGMENTED", 10, 10, "PORT5", PORT5);
+  viewer->addText("CROWN SEGMENTED", 10, 10, "PORT5", PORT5);
 
   int PORT6 = 0;
   viewer->createViewPort(0.66, 0.0, 1.0, 0.5, PORT6);
   viewer->setBackgroundColor (0, 0, 0, PORT6);
-  viewer->addText("TRUNK", 10, 10, "PORT6", PORT6);
+  viewer->addText("TRUNK SEGMENTED", 10, 10, "PORT6", PORT6);
 
   viewer->addPointCloud(Map3D, "Map3d", PORT1);
   viewer->addPointCloud(Map3DDense, "Map3dDense", PORT2);
@@ -133,12 +166,13 @@ int main(void){
   viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH,3,"DBH5m",PORT6);
 
   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> tree_color(tree_segmented, 255, 255, 0);
-  viewer->addPointCloud(tree_segmented,tree_color, "tree_segmented", PORT5);
+  viewer->addPointCloud(tree_segmented,tree_color, "tree_segmented", PORT4);
+  viewer->addLine(minTotalH,maxTotalH,255,0,0,"TotalH",PORT4);
+  viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH,3,"TotalH",PORT4);
 
   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> crown_color(trunk_segmented, 255, 0, 255);
-  viewer->addPointCloud(crown_segmented,crown_color,"crown", PORT4);
-  viewer->addLine(minCH,maxCH,255,255,0,"CH",PORT4);
-  viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH,3,"CH",PORT4);
+  viewer->addPointCloud(crown_segmented,crown_color,"crown", PORT5);
+
 
   pcl::PointXYZ p1, p2, p3;
   p1.getArray3fMap() << 100, 0, 0;

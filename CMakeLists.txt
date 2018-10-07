@@ -10,6 +10,9 @@ set(CMAKE_C_COMPILER /usr/bin/gcc)
 set(CMAKE_CXX_COMPILER /usr/bin/g++)
 set(QT_QMAKE_EXECUTABLE "/usr/lib/x86_64-linux-gnu/qt5/bin/qmake")
 
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp -lpthread ")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp -lpthread ")
+
 # set build type = Release mode
 set(CMAKE_BUILD_TYPE Release)
 
