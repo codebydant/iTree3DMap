@@ -27,9 +27,13 @@
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/gasd.h>
 #include <pcl/features/normal_3d_omp.h>
+
 #include <pcl/surface/poisson.h>
 #include <pcl/surface/simplification_remove_unused_vertices.h>
 #include <pcl/surface/vtk_smoothing/vtk_utils.h>
+#include <pcl/surface/mls.h>
+#include <pcl/surface/gp3.h>
+#include <pcl/surface/bilateral_upsampling.h>
 
 #include <pcl/search/search.h>
 #include <pcl/search/kdtree.h>
@@ -45,7 +49,6 @@
 #include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 
-#include <pcl/segmentation/region_growing_rgb.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_clusters.h>
 
@@ -105,10 +108,27 @@ public:
    static bool alignCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
                               pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_align);
                               
-   static void create_mesh(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud,pcl::PolygonMesh &mesh);
-   static void vizualizeMesh(vtkSmartPointer<vtkPolyData>& vtkCloud);
-   static void vtkVisualizer(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,pcl::PointXYZ& pt1,pcl::PointXYZ& pt2);
+   static void create_mesh(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud,pcl::PolygonMesh &mesh,int nThreads=8,
+                           int setKsearch=10, int depth=7, float pointWeight=4.0,float samplePNode=1.5,
+                           float scale=1.1,int isoDivide=8, bool confidence=true, bool outputPolygons=true,
+                           bool manifold=true,int solverDivide=8);
+   static void createMeshFromCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,pcl::PolygonMesh& triangles);
+   static void vizualizeMesh(vtkSmartPointer<vtkPolyData>& vtkCloud1,vtkSmartPointer<vtkPolyData>& vtkCloud2);
+   static void vtkVisualizer(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,pcl::PointXYZ& pt1,pcl::PointXYZ& pt2);
    static bool is_number(const std::string& s);
+
+   static void alignCloudSFM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
+                             pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_transformed,
+                             Eigen::Affine3f& transform_1,Eigen::Affine3f& transform_2,
+                             Eigen::Affine3f& transform_3);
+
+
+
+
+
+
+
+
 
 };
 
