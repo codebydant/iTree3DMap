@@ -79,6 +79,8 @@
 #include <tinyxml2.h>
 #include <X11/Xlib.h>
 
+#include "progress_display.hpp"
+
 class Utilities{
 
 
@@ -109,7 +111,7 @@ public:
                               pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_align);
                               
    static void create_mesh(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud,pcl::PolygonMesh &mesh,int nThreads=8,
-                           int setKsearch=10, int depth=7, float pointWeight=4.0,float samplePNode=1.5,
+                           int setKsearch=10, int depth=10, float pointWeight=4.0,float samplePNode=1.5,
                            float scale=1.1,int isoDivide=8, bool confidence=true, bool outputPolygons=true,
                            bool manifold=true,int solverDivide=8);
    static void createMeshFromCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,pcl::PolygonMesh& triangles);
