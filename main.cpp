@@ -66,14 +66,16 @@ int main(void){
   Segmentation::extractTree(cloud_3dMap_scaled,output_dir,trunk_segmented,tree_segmented,crown_segmented);
   end = std::chrono::high_resolution_clock::now();
   difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-  std::cout << "Trunk segmentation time: " << difference << " seconds" << std::endl;
+  std::cout << "Segmentation time: " << difference << " seconds" << std::endl;
   std::cout << std::endl;
 
   /*************************
   STEP 6: DENDROMETRY MEASUREMENTS
   **************************/
   pcl::PointXYZ minDBH,maxDBH,minTH,maxTH,minCH,maxCH,minDBH5,maxDBH5;
-  Dendrometry::estimate(trunk_segmented,crown_segmented,output_dir,minDBH,maxDBH,minTH,maxTH,minCH,maxCH,minDBH5,maxDBH5);
+  pcl::PolygonMesh mesh1;
+  pcl::PolygonMesh mesh2;
+  Dendrometry::estimate(trunk_segmented,crown_segmented,output_dir,minDBH,maxDBH,minTH,maxTH,minCH,maxCH,minDBH5,maxDBH5,mesh1,mesh2);
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr tree_cloud (new pcl::PointCloud<pcl::PointXYZ>());
 
@@ -122,95 +124,94 @@ int main(void){
   viewer->setSize(x,y);
 
   int PORT1 = 0;
-  viewer->createViewPort(0.0, 0.5, 0.33, 1.0, PORT1);
+  viewer->createViewPort(0.0, 0.5, 0.5, 1.0, PORT1);
   viewer->setBackgroundColor (0, 0, 0, PORT1);
-  viewer->addText("3D MAP", 10, 10, "PORT1", PORT1);
+  viewer->addText("ORIGINAL", 10, 10, "PORT1", PORT1);
 
   int PORT2 = 0;
-  viewer->createViewPort(0.33, 0.5, 0.66, 1.0, PORT2);
+  viewer->createViewPort(0.5, 0.5, 1.0, 1.0, PORT2);
   viewer->setBackgroundColor (0, 0, 0, PORT2);
-  viewer->addText("3D MAP DENSE", 10, 10, "PORT2", PORT2);
+  viewer->addText("TRUNK", 10, 10, "PORT2", PORT2);
 
   int PORT3 = 0;
-  viewer->createViewPort(0.66, 0.5, 1.0, 1.0, PORT3);
+  viewer->createViewPort(0.0, 0.0, 0.5, 0.5, PORT3);
   viewer->setBackgroundColor (0, 0, 0, PORT3);
   //viewer->addLine(ptt1,pt2,0,255,0 ,"lenght",PORT3);
-  viewer->addText("3D MAP SCALED", 10, 10, "PORT3", PORT3);
+  viewer->addText("VOLUME", 10, 10, "PORT3", PORT3);
 
   int PORT4 = 0;
-  viewer->createViewPort(0.0, 0.0, 0.33, 0.5, PORT4);
+  viewer->createViewPort(0.5, 0.0, 1.0, 0.5, PORT4);
   viewer->setBackgroundColor (0, 0, 0, PORT4);
-  viewer->addText("TREE SEGMENTED", 10, 10, "PORT4", PORT4);
-
+  viewer->addText("CROWN", 10, 10, "PORT4", PORT4);
+/*
   int PORT5 = 0;
   viewer->createViewPort(0.33, 0.0, 0.66, 0.5, PORT5);
   viewer->setBackgroundColor (0, 0, 0, PORT5);
-  viewer->addText("CROWN SEGMENTED", 10, 10, "PORT5", PORT5);
+  viewer->addText(, 10, 10, "PORT5", PORT5);
 
   int PORT6 = 0;
   viewer->createViewPort(0.66, 0.0, 1.0, 0.5, PORT6);
   viewer->setBackgroundColor (0, 0, 0, PORT6);
-  viewer->addText("TRUNK SEGMENTED", 10, 10, "PORT6", PORT6);
-
-  viewer->addPointCloud(Map3D, "Map3d", PORT1);
-  viewer->addPointCloud(Map3DDense, "Map3dDense", PORT2);
-  viewer->addPointCloud(cloud_3dMap_scaled, "Map3dScaled", PORT3);
+  viewer->addText(, 10, 10, "PORT6", PORT6);
+*/
+  //viewer->addPointCloud(Map3D, "Map3d", PORT1);
+  //viewer->addPointCloud(Map3DDense, "Map3dDense", PORT2);
+  viewer->addPointCloud(cloud_3dMap_scaled, "Map3dScaled", PORT1);
 
   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> trunk_color(trunk_segmented, 0,255, 0);
-  viewer->addPointCloud(trunk_segmented,trunk_color, "Trunk", PORT6);
-  viewer->addLine(minDBH,maxDBH,255,0,0,"DBH",PORT6);
-  viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH,3,"DBH",PORT6);
-  viewer->addLine(minTH,maxTH,255,0,0,"TH",PORT6);
-  viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH,3,"TH",PORT6);
-  viewer->addLine(minDBH5,maxDBH5,255,255,255,"DBH5m",PORT6);
-  viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH,3,"DBH5m",PORT6);
-
+  viewer->addPointCloud(trunk_segmented,trunk_color, "Trunk", PORT2);
+  viewer->addLine(minDBH,maxDBH,255,0,0,"DBH",PORT2);
+  viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH,3,"DBH",PORT2);
+  viewer->addLine(minTH,maxTH,255,0,0,"TH",PORT2);
+  viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH,3,"TH",PORT2);
+  viewer->addLine(minDBH5,maxDBH5,255,255,255,"DBH5m",PORT2);
+  viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH,3,"DBH5m",PORT2);
+ /*
   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> tree_color(tree_segmented, 255, 255, 0);
   viewer->addPointCloud(tree_segmented,tree_color, "tree_segmented", PORT4);
   viewer->addLine(minTotalH,maxTotalH,255,0,0,"TotalH",PORT4);
   viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH,3,"TotalH",PORT4);
-
+ */
   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> crown_color(trunk_segmented, 255, 0, 255);
-  viewer->addPointCloud(crown_segmented,crown_color,"crown", PORT5);
+  viewer->addPointCloud(crown_segmented,crown_color,"crown", PORT4);
 
+  //pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> mesh_color1(trunk_segmented, 255, 0, 0);
+  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> mesh_color2(trunk_segmented, 0, 255,0);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_mesh (new pcl::PointCloud<pcl::PointXYZ>());
+  vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+  pcl::io::mesh2vtk(mesh2,polydata);
+  pcl::io::vtkPolyDataToPointCloud(polydata,*cloud_mesh);
+  viewer->addPolygonMesh(mesh1,"mesh1", PORT3);
+  viewer->addPointCloud(cloud_mesh,mesh_color2,"mesh2", PORT3);
 
   pcl::PointXYZ p1, p2, p3;
   p1.getArray3fMap() << 100, 0, 0;
   p2.getArray3fMap() << 0, 100, 0;
   p3.getArray3fMap() << 0,0.1,100;
 
-  viewer->addCoordinateSystem(100,"scale_ucs",PORT3);
-  viewer->addText3D("x", p1, 15, 1, 0, 0, "x_",PORT3);
-  viewer->addText3D("y", p2, 15, 0, 1, 0, "y_",PORT3);
-  viewer->addText3D ("z", p3, 15, 0, 0, 1, "z_",PORT3);
+  viewer->addCoordinateSystem(100,"scale_ucs",PORT1);
+  viewer->addText3D("x", p1, 15, 1, 0, 0, "x_",PORT1);
+  viewer->addText3D("y", p2, 15, 0, 1, 0, "y_",PORT1);
+  viewer->addText3D ("z", p3, 15, 0, 0, 1, "z_",PORT1);
+
+  viewer->addCoordinateSystem(100,"trunk_ucs",PORT2);
+  viewer->addText3D("x", p1, 15, 1, 0, 0, "x_",PORT2);
+  viewer->addText3D("y", p2, 15, 0, 1, 0, "y_",PORT2);
+  viewer->addText3D ("z", p3, 15, 0, 0, 1, "z_",PORT2);
+
   viewer->addCoordinateSystem(100,"crown_ucs",PORT4);
   viewer->addText3D("x", p1, 15, 1, 0, 0, "x_",PORT4);
   viewer->addText3D("y", p2, 15, 0, 1, 0, "y_",PORT4);
   viewer->addText3D ("z", p3, 15, 0, 0, 1, "z_",PORT4);
-  viewer->addCoordinateSystem(100,"tree_without_trunk_ucs",PORT5);
-  viewer->addText3D("x", p1, 15, 1, 0, 0, "x_",PORT5);
-  viewer->addText3D("y", p2, 15, 0, 1, 0, "y_",PORT5);
-  viewer->addText3D ("z", p3, 15, 0, 0, 1, "z_",PORT5);
-  viewer->addCoordinateSystem(100,"trunk_ucs",PORT6);
-  viewer->addText3D("x", p1, 15, 1, 0, 0, "x_",PORT6);
-  viewer->addText3D("y", p2, 15, 0, 1, 0, "y_",PORT6);
-  viewer->addText3D ("z", p3, 15, 0, 0, 1, "z_",PORT6);
+
+  viewer->addCoordinateSystem(100,"volume_ucs",PORT3);
+  viewer->addText3D("x", p1, 15, 1, 0, 0, "x_",PORT3);
+  viewer->addText3D("y", p2, 15, 0, 1, 0, "y_",PORT3);
+  viewer->addText3D ("z", p3, 15, 0, 0, 1, "z_",PORT3);
 
   viewer->setPosition(0,0);
   viewer->addCoordinateSystem();
 
-  pcl::PointXYZ p11, p22, p33;
-  p11.getArray3fMap() << 1, 0, 0;
-  p22.getArray3fMap() << 0, 1, 0;
-  p33.getArray3fMap() << 0,0.1,1;
-
-  viewer->addText3D("x", p11, 0.2, 1, 0, 0, "x_",PORT1);
-  viewer->addText3D("y", p22, 0.2, 0, 1, 0, "y_",PORT1);
-  viewer->addText3D ("z", p33, 0.2, 0, 0, 1, "z_",PORT1);
-
-  viewer->addText3D("x", p1, 0.2, 1, 0, 0, "x_",PORT2);
-  viewer->addText3D("y", p2, 0.2, 0, 1, 0, "y_",PORT2);
-  viewer->addText3D ("z", p3, 0.2, 0, 0, 1, "z_",PORT2);
   viewer->initCameraParameters();
   viewer->resetCamera();
 

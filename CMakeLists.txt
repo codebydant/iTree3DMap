@@ -150,7 +150,7 @@ add_executable(${PROJECT_NAME}
                ${MAIN_SOURCE}
                ${UTILITIE_HEADER}
                ${SEGMENT_HEADER}
-               ${DENDROMETRY_HEADER})
+               ${DENDROMETRY_HEADER} "include/progress.hpp" "include/progress_display.hpp")
 
 ##############################################################################
 # TARGET LIBRARIES
