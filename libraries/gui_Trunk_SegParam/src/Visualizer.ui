@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Visualizer</class>
+ <widget class="QWidget" name="Visualizer">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>508</width>
+    <height>340</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Trunk Segmentation Parameters</string>
+  </property>
+  <widget class="QPushButton" name="okButton">
+   <property name="geometry">
+    <rect>
+     <x>120</x>
+     <y>300</y>
+     <width>89</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>OK</string>
+   </property>
+  </widget>
+  <widget class="QFrame" name="frame">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>10</y>
+     <width>481</width>
+     <height>281</height>
+    </rect>
+   </property>
+   <property name="frameShape">
+    <enum>QFrame::StyledPanel</enum>
+   </property>
+   <property name="frameShadow">
+    <enum>QFrame::Raised</enum>
+   </property>
+   <widget class="QLabel" name="label">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>20</y>
+      <width>67</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>K search</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="kSearchLine">
+    <property name="geometry">
+     <rect>
+      <x>90</x>
+      <y>20</y>
+      <width>51</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="clearButtonEnabled">
+     <bool>false</bool>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="distanceWeightLine">
+    <property name="geometry">
+     <rect>
+      <x>160</x>
+      <y>120</y>
+      <width>51</width>
+      <height>25</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_2">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>120</y>
+      <width>121</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Distance weight</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="maxIterationsLine">
+    <property name="geometry">
+     <rect>
+      <x>160</x>
+      <y>150</y>
+      <width>51</width>
+      <height>25</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_3">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>150</y>
+      <width>101</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Max iterations</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="distanceThresHoldLine">
+    <property name="geometry">
+     <rect>
+      <x>160</x>
+      <y>180</y>
+      <width>51</width>
+      <height>25</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_4">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>180</y>
+      <width>131</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Distance threshold</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="distanceWeightCylinderLine">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>120</y>
+      <width>51</width>
+      <height>25</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_5">
+    <property name="geometry">
+     <rect>
+      <x>260</x>
+      <y>120</y>
+      <width>121</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Distance Weight</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="maxIterationsCylinderLine">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>150</y>
+      <width>51</width>
+      <height>25</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_6">
+    <property name="geometry">
+     <rect>
+      <x>260</x>
+      <y>150</y>
+      <width>101</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Max iterations</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="distanceThresholdCylinderLine">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>180</y>
+      <width>51</width>
+      <height>25</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="minRadiusCylinderLine">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>210</y>
+      <width>51</width>
+      <height>25</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_8">
+    <property name="geometry">
+     <rect>
+      <x>260</x>
+      <y>210</y>
+      <width>81</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Min radius</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_9">
+    <property name="geometry">
+     <rect>
+      <x>50</x>
+      <y>70</y>
+      <width>131</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>SACModel Normal </string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_10">
+    <property name="geometry">
+     <rect>
+      <x>300</x>
+      <y>70</y>
+      <width>131</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>SACModel Cylinder</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_7">
+    <property name="geometry">
+     <rect>
+      <x>260</x>
+      <y>180</y>
+      <width>131</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Distance threshold</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_11">
+    <property name="geometry">
+     <rect>
+      <x>260</x>
+      <y>240</y>
+      <width>81</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Max radius</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="maxRadiusCylinderLine">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>240</y>
+      <width>51</width>
+      <height>25</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QFrame" name="frame_2">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>10</y>
+      <width>141</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Raised</enum>
+    </property>
+   </widget>
+   <widget class="QFrame" name="frame_3">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>9</x>
+      <y>110</y>
+      <width>211</width>
+      <height>101</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Raised</enum>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_12">
+    <property name="geometry">
+     <rect>
+      <x>50</x>
+      <y>90</y>
+      <width>131</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Plane Parameters</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_13">
+    <property name="geometry">
+     <rect>
+      <x>330</x>
+      <y>90</y>
+      <width>81</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Parameters</string>
+    </property>
+   </widget>
+   <widget class="QFrame" name="frame_4">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>250</x>
+      <y>110</y>
+      <width>211</width>
+      <height>161</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::Box</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Raised</enum>
+    </property>
+   </widget>
+   <zorder>frame_2</zorder>
+   <zorder>frame_3</zorder>
+   <zorder>frame_4</zorder>
+   <zorder>label</zorder>
+   <zorder>kSearchLine</zorder>
+   <zorder>distanceWeightLine</zorder>
+   <zorder>label_2</zorder>
+   <zorder>maxIterationsLine</zorder>
+   <zorder>label_3</zorder>
+   <zorder>distanceThresHoldLine</zorder>
+   <zorder>label_4</zorder>
+   <zorder>distanceWeightCylinderLine</zorder>
+   <zorder>label_5</zorder>
+   <zorder>maxIterationsCylinderLine</zorder>
+   <zorder>label_6</zorder>
+   <zorder>distanceThresholdCylinderLine</zorder>
+   <zorder>minRadiusCylinderLine</zorder>
+   <zorder>label_8</zorder>
+   <zorder>label_9</zorder>
+   <zorder>label_10</zorder>
+   <zorder>label_7</zorder>
+   <zorder>label_11</zorder>
+   <zorder>maxRadiusCylinderLine</zorder>
+   <zorder>label_12</zorder>
+   <zorder>label_13</zorder>
+  </widget>
+  <widget class="QPushButton" name="clearButton">
+   <property name="geometry">
+    <rect>
+     <x>260</x>
+     <y>300</y>
+     <width>89</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Clear</string>
+   </property>
+  </widget>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <resources/>
+ <connections/>
+</ui>
