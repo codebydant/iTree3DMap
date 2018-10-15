@@ -11,11 +11,15 @@ const std::string green("\033[0;32m");
 
 std::string output_dir_path;
 
+bool is_empty(std::ifstream& pFile){
+    return pFile.peek() == std::ifstream::traits_type::eof();
+}
+
 bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
                                const std::string& output_path,
                                pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_cloud,
                                pcl::PointCloud<pcl::PointXYZ>::Ptr& tree_segmented,
-                               pcl::PointCloud<pcl::PointXYZ>::Ptr& crown_segmented){
+                               pcl::PointCloud<pcl::PointXYZ>::Ptr& crown_cloud_segmented){
 
   std::cout << "\n************************************************" << std::endl;
   std::cout << "              SEGMENTATION                      " << std::endl;
@@ -28,7 +32,7 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
 
   cloud->header.frame_id = "principal_cloud";
   trunk_cloud->header.frame_id = "trunk_cloud";
-  crown_segmented->header.frame_id = "crown_cloud";
+  crown_cloud_segmented->header.frame_id = "crown_cloud";
   tree_segmented->header.frame_id = "tree_without_trunk";
 
   output_dir_path = output_path;
@@ -50,7 +54,7 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   std::cout << "Points after filter:" << yellow << cloud_xyz->points.size() << reset<< std::endl;
 
   /*TRUNK SEGMENTATION*/
-  std::cout << "Trunk cloud segmentation with:" << yellow << "Cylinder Model Segmentation..." << reset << std::endl;
+  std::cout << "Trunk cloud segmentation with:" << yellow << "Cylinder Model Segmentation..." << reset << "please wait..." << std::endl;
 
   bool trunkGood = false;
   std::string answer;
@@ -60,15 +64,35 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
 
       if(trunk_cloud->points.size()<=0){
 
-          trunkSegmentation(cloud_xyz,tree_segmented,trunk_cloud,setGui);
-          pcl::PointXYZ pt1(0,0,0);
-          pcl::PointXYZ pt2(0,0,0);
-          Utilities::vtkVisualizer(trunk_cloud,pt1,pt2);
+       bool success = trunkSegmentation(cloud_xyz,tree_segmented,trunk_cloud,setGui);
+       if(not success){
+           trunkGood = false;
+           trunk_cloud->points.clear();
+           answer.clear();
+           setGui= true;
+
+           std::string callParametersGui = "/home/daniel/Documents/iTree3DMap/libraries/gui_Trunk_SegParam/build/interfaz ";
+           callParametersGui += output_dir_path;
+           callParametersGui += "/trunk_parameters.txt ";
+           callParametersGui += output_dir_path;
+
+           int dont_care = std::system(callParametersGui.c_str());
+           if(dont_care > 0){
+             std::cout << red << "Failed. interfaz not found" << reset << std::endl;
+             return false;
+           }
+           continue;
+
+
+         // pcl::PointXYZ pt1(0,0,0);
+         // pcl::PointXYZ pt2(0,0,0);
+         // Utilities::vtkVisualizer(trunk_cloud,pt1,pt2);
+            }
       }
 
       if(trunk_cloud->points.size()>0){
 
-        std::cout << "\nTrunk segmentation Good?(yes/no)" << std::endl;
+        std::cout << blue << "\nTrunk segmentation Good?(yes/no)" << reset << std::endl;
         std::cout << "->" << std::flush;
         std::getline(std::cin, answer);
         if(answer.empty()){
@@ -83,17 +107,20 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
           trunk_cloud->points.clear();          
           answer.clear();
 
-          std::cout << "Trunk cloud segmentation with:" << yellow << "Cylinder Model Segmentation..." << reset << std::endl;
+          std::cout << "Trunk cloud re-segmenting..."<< yellow << "please wait" << reset << "..."<< std::endl;
 
           setGui = true;
 
-          int dont_care;
-          std::string callParametersGui = "/home/daniel/Documents/interfaz/build/interfaz ";
+          std::string callParametersGui = "/home/daniel/Documents/iTree3DMap/libraries/gui_Trunk_SegParam/build/interfaz ";
           callParametersGui += output_dir_path;
           callParametersGui += "/trunk_parameters.txt ";
           callParametersGui += output_dir_path;
 
-          dont_care = std::system(callParametersGui.c_str());
+          int dont_care = std::system(callParametersGui.c_str());
+          if(dont_care > 0){
+            std::cout << red << "Failed. interfaz not found" << reset << std::endl;
+            return false;
+          }
           continue;
         }else{
           PCL_ERROR("%s %s",answer.c_str(),"is not a valid answer.\n");
@@ -108,11 +135,9 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
       }
   }
 
-  std::cout << "Crown cloud segmentation with:" << yellow <<  "Euclidean Cluster Extraction..." << reset << std::endl;
-  crownSegmentation(tree_segmented,crown_segmented);
-
-  pcl::console::TicToc tt2;
-  PCL_INFO("\nSaving 3D mapping segmented...");
+  bool crownGood = false;
+  bool setGui2 = false;
+  std::string answer2;  
 
   std::string prefix = output_path;
   prefix += "/3D_Mapping/";
@@ -137,14 +162,130 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
 
   std::cout << "prefix1:" << prefix1 << std::endl;
 
+  std::cout << "Filtering points data with: PassThrough filter..." << std::endl;
+  PCL_INFO("PointCloud before filtering has %lu %s", tree_segmented->points.size()," data points.\n");
+
+  double meanMedian = pcl::geometry::distance(trunkMin,trunkMax);
+  //PCL_INFO("\nMean median: %f",meanMedian);
+  //std::cout << std::endl;
+  //PCL_INFO("Mean median/2: %f",meanMedian/2);
+  //std::cout << std::endl;
+
+  pcl::PointCloud<pcl::PointXYZ>::Ptr crown_cloud (new pcl::PointCloud<pcl::PointXYZ>());
+
+  pcl::PointXYZ pt1(0,0,0);
+  pcl::PointXYZ pt2(0,0,0);
+ // Utilities::vtkVisualizer(tree_segmented,pt1,pt2);
+
+  // Create the filtering object
+  pcl::PassThrough<pcl::PointXYZ> pass;
+  pass.setInputCloud(tree_segmented);
+  pass.setFilterFieldName("y");
+  pass.setFilterLimits(-900, meanMedian/2);
+  pass.setFilterLimitsNegative(true);
+  pass.filter(*crown_cloud);
+
+  float min,max;
+  pass.getFilterLimits(min,max);
+
+  std::cout << "PointCloud after filtering has: " << crown_cloud->points.size ()
+            << " data points." << std::endl;
+
+  std::cout << "The limits are: min=" << min << ", max=" << max << std::endl;
+
+ // Utilities::vtkVisualizer(crown_cloud,pt1,pt2);
+
   pcl::PLYWriter writer;
   writer.write(prefix2.c_str(), *trunk_cloud, false, false);
   writer.write(prefix4.c_str(), *tree_segmented, false, false);
-  writer.write(prefix6.c_str(), *crown_segmented, false, false);
+  writer.write(prefix6.c_str(), *crown_cloud, false, false);
 
   pcl::io::savePCDFileBinary(prefix1.c_str(), *trunk_cloud);
   pcl::io::savePCDFileBinary(prefix3.c_str(), *tree_segmented);
-  pcl::io::savePCDFileBinary(prefix5.c_str(), *crown_segmented);
+  pcl::io::savePCDFileBinary(prefix5.c_str(), *crown_cloud);
+
+
+  while(true){
+
+      if(crown_cloud_segmented->points.size()<=0){
+
+      bool success = crownSegmentation(crown_cloud,crown_cloud_segmented,setGui2);
+      if(not success){
+          crownGood = false;
+          crown_cloud_segmented->points.clear();
+          answer2.clear();
+          setGui2= true;
+
+          int dont_care;
+          std::string callParametersGui = "/home/daniel/Documents/iTree3DMap/libraries/gui_Crown_SegParam/build/interfaz ";
+          callParametersGui += output_dir_path;
+          callParametersGui += "/crown_parameters.txt ";
+          callParametersGui += output_dir_path;
+
+          dont_care = std::system(callParametersGui.c_str());
+          continue;
+
+        }
+         // pcl::PointXYZ pt1(0,0,0);
+         // pcl::PointXYZ pt2(0,0,0);
+         // Utilities::vtkVisualizer(crown_cloud,pt1,pt2);
+      }
+
+      if(crown_cloud_segmented->points.size()>0){
+
+        std::cout << blue <<  "\nCrown segmentation Good?(yes/no)" << reset << std::endl;
+        std::cout << "->" << std::flush;
+        std::getline(std::cin, answer2);
+        if(answer.empty()){
+          PCL_ERROR("Nothing entered.\n");
+          answer2.clear();
+          continue;
+        }
+        if(answer2 == "yes"){
+          crownGood = true;
+        }else if(answer2 == "no"){
+          crownGood = false;
+          crown_cloud_segmented->points.clear();
+          answer2.clear();
+
+          std::cout << "Crown cloud re-segmenting..."<< yellow << "please wait" << reset << "..."<< std::endl;
+
+          setGui2= true;
+
+          int dont_care;
+          std::string callParametersGui = "/home/daniel/Documents/iTree3DMap/libraries/gui_Crown_SegParam/build/interfaz ";
+          callParametersGui += output_dir_path;
+          callParametersGui += "/crown_parameters.txt ";
+          callParametersGui += output_dir_path;
+
+          dont_care = std::system(callParametersGui.c_str());
+          continue;
+        }else{
+          PCL_ERROR("%s %s",answer2.c_str(),"is not a valid answer.\n");
+          crownGood = false;
+          answer2.clear();
+          continue;
+        }
+      }
+
+      if(crownGood){
+        break;
+      }
+  }
+
+  //std::cout << "Crown cloud segmentation with:" << yellow <<  "Euclidean Cluster Extraction..." << reset << std::endl;
+
+  pcl::console::TicToc tt2;
+  PCL_INFO("\nSaving 3D mapping segmented...");
+
+  pcl::PLYWriter writer2;
+  writer2.write(prefix2.c_str(), *trunk_cloud, false, false);
+  writer2.write(prefix4.c_str(), *tree_segmented, false, false);
+  writer2.write(prefix6.c_str(), *crown_cloud_segmented, false, false);
+
+  pcl::io::savePCDFileBinary(prefix1.c_str(), *trunk_cloud);
+  pcl::io::savePCDFileBinary(prefix3.c_str(), *tree_segmented);
+  pcl::io::savePCDFileBinary(prefix5.c_str(), *crown_cloud_segmented);
 
   pcl::console::print_info ("[done, ");
   pcl::console::print_value ("%g", tt2.toc ());
@@ -254,22 +395,51 @@ bool Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
 
   extract.setNegative(true);
   extract.filter(*rest_seg);
-
-  /*
+  
   pcl::PointCloud<pcl::PointXYZ>::Ptr trunk_seg_filtered (new pcl::PointCloud<pcl::PointXYZ>());  
   pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor2;
   sor2.setInputCloud(trunk_seg);
   sor2.setMeanK(80);
   sor2.setStddevMulThresh(1.0);
   sor2.filter(*trunk_seg_filtered);
-  */
+
+  std::string prefix = output_dir_path;
+  prefix += "/3D_Mapping/";
+
+  std::string prefix1 = prefix;
+  prefix1 += "MAP3D_trunk_segmented.pcd";
+
+  pcl::io::savePCDFileBinary(prefix1.c_str(), *trunk_seg_filtered);  
+  
+  std::map<double,pcl::PointXYZ> min_max_HeightTrunk;
+
+  C_Progress_display my_progress_bar( trunk_seg_filtered->size(),std::cout, "\n- Getting trunk height -\n" );
+  for(pcl::PointCloud<pcl::PointXYZ>::iterator it = trunk_seg_filtered->begin();
+    it != trunk_seg_filtered->end();++it, ++my_progress_bar){
+
+      pcl::PointXYZ pt = pcl::PointXYZ(it->x,it->y,it->z);
+      min_max_HeightTrunk[pt.y] = pt;
+
+    }
+
+/*
+  for(pcl::PointCloud<pcl::PointXYZ>::iterator it=trunk_seg_filtered->begin();it!=trunk_seg_filtered->end(); ++it){
+    pcl::PointXYZ pt = pcl::PointXYZ(it->x,it->y,it->z);
+    min_max_HeightTrunk[pt.y] = pt;
+  } 
+*/
+  std::map<double,pcl::PointXYZ>::iterator it1_minH = min_max_HeightTrunk.begin();
+  pcl::PointXYZ minDBH_inX = it1_minH->second;
+  
+  pcl::PointCloud<pcl::PointXYZ>::Ptr trunk_seg_filtered_DBScan (new pcl::PointCloud<pcl::PointXYZ>());   
+  DBScan(trunk_seg_filtered_DBScan,minDBH_inX);
 
   Eigen::Matrix4f align_cloud = Eigen::Matrix4f::Identity();
 
   pcl::PointXYZ minH,maxH;
   std::map<double,pcl::PointXYZ> minMaxValues;
 
-  for(pcl::PointCloud<pcl::PointXYZ>::iterator it=trunk_seg->begin(); it!=trunk_seg->end(); ++it){
+  for(pcl::PointCloud<pcl::PointXYZ>::iterator it=trunk_seg_filtered_DBScan->begin(); it!=trunk_seg_filtered_DBScan->end(); ++it){
     pcl::PointXYZ p = pcl::PointXYZ(it->x,it->y,it->z);
     minMaxValues[p.y] = p;
   }
@@ -307,7 +477,7 @@ bool Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   std::cout << "\nHere is the translation matrix transform:\n" << align_cloud << "\n" << std::endl;
   PCL_INFO("Executing the transformation...");
 
-  pcl::transformPointCloud(*trunk_seg, *cloud_trunk, align_cloud);
+  pcl::transformPointCloud(*trunk_seg_filtered_DBScan, *cloud_trunk, align_cloud);
   pcl::transformPointCloud(*rest_seg, *cloud_without_trunk, align_cloud);
 
   pcl::console::print_info ("[done, ");
@@ -362,37 +532,153 @@ bool Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
 
 }
 
-bool Segmentation::crownSegmentation(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_without_trunk,
-                                     pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_crown){
+bool Segmentation::crownSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_crown,
+                                     pcl::PointCloud<pcl::PointXYZ>::Ptr& crown_better_segmented,bool setGUI,int octreeResolution, double eps,int minPtsAux,int minPts){
 
-  if(cloud_without_trunk->points.size() <= 0){
+  if(cloud_crown->points.size() <= 0){
     PCL_ERROR("Input point cloud has no data!");
     return false;
   }
 
-  std::cout << "Filtering points data with: PassThrough filter..." << std::endl;
+  if(setGUI){
 
-  PCL_INFO("PointCloud before filtering has %lu %s", cloud_without_trunk->points.size()," data points.\n");
+      std::string crownParameters = output_dir_path;
+      crownParameters += "/crown_parameters.txt";
 
-  double meanMedian = pcl::geometry::distance(trunkMin,trunkMax);
-  PCL_INFO("\nMean median: %f",meanMedian);
-  std::cout << std::endl;
-  PCL_INFO("Mean median/2: %f",meanMedian/2);
-  std::cout << std::endl;
+      std::ifstream file(crownParameters.c_str());
 
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>());
+      while(file >> octreeResolution >> eps >> minPtsAux >> minPts){
+        }
 
-  // Create the filtering object
-  pcl::PassThrough<pcl::PointXYZ> pass;
-  pass.setInputCloud(cloud_without_trunk);
-  pass.setFilterFieldName("y");
-  pass.setFilterLimits(-900, meanMedian/2);
-  pass.setFilterLimitsNegative(true);
-  pass.filter(*cloud_filtered);
+      file.close();
+  }
 
-  std::cout << "\nPointCloud after filtering has: " << cloud_filtered->points.size ()
-            << " data points." << std::endl;  
+  std::string command = "../../libraries/DBScan_Octrees-master/src/build/bin/dbscan ";
+  command += output_dir_path;
+  command += "/3D_Mapping/MAP3D_crown_segmented.pcd ";
+  command += std::to_string(octreeResolution);
+  command += " ";
+  command += std::to_string(eps);
+  command += " ";
+  command += std::to_string(minPtsAux);
+  command += " ";
+  command += std::to_string(minPts);
+  command += " ";
+  command += output_dir_path;
 
+  std::cout << "\nApplying DBSCAN..." << std::endl;
+  int dont_care = -1;
+  std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> clouds_vector;
+  //if(cloud_crown->points.size()>10000){
+      dont_care = std::system(command.c_str());
+
+      if(dont_care > 0){
+        std::cout << red << "Failed. dbscan not found" << reset << std::endl;
+        return false;
+      }
+
+      std::string numCluster = output_dir_path;
+      numCluster += "/clusters_number.txt";
+      std::ifstream file(numCluster.c_str());
+      if(!file.is_open()){
+          std::cout << "Error: Could not find " << numCluster << std::endl;
+          return false;
+      }
+
+      if(is_empty(file)){
+          PCL_WARN("Could not generated cluster. skip!\n");
+          return false;
+      }
+
+          unsigned int totalClusters;
+
+           while(file >> totalClusters){
+            //std::cout << "getting total clusters:" << totalClusters << std::endl;
+          }
+
+           if(totalClusters<=0){
+               PCL_WARN("Could not generated cluster. skip!\n");
+               return false;
+             }
+      file.close();
+      for(int i=0;i<totalClusters; i++){
+
+          std::string feature_path=output_dir_path;
+          feature_path +="/cloud_cluster_";
+          feature_path += std::to_string(i);
+          feature_path += ".xyz";
+         // std::cout << "Using file:" << feature_path << std::endl;
+
+          float x_, y_,z_;
+
+          std::ifstream file(feature_path.c_str());
+          if(!file.is_open() ){
+            std::cout << "Error: Could not find " << feature_path << std::endl;
+            feature_path.clear();
+            return false;
+
+          }
+
+          pcl::PointCloud<pcl::PointXYZ>::Ptr crown_cloud_segmented (new pcl::PointCloud<pcl::PointXYZ>());
+
+          while(file >> x_ >> y_ >> z_){
+            pcl::PointXYZ pt = pcl::PointXYZ(x_,y_,z_);
+              crown_cloud_segmented->points.push_back(pt);
+          }
+
+          crown_cloud_segmented->width = crown_cloud_segmented->points.size();
+          crown_cloud_segmented->height = 1;
+          crown_cloud_segmented->is_dense = true;
+
+          clouds_vector.push_back(crown_cloud_segmented);
+
+      }
+      //std::cout << "Crown cloud segmented with DBScan:" << clouds_vector.size() << " clusters" << std::endl;
+  //}
+
+  std::map<double,pcl::PointCloud<pcl::PointXYZ>::Ptr> clusters_dbscan_map;
+
+ // if(cloud_crown->points.size()>10000){
+    for(int i=0;i<clouds_vector.size(); i++){
+
+        Eigen::Vector4f centroid;
+
+        pcl::compute3DCentroid(*clouds_vector.at(i),centroid);
+        pcl::PointXYZ pt2 = pcl::PointXYZ(centroid[0],centroid[1],centroid[2]);
+        //std::cout << "centroid:" << pt2 << std::endl;
+
+        double error = pcl::geometry::distance(trunkMax,pt2);
+        //std::cout << "Error distance centroid trunk-crown:" << error << std::endl;
+        clusters_dbscan_map[error]= clouds_vector.at(i);
+    }
+
+    std::map<double,pcl::PointCloud<pcl::PointXYZ>::Ptr>::iterator crown_dbscan_segmented = clusters_dbscan_map.begin();
+    crown_better_segmented->points.clear();
+    pcl::copyPointCloud(*crown_dbscan_segmented->second,*crown_better_segmented);
+ //  }
+
+  std::cout << "Crown DBScan segmented:" << crown_better_segmented->points.size() << std::endl;
+
+  std::string guardar= output_dir_path;
+  guardar += "/3D_Mapping/cloud_crown_segmented_DBScan.pcd";
+
+  pcl::io::savePCDFileBinary(guardar.c_str(),*crown_better_segmented);
+
+  std::string crownParameters = output_dir_path;
+  crownParameters += "/crown_parameters.txt";
+
+  std::ofstream ofs(crownParameters.c_str());
+
+  ofs << octreeResolution << std::endl
+      << eps << std::endl
+      << minPtsAux << std::endl
+      << minPts << std::endl;
+  ofs.close();
+
+
+
+
+/*
   std::cout << "\nCreating the KdTree object for the search method of the extraction..." << std::endl;
 
   pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
@@ -455,6 +741,126 @@ bool Segmentation::crownSegmentation(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_
     sor.setMeanK(100);
     sor.setStddevMulThresh(0.2);
     sor.filter(*cloud_crown);
+    */
+
+  return true;
+
+}
+
+bool Segmentation::DBScan(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_segmented,pcl::PointXYZ& minTrunkHeight){
+
+  std::string command = "../../libraries/DBScan_Octrees-master/src/build/bin/dbscan ";
+  command += output_dir_path;
+  command += "/3D_Mapping/MAP3D_trunk_segmented.pcd 3 40 5 10 ";//40 10 1000
+  command += output_dir_path;
+  
+  std::cout << "\nApplying DBSCAN..." << std::endl;
+
+  int dont_care = std::system(command.c_str());
+
+  if(dont_care > 0){
+    std::cout << red << "Failed. dbscan not found" << reset << std::endl;
+    return false;
+  } 
+  
+  std::string numCluster = output_dir_path;
+  numCluster += "/clusters_number.txt";
+  std::ifstream file(numCluster.c_str());
+  if(!file.is_open()){
+      std::cout << "Error: Could not find " << numCluster << std::endl;
+      return false;
+  }
+
+  if(is_empty(file)){
+      PCL_WARN("Could not generated cluster. skip!\n");
+      return false;
+  }
+
+  unsigned int totalClusters;
+
+  while(file >> totalClusters){
+      //std::cout << "getting total clusters:" << totalClusters << std::endl;
+    }
+
+  if(totalClusters<=0){
+      PCL_WARN("Could not generated cluster. skip!\n");
+      return false;
+  }
+
+  file.close();
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>());
+  
+  std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> clouds_vector;
+  
+  for(int i=0;i<totalClusters; i++){
+
+      std::string feature_path=output_dir_path;
+      feature_path +="/cloud_cluster_";
+      feature_path += std::to_string(i);
+      feature_path += ".xyz";  
+      //std::cout << "Using file:" << feature_path << std::endl;
+
+      float x_, y_,z_;
+
+      std::ifstream file(feature_path.c_str());
+      if(!file.is_open() ){
+        std::cout << "Error: Could not find " << feature_path << std::endl;
+        feature_path.clear();
+        return false;
+      }
+
+      if(is_empty(file)){
+          PCL_WARN("Could not generated cluster. skip!\n");
+          return false;
+      }
+
+      while(file >> x_ >> y_ >> z_){
+        pcl::PointXYZ pt = pcl::PointXYZ(x_,y_,z_);
+        cloud_cluster->points.push_back(pt);
+      }
+
+      cloud_cluster->width = cloud_cluster->points.size();
+      cloud_cluster->height = 1;
+      cloud_cluster->is_dense = true;
+      /*
+      std::map<double,pcl::PointXYZ> min_max_Height;
+
+      for(pcl::PointCloud<pcl::PointXYZ>::iterator it=cloud_cluster->begin();it!=cloud_cluster->end(); ++it){
+        pcl::PointXYZ pt = pcl::PointXYZ(it->x,it->y,it->z);
+        min_max_Height[pt.y]=pt;
+      }
+
+      std::map<double,pcl::PointXYZ>::iterator it3 = min_max_Height.begin();
+      pcl::PointXYZ minH = it3->second;
+      
+      std::map<double,pcl::PointXYZ>::iterator it4 = std::prev(min_max_Height.end());
+      pcl::PointXYZ maxH = it4->second; 
+      
+      //if(minH.y != minTrunkHeight.y)continue;
+      */
+      clouds_vector.push_back(cloud_cluster);  
+  }
+  
+  std::cout << "Crown cloud segmented with DBScan:" << clouds_vector.size() << " clusters" << std::endl;
+  pcl::copyPointCloud(*clouds_vector.at(0),*cloud_segmented);
+  /*
+  std::map<double,pcl::PointCloud<pcl::PointXYZ>::Ptr> clusters_dbscan_map;
+  
+  for(int i=0;i<clouds_vector.size(); i++){   
+  
+      Eigen::Vector4f centroid;
+     
+      pcl::compute3DCentroid(*clouds_vector.at(i),centroid);
+      pcl::PointXYZ pt2 = pcl::PointXYZ(centroid[0],centroid[1],centroid[2]);
+      //std::cout << "centroid:" << pt2 << std::endl;
+            
+      double error = pcl::geometry::distance(maxTH,pt2);
+      //std::cout << "Error distance centroid trunk-crown:" << error << std::endl;
+      clusters_dbscan_map[error]= clouds_vector.at(i);  
+  
+  }
+
+*/
 
 }
 

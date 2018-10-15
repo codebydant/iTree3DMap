@@ -6,8 +6,7 @@ const std::string yellow("\033[0;33m");
 const std::string reset("\033[0m");
 const std::string green("\033[0;32m");
 
-static float signedVolumeOfTriangle(pcl::PointXYZ p1, pcl::PointXYZ p2, pcl::PointXYZ p3) 
-{
+static float signedVolumeOfTriangle(pcl::PointXYZ p1, pcl::PointXYZ p2, pcl::PointXYZ p3){
     float v321 = p3.x*p2.y*p1.z;
     float v231 = p2.x*p3.y*p1.z;
     float v312 = p3.x*p1.y*p2.z;
@@ -30,7 +29,6 @@ static float volumeOfMesh(pcl::PolygonMesh mesh){
         pcl::PointXYZ pt3 = cloud->points[mesh.polygons[triangle].vertices[2]];
         vols += signedVolumeOfTriangle(pt1, pt2, pt3);
     }
-
     return std::abs(vols);
 }
 
@@ -54,86 +52,19 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
                            const pcl::PointCloud<pcl::PointXYZ>::Ptr& crown_cloud,
                            const std::string output_dir,
                            pcl::PointXYZ& minDBH,pcl::PointXYZ& maxDBH,pcl::PointXYZ& minTH,pcl::PointXYZ& maxTH,
-                           pcl::PointXYZ& minCH,pcl::PointXYZ& maxCH,pcl::PointXYZ& minDBH5,pcl::PointXYZ& maxDBH5
-                           ){
+                           pcl::PointXYZ& minCH,pcl::PointXYZ& maxCH,pcl::PointXYZ& minDBH5,pcl::PointXYZ& maxDBH5,pcl::PolygonMesh& mesh1,pcl::PolygonMesh& mesh2){
 
   std::cout << "************************************************" << std::endl;
   std::cout << "              DENDROMETRY ESTIMATION            " << std::endl;
   std::cout << "************************************************" << std::endl;
-
-  std::string command = "../../libraries/DBScan_Octrees-master/src/build/bin/dbscan ";
-  command += output_dir;
-  command += "/3D_Mapping/MAP3D_crown_segmented.pcd 40 10 1000 ";
-  command += output_dir;
-  
-  std::cout << "Applying DBSCAN..." << std::endl;
-
-  int dont_care = std::system(command.c_str());
-
-  if(dont_care > 0){
-    std::cout << red << "Failed. dbscan not found" << reset << std::endl;
-    return std::exit(-1);
-  } 
-  
-  std::string numCluster = output_dir;
-  numCluster += "/clusters_number.txt";
-  std::ifstream file(numCluster.c_str());
-      if(!file.is_open()){
-        std::cout << "Error: Could not find " << numCluster << std::endl;        
-        return exit(-1);
-      }
-      
-      unsigned int totalClusters;
-      
-       while(file >> totalClusters){
-        std::cout << "getting total clusters:" << totalClusters << std::endl;
-      }
-  file.close();  
-  
-  std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> clouds_vector;
-  
-  for(int i=0;i<totalClusters; i++){
-  
-      std::string feature_path=output_dir;
-      feature_path +="/cloud_cluster_";
-      feature_path += std::to_string(i);
-      feature_path += ".xyz";  
-      std::cout << "Using file:" << feature_path << std::endl;
-
-      float x_, y_,z_;
-
-      std::ifstream file(feature_path.c_str());
-      if(!file.is_open() ){
-        std::cout << "Error: Could not find " << feature_path << std::endl;
-        feature_path.clear();
-        return exit(-1);
-
-      }
-
-      pcl::PointCloud<pcl::PointXYZ>::Ptr crown_cloud_segmented (new pcl::PointCloud<pcl::PointXYZ>());
-
-      while(file >> x_ >> y_ >> z_){
-        pcl::PointXYZ pt = pcl::PointXYZ(x_,y_,z_);
-          crown_cloud_segmented->points.push_back(pt);
-      }
-
-      crown_cloud_segmented->width = crown_cloud_segmented->points.size();
-      crown_cloud_segmented->height = 1;
-      crown_cloud_segmented->is_dense = true;
-      
-      clouds_vector.push_back(crown_cloud_segmented);
-  
-  }
-  
-  std::cout << "Crown cloud segmented with DBScan:" << clouds_vector.size() << " clusters" << std::endl;
-  std::map<double,pcl::PointCloud<pcl::PointXYZ>::Ptr> clusters_dbscan_map;
 
   std::string dendrometric_results = output_dir;
   dendrometric_results += "/dendrometric.txt";
 
   ofstream feature(dendrometric_results.c_str());
 
-  double height_trunk,DBH,height_crown,total_height,factor_morfico,crown_volume;
+  double height_trunk,DBH,height_crown,total_height,crown_volume;
+  float factor_morfico;
 
   std::cout << blue << "Estimating trunk features..." << reset << std::endl;
   std::cout << "------------------------------------------" << std::endl;
@@ -304,32 +235,7 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   
   //-------------------------------------------------
   //-------------------------------------------------  
-  
-  for(int i=0;i<clouds_vector.size(); i++){   
-  
-      Eigen::Vector4f centroid;
-     
-      pcl::compute3DCentroid(*clouds_vector.at(i),centroid);
-      pcl::PointXYZ pt2 = pcl::PointXYZ(centroid[0],centroid[1],centroid[2]);
-      //std::cout << "centroid:" << pt2 << std::endl;
-            
-      double error = pcl::geometry::distance(maxTH,pt2);
-      //std::cout << "Error distance centroid trunk-crown:" << error << std::endl;
-      clusters_dbscan_map[error]= clouds_vector.at(i);  
-  
-  }
-  
-  std::map<double,pcl::PointCloud<pcl::PointXYZ>::Ptr>::iterator crown_better_segmented = clusters_dbscan_map.begin();
-  crown_cloud->points.clear();
-  pcl::copyPointCloud(*crown_better_segmented->second,*crown_cloud);
-  
-  std::cout << "Crown DBScan segmented:" << crown_cloud->points.size() << std::endl;
-  
-  std::string guardar= output_dir;
-  guardar += "/3D_Mapping/cloud_crown_segmented_DBScan.pcd";
-   
-  pcl::io::savePCDFileBinary(guardar.c_str(),*crown_cloud); 
-  
+
   
   //---------------------------------------------
   //---------------------------------------------  
@@ -393,7 +299,7 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
 
   if(pts_for_DBH_5m.size()<=0){
     PCL_WARN("No points at 5m, using morphic factor = 0.75\n");
-    factor_morfico = 0.75;
+    factor_morfico = 0.75f;
 
   }else{
 
@@ -424,19 +330,17 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
     minDBH5.y = maxDBH5.y;
     minDBH5.z = maxDBH5.z;
     DBH_5m = pcl::geometry::distance(minDBH5,maxDBH5);
-    factor_morfico = DBH_5m/DBH;
+    factor_morfico = (float) DBH_5m/DBH;
   }
 
   crown_volume = (DBH*DBH)*(M_PI/4)*total_height*factor_morfico;
 
-  pcl::PolygonMesh mesh1,mesh2;
-
   //Utilities::create_mesh(crown_cloud,mesh1);
   Utilities::createMeshFromCloud(crown_cloud,mesh1);
-  Utilities::create_mesh(crown_cloud,mesh2,8,10,6,4.0,1.5,1.1,8,true,true,false,8);
+  Utilities::create_mesh(crown_cloud,mesh2,8,10,7,4.0,1.5,1.1,8,true,true,true,8);
 
   std::string mesh_path = output_dir;
-  mesh_path += "3D_Mapping/mesh.ply";
+  mesh_path += "3D_Mapping/Crown_mesh.ply";
 
   vtkSmartPointer<vtkPolyData> vtkCloud1 = vtkSmartPointer<vtkPolyData>::New();
   pcl::VTKUtils::convertToVTK(mesh1,vtkCloud1);
@@ -444,46 +348,49 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   vtkSmartPointer<vtkPolyData> vtkCloud2 = vtkSmartPointer<vtkPolyData>::New();
   pcl::VTKUtils::convertToVTK(mesh2,vtkCloud2);
 
-  Utilities::vizualizeMesh(vtkCloud1,vtkCloud2);
+  //Utilities::vizualizeMesh(vtkCloud1,vtkCloud2);
 
   float volume1 = volumeOfMesh(mesh1);
   float volume2 = volumeOfMesh(mesh2);
 
-  int crown_percentage = (int)std::abs(((volume1 -volume2)/volume1)*100);
+  int canopy_missing_percentage = (int)std::abs(((volume2 - volume1)/volume2)*100);
+  canopy_missing_percentage = 100 - canopy_missing_percentage;
 
   std::cout << "\n*** Measurements ***" << std::endl;
   std::cout << "---------------------------------------" << std::endl;
   std::cout << green << "TRUNK" << reset << std::endl;
   std::cout << "---------------------------------------" << std::endl;
-  std::cout << "------ Trunk height:" << height_trunk << " cm" << std::endl;
-  std::cout << "------ DBH:" << DBH << " cm" << std::endl;
-  std::cout << "------ DBH5m:" << DBH_5m << " cm" << std::endl;
+  std::cout << "------ Height to crown base: " << height_trunk << " cm" << std::endl;
+  std::cout << "------ DBH: " << DBH << " cm" << std::endl;
+  std::cout << "------ DBH at 5m: " << DBH_5m << " cm" << std::endl;
   std::cout << "---------------------------------------" << std::endl;
   std::cout << green << "CROWN" << reset << std::endl;
   std::cout << "---------------------------------------" << std::endl;
-  std::cout << "------ Crown height:" << height_crown << " cm" << std::endl;
+  std::cout << "------ Crown height: " << height_crown << " cm" << std::endl;
   std::cout<< std::fixed;
-  std::cout << "------ Crown volume (eq method):" << crown_volume << " cm^3" << std::endl;
-  std::cout << "------ Crown volume (mesh):" << volume1 << " cm^3" << std::endl;
-  std::cout << "------ Crown percentage:" << crown_percentage << "%" << std::endl;
+  std::cout << "------ Crown volume (eq method): " << crown_volume << " cm^3" << std::endl;
+  std::cout << "------ Crown volume end(mesh): " << volume1 << " cm^3" << std::endl;
+  std::cout << "------ Crown volume init(mesh): " << volume2 << " cm^3" << std::endl;
+  std::cout << "------ Percent canopy missing: " << canopy_missing_percentage << "%" << std::endl;
   std::cout << "---------------------------------------" << std::endl;
   std::cout << green << "OTHERS FEATURES" << reset << std::endl;
   std::cout << "---------------------------------------" << std::endl;
-  std::cout << "------ Total height:" << total_height << " cm" << std::endl;
-  std::cout << "------ Morphic factor:" << factor_morfico << std::endl;
+  std::cout << "------ Total height: " << total_height << " cm" << std::endl;
+  std::cout << "------ Morphic factor: " << factor_morfico << std::endl;
   std::cout << "************************************************" << std::endl;
   std::cout << "************************************************" << std::endl;
 
   std::cout << "Saving results in:" << output_dir << std::endl;
 
-  feature << "\nTRUNK" << "\n" << "Height:" << height_trunk << " cm" << std::endl;
+  feature << "\nTRUNK" << "\n" << "Height to crown base:" << height_trunk << " cm" << std::endl;
   feature << "DBH:" << DBH << " cm" << std::endl;
-  feature << "DBH 5m:" << DBH_5m << " cm" << std::endl;
+  feature << "DBH at 5m:" << DBH_5m << " cm" << std::endl;
   feature << "--------------------------" << std::endl;
   feature << "CROWN" << "\n" << "Height:" << height_crown << " cm" << std::endl;
-  feature << "Volume (MESH):" << volume1 << " cm^3" << std::endl;
+  feature << "Volume end(MESH):" << volume1 << " cm^3" << std::endl;
+  feature << "Volume init(MESH):" << volume2 << " cm^3" << std::endl;
   feature << "Volume (Eq):" << crown_volume << " cm^3" << std::endl;
-  feature << "Crown percentage: " << crown_percentage << "%" << std::endl;
+  feature << "Percent canopy missing: " << canopy_missing_percentage << "%" << std::endl;
   feature << "--------------------------" << std::endl;
   feature << "Total height:" << total_height << " cm" << std::endl;
   feature << "Morphic factor:" << factor_morfico << std::endl;

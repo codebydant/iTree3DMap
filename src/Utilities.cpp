@@ -262,11 +262,11 @@ bool Utilities::run_openMVG(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D, std::
   folder_name += project_name;
 
   dont_care = std::system(folder_name.c_str());
-*/  
+ */
   output_dir += "/";
   output_dir += project_name;
   output_path = output_dir;
-/*
+ /*
   std::string output_pcd_files = "3D_Mapping";
   std::string folder_name2 = "mkdir ";
   folder_name2 += output_dir;
@@ -320,7 +320,9 @@ bool Utilities::run_openMVG(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D, std::
 
   std::cout << "\nGetting cloud from 3D reconstruction..." << std::endl;
 
-  pcl::io::loadPLYFile(polyFile.c_str(),*Map3D);
+  if(pcl::io::loadPLYFile(polyFile.c_str(),*Map3D) == -1){
+      return false;
+  }
   if(Map3D->points.size()<=0 or Map3D->points.at(0).x <=0 and Map3D->points.at(0).y <=0 and Map3D->points.at(0).z <=0){
       pcl::console::print_warn("\nloadPLYFile could not read the cloud, attempting to loadPolygonFile...");
       pcl::io::loadPolygonFile(polyFile.c_str(), polyMesh);
@@ -331,7 +333,7 @@ bool Utilities::run_openMVG(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D, std::
           plyRead.read(polyFile.c_str(),*Map3D);
           if(Map3D->points.size()<=0 or Map3D->points.at(0).x <=0 and Map3D->points.at(0).y <=0 and Map3D->points.at(0).z <=0){
               pcl::console::print_error("\nError. ply file is not compatible.\n");
-              return -1;
+              return false;
             }
         }
     }
@@ -517,7 +519,7 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,dou
           if(dont_care > 0){
               PCL_ERROR("Failed. Could not find control_point_Reg.bin\n");
               return false;
-            }
+          }
 
           std::string image_path = output_dir;
           image_path += "/image_selected.txt";
@@ -623,6 +625,14 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,dou
             cv::circle(img_copy, center, radius,cv::Scalar(0,255,0),30);
           }
 
+          if(center_pattern1.x <= 0 and center_pattern1.y <=0 or center_pattern2.x <= 0
+             and center_pattern2.y <=0){
+
+              std::cout << yellow << "HoughCircles transform can't detected patterns. skip!" << reset << std::endl;
+              img_selected.clear();
+              continue;
+          }
+
           std::cout << "\nNum of circles detect:" << circles.size() << std::endl;
           std::cout << "Circle 1 center:" << center_pattern1 << std::endl;
           std::cout << "Circle 2 center:" << center_pattern2 << std::endl;
@@ -633,6 +643,8 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,dou
           Screen*  s = DefaultScreenOfDisplay(d);
 
           int x = s->width;
+
+          std::cout << "\nPress [q] to continue!" << std::endl;
 
           cv::namedWindow("pattern",CV_WINDOW_NORMAL);
           cv::resizeWindow("pattern",640,480);
@@ -645,7 +657,7 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,dou
 
             std::string answer;
 
-            std::cout << yellow << "\nIs this lenght OK? (yes/no):" << reset << std::endl;
+            std::cout << yellow << "\nAre the detected circles correct? (yes/no):" << reset << std::endl;
             std::cout << "------------------------------------------\n" << "->" << std::flush;
             std::getline(std::cin, answer);
             if(answer.empty()){
@@ -770,7 +782,54 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,dou
   cv::Mat rvec;
   cv::Rodrigues(pose.get_minor<3,3>(0,0),rvec);
   cv::Mat tvec(pose.get_minor<3,1>(0,3));
+/*
+  cv::Mat P = (cv::Mat)intrinsic*(cv::Mat)pose;
+    std::cout << "intrinsic:" << intrinsic << std::endl;
+    std::cout << "pose:" << pose << std::endl;
+  std::cout << "P:" << P << std::endl;
+  cv::Mat P_inv;
 
+  std::vector<cv::Point3d> PointsCircle1;
+
+  for(int i=0;i<pts_for_circle1.size();i++){
+      cv::Point2d pt= pts_for_circle1.at(i);
+      PointsCircle1.push_back(cv::Point3d(1180.02,1415.99,1));
+    }
+
+  cv::invert(P,P_inv,cv::DECOMP_SVD);
+  std::cout << "P_inv:" << P_inv << std::endl;
+  cv::Mat_<double> pointToTransform(PointsCircle1.at(0),false);
+  std::cout<< "point in mat:" << pointToTransform << std::endl;
+
+
+  cv::Mat_<double> newPP(3,3);
+  newPP.at<double>(0,0) =R.at<double>(0,0);
+  newPP.at<double>(1,0) =R.at<double>(1,0);
+  newPP.at<double>(2,0) =R.at<double>(2,0);
+
+  newPP.at<double>(0,1) =R.at<double>(0,1);
+  newPP.at<double>(1,1) =R.at<double>(1,1);
+  newPP.at<double>(2,1) =R.at<double>(2,1);
+
+  newPP.at<double>(0,2) =t.at<double>(0);
+  newPP.at<double>(1,2) =t.at<double>(1);
+  newPP.at<double>(2,2) =t.at<double>(2);
+
+  cv::Mat_<double> Homo = intrinsic*newPP;
+
+  std::cout << "newPP:" << newPP << std::endl;
+   std::cout << "Homography:" << Homo << std::endl;
+  //cv::Rodrigues(pose.get_minor<3,3>(0,0),newPP);
+   cv::Mat_<double> point3D1=Homo*pointToTransform;
+
+
+   //point3D1 = point3D1/pointToTransform.at<double>(2,0);
+   std::cout << "Point3D reprojected to world:" << point3D1 << std::endl;
+   point3D1.at<double>(0,0) = point3D1.at<double>(0,0)/point3D1.at<double>(2,0);
+   point3D1.at<double>(1,0) = point3D1.at<double>(1,0)/point3D1.at<double>(2,0);
+   point3D1.at<double>(2,0) = point3D1.at<double>(2,0)/point3D1.at<double>(2,0);
+   std::cout << "Point3D reprojected to world:" << point3D1 << std::endl;
+*/
   std::vector<cv::Point2d> projected_points;
   std::vector<cv::Point3d> points3d;
 
@@ -783,9 +842,13 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,dou
   double error;
   pcl::PointXYZ ptt1,pt2;
 
+  std::cout << "original pt3d:" << points3d.at(0) << std::endl;
+  std::cout << "projected original pt3d:" << projected_points.at(0) << std::endl; //1180.02, 1415.99
+
+
   std::map<double,std::pair<std::pair<cv::Point2d,cv::Point2d>,cv::Point3d>> p1_map;
 
-  std::cout << yellow << "\ncheck if point reprojection error is small enough..." << reset << std::endl;
+  std::cout << yellow << "\nchecking if reprojection error is small enough..." << reset << std::endl;
 
   std::string dendrometric_results = output_dir;
   dendrometric_results += "/pts_for_circle1.txt";
@@ -1461,6 +1524,10 @@ bool Utilities::alignCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
 }
 
 void Utilities::create_mesh(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud,pcl::PolygonMesh &mesh,int nThreads,int setKsearch, int depth, float pointWeight,float samplePNode, float scale, int isoDivide, bool confidence, bool outputPolygons, bool manifold, int solverDivide){
+
+  if(cloud->points.size()<=0){
+      std::cout << "Cloud has no data!" << std::endl;
+    }
 /*
   Eigen::Vector4f centroid;
   pcl::compute3DCentroid(*cloud, centroid);
@@ -1477,18 +1544,18 @@ void Utilities::create_mesh(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud,pcl
 */
   pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ> ());
 
-//  pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> ne;
-//  ne.setNumberOfThreads(nThreads);
-//  ne.setInputCloud(cloud);
+  pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> ne;
+  ne.setNumberOfThreads(nThreads);
+  ne.setInputCloud(cloud);
 
-//  ne.setSearchMethod (tree);
-//  ne.setKSearch(setKsearch); //20
-//  //ne.setRadiusSearch (0.5); // no funciona
-//  pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>());
-//  ne.compute(*cloud_normals);
-
-//  pcl::PointCloud<pcl::PointXYZ>::Ptr smooth_mls (new pcl::PointCloud<pcl::PointXYZ>());
-//  const double radius;
+  ne.setSearchMethod (tree);
+  ne.setKSearch(setKsearch); //20
+  //ne.setRadiusSearch (0.5); // no funciona
+  pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>());
+  ne.compute(*cloud_normals);
+/*
+  pcl::PointCloud<pcl::PointXYZ>::Ptr smooth_mls (new pcl::PointCloud<pcl::PointXYZ>());
+  const double radius;
 
 
     // Output has the PointNormal type in order to store the normals calculated by MLS
@@ -1521,9 +1588,9 @@ void Utilities::create_mesh(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud,pcl
 //    cloud_normals->points[i].normal_y *= -1;
 //    cloud_normals->points[i].normal_z *= -1;
 //  }
-
+*/
   pcl::PointCloud<pcl::PointNormal>::Ptr cloud_smoothed_normals (new pcl::PointCloud<pcl::PointNormal> ());
-  pcl::concatenateFields (*cloud, *mls_points, *cloud_smoothed_normals);//x
+  pcl::concatenateFields (*cloud, *cloud_normals, *cloud_smoothed_normals);//x
 
   pcl::Poisson<pcl::PointNormal> poisson;
 
@@ -1607,6 +1674,7 @@ void Utilities::createMeshFromCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr& c
     gp3.setInputCloud (cloud_with_normals);
     gp3.setSearchMethod (tree2);
     gp3.reconstruct (triangles);
+    /*
 
     vtkSmartPointer<vtkPolyData> polydata= vtkSmartPointer<vtkPolyData>::New();
 
@@ -1616,7 +1684,7 @@ void Utilities::createMeshFromCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr& c
     pcl::VTKUtils::convertToPCL(polydata,mms2);
 
     pcl::io::savePolygonFilePLY("mesh2.ply", mms2);
-
+*/
 }
 
 
@@ -1631,7 +1699,7 @@ void Utilities::vizualizeMesh(vtkSmartPointer<vtkPolyData>& vtkCloud1,vtkSmartPo
 
   // Create a mapper and actor
   vtkSmartPointer<vtkPolyDataMapper> mapper1 = vtkSmartPointer<vtkPolyDataMapper>::New();
-  mapper1->SetInputData(polydata1);
+  mapper1->SetInputData(vtkCloud1);
 
   vtkSmartPointer<vtkActor> actor1 = vtkSmartPointer<vtkActor>::New();
   actor1->SetMapper(mapper1);
@@ -1878,10 +1946,4 @@ void Utilities::alignCloudSFM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,pcl:
   */
 
 }
-
-
-
-
-
-
 
