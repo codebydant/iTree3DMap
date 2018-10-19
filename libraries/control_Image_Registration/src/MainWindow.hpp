@@ -11,12 +11,20 @@
 
 #include <QtGui>
 #include <QTreeView>
-#include <string>
+#include <QTabWidget>
 #include <QLabel>
+#include <QLineEdit>
 #include <QGridLayout>
-#include <QOpenGLWidget>
+#include <QPushButton>
+#include <QMessageBox>
+#include <QMainWindow>
+#include <QSplitter>
+#include <QStatusBar>
+#include <QWidget>
 
-#include "GraphicsView.hpp"
+#include <iostream>
+#include <string>
+
 #include "document.hpp"
 
 class MainWindow : public QMainWindow{
@@ -25,44 +33,37 @@ class MainWindow : public QMainWindow{
 private:
   QTabWidget * m_tabWidget;
   QWidget * m_tab_1;
+  QLineEdit * dpLineEdit;
+  QLineEdit * minDistLineEdit;
+  QLineEdit * param1LineEdit;
+  QLineEdit * param2LineEdit;
+  QLineEdit * minRadiusLineEdit;
+  QLineEdit * maxRadiusLineEdit;
+  std::string dp;
+  std::string minDist;
+  std::string param1;
+  std::string param2;
+  std::string minRadius;
+  std::string maxRadius;
+  QWidget * houghParameters;
   QTreeView * m_treeView_Images;   // Image list of the project
   QLabel * myLabel;
   QPushButton* button ;
+  QPushButton* buttonOkParams;
 
   QStatusBar *m_statusbar;         // Status bar
-  QMenuBar *m_menubar;             // Menu bar
-
-  QMenu *m_menuHelp;               // Menu
-  QMenu *m_menuFile;               // Help
-
-  //Actions
-  QAction * m_open_action;
-  QAction * m_save_action;
-  QAction * m_register_action;
-  QAction * m_edit_cp_action;
-  QAction * m_delete_control_point_action;
-  QAction * m_help_action;
 
   // -- DOCUMENT
   Document m_doc;
   std::string m_sfm_data_filename;
   // -- END DOCUMENT
 
-  // -- VIEW
-  control_point_GUI::GraphicsView * m_widget;
-  // -- END VIEW
-
   private slots:
 
-  /// Display a brief help
-  void help();
-
-  /// handle the event Double Click on the SfM_Data image view list
-  /// - Display the chosen image & display view's control point observations
   void doubleClickImageList();
-
-  /// Open a SfM_Data scene
   void openProject(char** argv);
+  void setParameters(void);
+  void getDefaultParameters(std::string& inputPath);
 
 public:
 
@@ -71,7 +72,7 @@ public:
 
   /* Create the Window layout (shape panels & co.)
   |____________________________
-  |Tab1     |                  |
+  |Tab1|Tab2|                  |
   |---------|                  |
   |         |     Drawing      |
   | Img     |      Widget      |
