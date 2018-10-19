@@ -13,7 +13,8 @@ public:
   ~Segmentation(){}
 
 
- static bool trunkSegmentation(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
+ static bool trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
+                               pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_aligned,
                                pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_without_trunk,
                                pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_trunk,bool setGUI=false,
                                Eigen::Matrix4f align_cloud=Eigen::Matrix4f::Identity(),
@@ -25,8 +26,9 @@ public:
  static bool crownSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_crown,
                                pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_better_Segmented,bool setGUI,int octreeResolution=124, double eps=60,int minPtsAux=3,int minPts=3);
 
- static bool extractTree(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
+ static bool extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
                          const std::string& output_path,
+                         pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_aligned,
                          pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_cloud,
                          pcl::PointCloud<pcl::PointXYZ>::Ptr& tree_segmented,
                          pcl::PointCloud<pcl::PointXYZ>::Ptr& crown_segmented);
