@@ -6,6 +6,7 @@
 ## Example
 
 <img src="./example/tree.jpg" align="center" height="500" width="640"><br>
+<img src="./example/system.png" align="center" height="500" width="640"><br>
 
 * openMVG --> incremental structure from motion.
 * pmvs2 --> densify cloud process
