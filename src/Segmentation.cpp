@@ -1,4 +1,4 @@
-#include "include/Segmentation.h"
+﻿#include "include/Segmentation.h"
 
 pcl::PointXYZ trunkMin;
 pcl::PointXYZ trunkMax;
@@ -15,7 +15,7 @@ bool is_empty(std::ifstream& pFile){
     return pFile.peek() == std::ifstream::traits_type::eof();
 }
 
-bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
+bool Segmentation::extractTree(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
                                const std::string& output_path,
                                pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_cloud,
                                pcl::PointCloud<pcl::PointXYZ>::Ptr& tree_segmented,
@@ -60,11 +60,13 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   std::string answer;
   bool setGui = false;
 
+  Eigen::Matrix4f align_cloud;
+
   while(true){
 
       if(trunk_cloud->points.size()<=0){
 
-       bool success = trunkSegmentation(cloud_xyz,tree_segmented,trunk_cloud,setGui);
+       bool success = trunkSegmentation(cloud_xyz,tree_segmented,trunk_cloud,setGui,align_cloud);
        if(not success){
            trunkGood = false;
            trunk_cloud->points.clear();
@@ -91,6 +93,8 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
       }
 
       if(trunk_cloud->points.size()>0){
+
+        MultipleViewportsVTK(cloud_xyz,trunk_cloud);
 
         std::cout << blue << "\nTrunk segmentation Good?(yes/no)" << reset << std::endl;
         std::cout << "->" << std::flush;
@@ -233,6 +237,8 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
 
       if(crown_cloud_segmented->points.size()>0){
 
+        MultipleViewportsVTK(cloud_xyz,crown_cloud_segmented);
+
         std::cout << blue <<  "\nCrown segmentation Good?(yes/no)" << reset << std::endl;
         std::cout << "->" << std::flush;
         std::getline(std::cin, answer2);
@@ -292,16 +298,34 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   pcl::console::print_info (" ms : ");
   pcl::console::print_value ("%d", trunk_cloud->points.size ());
   pcl::console::print_info (" points]\n");
+/*
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_temporal (new pcl::PointCloud<pcl::PointXYZRGB>());
+  pcl::copyPointCloud(*cloud,*cloud_temporal);
+  cloud->points.clear();
+  pcl::transformPointCloud(*cloud_temporal, *cloud, align_cloud);
+  */
+/*
+  for(int i=0;i<cloud->points.size();i++){
 
+      cloud->points[i].x=cloud_xyz->points[i].x;
+      cloud->points[i].y=cloud_xyz->points[i].y;
+      cloud->points[i].z=cloud_xyz->points[i].z;
+    }
+
+*/
   std::cout << "Segmentation proccess --> [OK]" << std::endl;  
 
   return true;
 
 }
 
-bool Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
+bool Segmentation::trunkSegmentation(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
                                      pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_without_trunk,
-                                     pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_trunk,bool setGUI,int K,double distanceWeight, int maxIterations,double distanceThreshold, double distanceWeight_cylinder,int maxIterations_cylinder,double distanceThreshold_cylinder, double minRadius, double maxRadius){
+                                     pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_trunk,bool setGUI,
+                                     Eigen::Matrix4f align_cloud,int K,double distanceWeight,
+                                     int maxIterations,double distanceThreshold, double distanceWeight_cylinder,
+                                     int maxIterations_cylinder,double distanceThreshold_cylinder,
+                                     double minRadius, double maxRadius){
 
   if(cloud->points.size() <= 0){
      PCL_ERROR("Input point cloud has no data!\n");
@@ -434,7 +458,7 @@ bool Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   pcl::PointCloud<pcl::PointXYZ>::Ptr trunk_seg_filtered_DBScan (new pcl::PointCloud<pcl::PointXYZ>());   
   DBScan(trunk_seg_filtered_DBScan,minDBH_inX);
 
-  Eigen::Matrix4f align_cloud = Eigen::Matrix4f::Identity();
+  align_cloud = Eigen::Matrix4f::Identity();
 
   pcl::PointXYZ minH,maxH;
   std::map<double,pcl::PointXYZ> minMaxValues;
@@ -477,6 +501,11 @@ bool Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   std::cout << "\nHere is the translation matrix transform:\n" << align_cloud << "\n" << std::endl;
   PCL_INFO("Executing the transformation...");
 
+  pcl::PointCloud<pcl::PointXYZ>::Ptr temp (new pcl::PointCloud<pcl::PointXYZ>());
+
+  pcl::copyPointCloud(*cloud,*temp);
+  cloud->points.clear();
+  pcl::transformPointCloud(*temp, *cloud, align_cloud);
   pcl::transformPointCloud(*trunk_seg_filtered_DBScan, *cloud_trunk, align_cloud);
   pcl::transformPointCloud(*rest_seg, *cloud_without_trunk, align_cloud);
 
@@ -553,7 +582,7 @@ bool Segmentation::crownSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
       file.close();
   }
 
-  std::string command = "../../libraries/DBScan_Octrees-master/src/build/bin/dbscan ";
+  std::string command = "/home/daniel/Documents/iTree3DMap/libraries/DBScan_Octrees-master/build/bin/dbscan ";
   command += output_dir_path;
   command += "/3D_Mapping/MAP3D_crown_segmented.pcd ";
   command += std::to_string(octreeResolution);
@@ -675,9 +704,6 @@ bool Segmentation::crownSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
       << minPts << std::endl;
   ofs.close();
 
-
-
-
 /*
   std::cout << "\nCreating the KdTree object for the search method of the extraction..." << std::endl;
 
@@ -749,13 +775,14 @@ bool Segmentation::crownSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
 
 bool Segmentation::DBScan(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_segmented,pcl::PointXYZ& minTrunkHeight){
 
-  std::string command = "../../libraries/DBScan_Octrees-master/src/build/bin/dbscan ";
+  std::string command = "/home/daniel/Documents/iTree3DMap/libraries/DBScan_Octrees-master/build/bin/dbscan ";
   command += output_dir_path;
   command += "/3D_Mapping/MAP3D_trunk_segmented.pcd 3 40 5 10 ";//40 10 1000
   command += output_dir_path;
   
   std::cout << "\nApplying DBSCAN..." << std::endl;
 
+  std::cout << "command:" << command << std::endl;
   int dont_care = std::system(command.c_str());
 
   if(dont_care > 0){
@@ -794,7 +821,7 @@ bool Segmentation::DBScan(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_segmented,p
   
   for(int i=0;i<totalClusters; i++){
 
-      std::string feature_path=output_dir_path;
+      std::string feature_path = output_dir_path;
       feature_path +="/cloud_cluster_";
       feature_path += std::to_string(i);
       feature_path += ".xyz";  
@@ -861,6 +888,150 @@ bool Segmentation::DBScan(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_segmented,p
   }
 
 */
+
+}
+
+void Segmentation::MultipleViewportsVTK(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud1,
+                                        pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud2){
+
+  if(cloud1->points.size()<=0 or cloud2->points.size()<=0){
+      PCL_ERROR("Input point cloud has no data!");
+      return std::exit(-1);
+    }
+
+  vtkSmartPointer<vtkPolyData> cloud1VTK = vtkSmartPointer<vtkPolyData>::New();
+  vtkSmartPointer<vtkPolyData> cloud2VTK = vtkSmartPointer<vtkPolyData>::New();
+
+  vtkSmartPointer<vtkPoints> pts1 = vtkSmartPointer<vtkPoints>::New();
+
+  for(int n=0;n<cloud1->points.size();n++){
+      pcl::PointXYZ pt = cloud1->points.at(n);
+      pts1->InsertNextPoint(pt.x,pt.y,pt.z);
+    }
+
+  cloud1VTK->SetPoints(pts1);
+
+  vtkSmartPointer<vtkPoints> pts2 = vtkSmartPointer<vtkPoints>::New();
+
+  for(int n=0;n<cloud2->points.size();n++){
+      pcl::PointXYZ pt = cloud2->points.at(n);
+      pts2->InsertNextPoint(pt.x,pt.y,pt.z);
+    }
+
+  cloud2VTK->SetPoints(pts2);
+
+  vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
+
+  vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor =
+      vtkSmartPointer<vtkRenderWindowInteractor>::New();
+
+  renderWindowInteractor->SetRenderWindow(renderWindow);
+
+  // Define viewport ranges
+   double xmins[2] = {0.0,0.5};
+   double xmaxs[2] = {0.5,1.0};
+   double ymins[2] = {0.0,0.0};
+   double ymaxs[2] = {1.0,1.0};
+
+   vtkCamera* camera;
+
+   for(unsigned i = 0; i < 2; i++){
+
+       vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
+
+       renderWindow->AddRenderer(renderer);
+
+       if(i == 0){
+           camera = renderer->GetActiveCamera();
+       }else{
+           renderer->SetActiveCamera(camera);
+       }
+
+       renderer->SetViewport(xmins[i],ymins[i],xmaxs[i],ymaxs[i]);
+
+       if(i==0){
+
+           vtkSmartPointer<vtkVertexGlyphFilter> vertexFilter1 = vtkSmartPointer<vtkVertexGlyphFilter>::New();
+           vertexFilter1->SetInputData(cloud1VTK);
+           vertexFilter1->Update();
+
+           vtkSmartPointer<vtkPolyData> polydata1 = vtkSmartPointer<vtkPolyData>::New();
+           polydata1->ShallowCopy(vertexFilter1->GetOutput());
+
+           // Create a mapper and actor
+           vtkSmartPointer<vtkPolyDataMapper> mapper1 = vtkSmartPointer<vtkPolyDataMapper>::New();
+           mapper1->SetInputData(polydata1);
+
+           vtkSmartPointer<vtkActor> actor1 = vtkSmartPointer<vtkActor>::New();
+           actor1->SetMapper(mapper1);
+           actor1->GetProperty()->SetColor(1.0, 1.0, 1.0);
+           actor1->GetProperty()->SetPointSize(1);
+           renderer->AddActor(actor1);
+
+           vtkSmartPointer<vtkTextActor> textActor = vtkSmartPointer<vtkTextActor>::New();
+           textActor->SetInput("Original");
+           textActor->SetPosition2(20,60);
+           textActor->GetTextProperty()->SetFontSize(12);
+           textActor->GetTextProperty()->SetColor(1.0, 1.0, 1.0);
+           renderer->AddActor2D(textActor);
+       }else
+
+       //---------------------------------------
+       //---------------------------------------
+       {
+
+           vtkSmartPointer<vtkVertexGlyphFilter> vertexFilter2 = vtkSmartPointer<vtkVertexGlyphFilter>::New();
+           vertexFilter2->SetInputData(cloud2VTK);
+           vertexFilter2->Update();
+
+           vtkSmartPointer<vtkPolyData> polydata2 = vtkSmartPointer<vtkPolyData>::New();
+           polydata2->ShallowCopy(vertexFilter2->GetOutput());
+
+           // Create a mapper and actor
+           vtkSmartPointer<vtkPolyDataMapper> mapper2 = vtkSmartPointer<vtkPolyDataMapper>::New();
+           mapper2->SetInputData(polydata2);
+
+           vtkSmartPointer<vtkActor> actor2 = vtkSmartPointer<vtkActor>::New();
+           actor2->SetMapper(mapper2);
+           actor2->GetProperty()->SetColor(0.0, 1.0, 0.0);
+           actor2->GetProperty()->SetPointSize(1);
+           renderer->AddActor(actor2);
+
+           vtkSmartPointer<vtkTextActor> textActor = vtkSmartPointer<vtkTextActor>::New();
+           textActor->SetInput("Segmented");
+           textActor->SetPosition2(20,60);
+           textActor->GetTextProperty()->SetFontSize(12);
+           textActor->GetTextProperty()->SetColor(1.0, 1.0, 1.0);
+           renderer->AddActor2D(textActor);
+       }
+
+       // Create a renderer, render window, and interactor
+
+       renderer->SetBackground(0.0, 0.0, 0.0);
+       renderer->ResetCamera();
+
+       vtkSmartPointer<vtkAxesActor> axes = vtkSmartPointer<vtkAxesActor>::New();
+
+       renderWindow->SetSize(800, 600);
+       renderWindow->AddRenderer(renderer);
+
+       renderWindowInteractor->SetRenderWindow(renderWindow);
+
+       //renderer->AddActor(axes);
+       renderer->ResetCamera();
+       renderer->SetViewPoint(0,0,0);
+
+       renderWindow->Render();
+       renderWindow->SetWindowName("Segmentation");
+
+       vtkSmartPointer<vtkInteractorStyleTrackballCamera> style = vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
+       renderWindowInteractor->SetInteractorStyle(style);
+
+     }
+
+   PCL_INFO("\nPress [q] to close visualizer");
+   renderWindowInteractor->Start();
+
 
 }
 

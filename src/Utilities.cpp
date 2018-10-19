@@ -536,7 +536,10 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,dou
 
           std::string answer;
           bool WRefOk = false;
-
+          im_ID = img_id;
+          img_selected = path;
+          WRefOk = true;
+/*
           while(true){
 
               std::cout << "\nimage selected = " << yellow << img_id << reset << " are you sure? (yes/no)" << std::endl;
@@ -573,7 +576,7 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,dou
                   break;
               }
           }
-
+*/
       }
 
       if(img_selected.size() > 0){
@@ -597,16 +600,38 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,dou
           }
 
           cv::Mat img_copy = img.clone();
-          cv::Mat gray;
+          cv::Mat gray,outputCanny,outputGaussian;
 
           cv::cvtColor(img_copy,gray,CV_BGR2GRAY);
-          std::vector<cv::Vec3f> circles(2);
+          std::vector<cv::Vec3f> circles(2,0);
 
           std::cout << "\nFiltering...Canny!" << std::endl;
-          cv::Canny(gray, gray, 100, 100*2, 3 );
+          cv::Canny(gray, gray, 100, 100*2,3);
+
           std::cout << "Filtering...GaussianBlur!" << std::endl;
           cv::GaussianBlur(gray,gray,cv::Size(7,7),2,2);
 
+/*
+          std::vector<std::vector<cv::Point>> contours;
+          std::vector<cv::Vec4i> hierarchy;
+
+          cv::findContours(outputCanny, contours, hierarchy,CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
+
+
+cv::Point2f center;
+float radiusR;
+cv::minEnclosingCircle(contours,center,radiusR);
+
+    cv::circle(outputCanny,center,radiusR,(0,255,0),2);
+
+
+           cv::namedWindow("pattern",CV_WINDOW_NORMAL);
+           cv::resizeWindow("pattern",640,480);
+           cv::moveWindow("pattern",0,0);
+           cv::imshow("pattern",outputCanny);
+           cv::waitKey(0);
+           cv::destroyAllWindows();
+*/
           std::cout << "Detecting circles in image..." << std::endl;
           cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT,1, gray.rows/16, 200, 100, 0, 150);
 
@@ -1947,3 +1972,12 @@ void Utilities::alignCloudSFM(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,pcl:
 
 }
 
+void Utilities::getEllipses(std::vector<std::vector<cv::Point> >& contours, std::vector<cv::RotatedRect>& ellipses) {
+    ellipses.clear();
+    cv::Mat img(cv::Size(800,500), CV_8UC3);
+    for (unsigned i = 0; i<contours.size(); i++) {
+
+
+
+    }
+}
