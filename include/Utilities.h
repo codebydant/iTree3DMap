@@ -52,6 +52,8 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_clusters.h>
 
+#include <pcl/conversions.h>
+
 #include <vtkActor.h>
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
@@ -75,6 +77,8 @@
 #include <vtkInteractorStyleUser.h>
 #include <vtkInteractorStyleTrackballActor.h>
 #include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkTextActor.h>
+#include <vtkTextProperty.h>
 
 #include <tinyxml2.h>
 #include <X11/Xlib.h>
@@ -123,6 +127,8 @@ public:
                              pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_transformed,
                              Eigen::Affine3f& transform_1,Eigen::Affine3f& transform_2,
                              Eigen::Affine3f& transform_3);
+
+   static void getEllipses(std::vector<std::vector<cv::Point> >& contours, std::vector<cv::RotatedRect>& ellipses);
 
 
 
