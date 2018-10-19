@@ -21,8 +21,6 @@ int main(void){
     return -1;
   }
 
-  std::cout << "firts output dir:" << output_dir << std::endl;
-
   /*************************
   STEP 2: GET SCALE FACTOR
   **************************/
@@ -60,10 +58,11 @@ int main(void){
   STEP 5: SEGMENTATION
   **************************/
   pcl::PointCloud<pcl::PointXYZ>::Ptr trunk_segmented (new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_aligned (new pcl::PointCloud<pcl::PointXYZRGB>());
   pcl::PointCloud<pcl::PointXYZ>::Ptr tree_segmented (new pcl::PointCloud<pcl::PointXYZ>());
   pcl::PointCloud<pcl::PointXYZ>::Ptr crown_segmented (new pcl::PointCloud<pcl::PointXYZ>());
   start = std::chrono::high_resolution_clock::now();
-  Segmentation::extractTree(cloud_3dMap_scaled,output_dir,trunk_segmented,tree_segmented,crown_segmented);
+  Segmentation::extractTree(cloud_3dMap_scaled,output_dir,cloud_aligned,trunk_segmented,tree_segmented,crown_segmented);
   end = std::chrono::high_resolution_clock::now();
   difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
   std::cout << "Segmentation time: " << difference << " seconds" << std::endl;
