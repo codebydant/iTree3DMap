@@ -15,8 +15,9 @@ bool is_empty(std::ifstream& pFile){
     return pFile.peek() == std::ifstream::traits_type::eof();
 }
 
-bool Segmentation::extractTree(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
+bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
                                const std::string& output_path,
+                               pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_aligned,
                                pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_cloud,
                                pcl::PointCloud<pcl::PointXYZ>::Ptr& tree_segmented,
                                pcl::PointCloud<pcl::PointXYZ>::Ptr& crown_cloud_segmented){
@@ -34,8 +35,11 @@ bool Segmentation::extractTree(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
   trunk_cloud->header.frame_id = "trunk_cloud";
   crown_cloud_segmented->header.frame_id = "crown_cloud";
   tree_segmented->header.frame_id = "tree_without_trunk";
+  cloud_aligned->header.frame_id = "cloud_aligned";
 
   output_dir_path = output_path;
+
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_xyz_aligned (new pcl::PointCloud<pcl::PointXYZ>());
 
   /*CONVERT XYZRGB TO XYZ*/
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_xyz (new pcl::PointCloud<pcl::PointXYZ>());
@@ -66,7 +70,7 @@ bool Segmentation::extractTree(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
 
       if(trunk_cloud->points.size()<=0){
 
-       bool success = trunkSegmentation(cloud_xyz,tree_segmented,trunk_cloud,setGui,align_cloud);
+       bool success = trunkSegmentation(cloud_xyz,cloud_xyz_aligned,tree_segmented,trunk_cloud,setGui,align_cloud);
        if(not success){
            trunkGood = false;
            trunk_cloud->points.clear();
@@ -94,7 +98,7 @@ bool Segmentation::extractTree(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
 
       if(trunk_cloud->points.size()>0){
 
-        MultipleViewportsVTK(cloud_xyz,trunk_cloud);
+        MultipleViewportsVTK(cloud_xyz_aligned,trunk_cloud);
 
         std::cout << blue << "\nTrunk segmentation Good?(yes/no)" << reset << std::endl;
         std::cout << "->" << std::flush;
@@ -237,7 +241,7 @@ bool Segmentation::extractTree(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
 
       if(crown_cloud_segmented->points.size()>0){
 
-        MultipleViewportsVTK(cloud_xyz,crown_cloud_segmented);
+        MultipleViewportsVTK(cloud_xyz_aligned,crown_cloud_segmented);
 
         std::cout << blue <<  "\nCrown segmentation Good?(yes/no)" << reset << std::endl;
         std::cout << "->" << std::flush;
@@ -299,27 +303,50 @@ bool Segmentation::extractTree(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
   pcl::console::print_value ("%d", trunk_cloud->points.size ());
   pcl::console::print_info (" points]\n");
 /*
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_temporal (new pcl::PointCloud<pcl::PointXYZRGB>());
+
   pcl::copyPointCloud(*cloud,*cloud_temporal);
   cloud->points.clear();
   pcl::transformPointCloud(*cloud_temporal, *cloud, align_cloud);
   */
-/*
-  for(int i=0;i<cloud->points.size();i++){
 
-      cloud->points[i].x=cloud_xyz->points[i].x;
-      cloud->points[i].y=cloud_xyz->points[i].y;
-      cloud->points[i].z=cloud_xyz->points[i].z;
+  std::cout << "XYZRGB original:" << cloud->points.at(0) << std::endl;
+  std::cout << "XYZ info:" << cloud_xyz_aligned->points.at(0) << std::endl;
+
+  for(int i=0;i<cloud_xyz->points.size();i++){
+
+      pcl::PointXYZRGB pt;
+      pt.x=cloud_xyz_aligned->points[i].x;
+      pt.y=cloud_xyz_aligned->points[i].y;
+      pt.z=cloud_xyz_aligned->points[i].z;
+
+      int rgb = ((int)cloud->points[i].r) << 16 | ((int)cloud->points[i].g) << 8 | ((int)cloud->points[i].b);
+      uint8_t r = (rgb >> 16) & 0x0000ff;
+      uint8_t g = (rgb >> 8)  & 0x0000ff;
+      uint8_t b = (rgb)     & 0x0000ff;
+/*
+      uint8_t r = (uint8_t);
+      uint8_t g = (uint8_t)cloud->points[i].g;
+      uint8_t b = (uint8_t)cloud->points[i].b;
+      int32_t rgb = (b << 16) | (g << 8) | r;
+      pt.rgb = *(float *)(&rgb); // makes the point red
+*/
+      pt.r = r;
+      pt.g = g;
+      pt.b = b;
+
+
+      cloud_aligned->points.push_back(pt);
     }
 
-*/
-  std::cout << "Segmentation proccess --> [OK]" << std::endl;  
+ std::cout << "XYZRGB final:" << cloud_aligned->points.at(0) << std::endl;
+ std::cout << "Segmentation proccess --> [OK]" << std::endl;
 
   return true;
 
 }
 
-bool Segmentation::trunkSegmentation(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
+bool Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
+                                     pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_aligned,
                                      pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_without_trunk,
                                      pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_trunk,bool setGUI,
                                      Eigen::Matrix4f align_cloud,int K,double distanceWeight,
@@ -501,11 +528,7 @@ bool Segmentation::trunkSegmentation(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
   std::cout << "\nHere is the translation matrix transform:\n" << align_cloud << "\n" << std::endl;
   PCL_INFO("Executing the transformation...");
 
-  pcl::PointCloud<pcl::PointXYZ>::Ptr temp (new pcl::PointCloud<pcl::PointXYZ>());
-
-  pcl::copyPointCloud(*cloud,*temp);
-  cloud->points.clear();
-  pcl::transformPointCloud(*temp, *cloud, align_cloud);
+  pcl::transformPointCloud(*cloud, *cloud_aligned, align_cloud);
   pcl::transformPointCloud(*trunk_seg_filtered_DBScan, *cloud_trunk, align_cloud);
   pcl::transformPointCloud(*rest_seg, *cloud_without_trunk, align_cloud);
 

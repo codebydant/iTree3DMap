@@ -497,16 +497,34 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,dou
   std::string img_selected;
   int im_ID = -1;
 
-  cv::Point2d img_p1,img_p2;
+  //cv::Point2d img_p1,img_p2;
   std::vector<cv::Point2d> pts_for_circle1;
   std::vector<cv::Point2d> pts_for_circle2;
   int numImg = -1;
 
+  double dp = 1;
+  double minDist = 16;
+  double param1 = 200;
+  double param2 = 100;
+  int minRadius = 0;
+  int maxRadius = 150;
+  std::string houghOutputParameters = output_dir;
+  houghOutputParameters += "/hough_parameters.txt";
+
   while(true){
 
-      bool bestImage = false;
+      //bool bestImage = false;
 
       if(img_selected.size() <= 0){
+
+          std::ofstream ofs(houghOutputParameters.c_str());
+          ofs << dp << std::endl
+              << minDist << std::endl
+              << param1 << std::endl
+              << param2 << std::endl
+              << minRadius << std::endl
+              << maxRadius << std::endl;
+          ofs.close();
 
           PCL_INFO("\nChoose a image pattern reference\n");
 
@@ -514,6 +532,9 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,dou
           command2 += output_dir;
           command2 += "/reconstruction_sequential/sfm_data.xml ";
           command2 += output_dir;
+          command2 += " ";
+          command2 += output_dir;
+          command2 += "/hough_parameters.txt";
 
           int dont_care = std::system(command2.c_str());
           if(dont_care > 0){
@@ -600,7 +621,7 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,dou
           }
 
           cv::Mat img_copy = img.clone();
-          cv::Mat gray,outputCanny,outputGaussian;
+          cv::Mat gray;
 
           cv::cvtColor(img_copy,gray,CV_BGR2GRAY);
           std::vector<cv::Vec3f> circles(2,0);
@@ -632,8 +653,18 @@ cv::minEnclosingCircle(contours,center,radiusR);
            cv::waitKey(0);
            cv::destroyAllWindows();
 */
+
+          std::ifstream file(houghOutputParameters.c_str());
+          if(!file.is_open()){
+              std::cout << "Error: Hough parameters file not found." << std::endl;
+              return false;
+          }
+
+          while(file >> dp >> minDist >> param1 >> param2 >> minRadius >> maxRadius){
+          }
+
           std::cout << "Detecting circles in image..." << std::endl;
-          cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT,1, gray.rows/16, 200, 100, 0, 150);
+          cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT,dp, gray.rows/minDist, param1, param2, minRadius,maxRadius);
 
           cv::Point2d center_pattern1,center_pattern2;
           int radius = 0;
