@@ -12,8 +12,8 @@
 
 int main(int argc, char ** argv){
 
-  if(argc < 3 or argc > 3){
-     std::cerr << "Enter: <sfm data bin> <output dir>" << std::endl;
+  if(argc < 4 or argc > 4){
+     std::cerr << "Enter: <sfm data bin> <output dir> <hough paramaters>" << std::endl;
      return -1;
    }
 
