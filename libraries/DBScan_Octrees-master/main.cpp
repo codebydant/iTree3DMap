@@ -293,7 +293,7 @@ int main(int argc, char** argv){
    std::cout << "*** DBSCAN Cluster Segmentation *** " << std::endl;
    std::cout << "*************************************" << std::endl;
    
-   bool showClusters = true;
+   bool showClusters = false;
 
    init(argc,argv,showClusters);
 
