@@ -19,18 +19,22 @@ To build use CMake minimum required 3.5.1 : https://github.com/Kitware/CMake
 ### Datasets
 
 Images dataset in Google Drive:
-* Tree1: https://drive.google.com/open?id=1AsdQgc2l6l8o7U2K4WO3KJO4slQSHrQK
-* Tree2: https://drive.google.com/open?id=1rUcZ2k-Pie_U_kv5qRIJg-vVpyem0e74
-*
-* Tree4: https://drive.google.com/open?id=1AZPB0J58qxXQ4_ad-XHbkAinNvna5faW
-* Trunk: https://drive.google.com/open?id=1R9ubdsSIOiJsaHf98XhkoQySATVV-ymP
+* Tree1: https://drive.google.com/drive/folders/15e5q8XZuJUcQLk_ynZeljlkJmXFAAqVG?usp=sharing
+* Tree2: https://drive.google.com/drive/folders/1SHkres6Ex0UFzMuqG9V7CBDIEz4nIDf5?usp=sharing
+* Tree3: https://drive.google.com/drive/folders/19hX1J3fSw8WvX7-ma4me7_hjh9lAjsk-?usp=sharing
+* Tree4: https://drive.google.com/drive/folders/1cN7NyDK1VAGgMcARtP4hV0MdVsHLNZc_?usp=sharing
+* Tree5: https://drive.google.com/drive/folders/1ifLVliqBYHj6_6wCBpN2zcHa5HV4F6Rq?usp=sharing
+* Tree6: https://drive.google.com/drive/folders/1cHlqOBxYP0mTnO-Y9pluAx98Ey32ENKt?usp=sharing
+
+### PCD files
 
 ### Prerequisite
 
 - OpenCV 3.4.1: https://github.com/opencv
 - PCL 1.8.1: https://github.com/PointCloudLibrary/pcl
 - OpenMVG:https://github.com/openMVG/openMVG
-- PMVS: https://github.com/pmoulon/CMVS-PMVS
+- CMVS-PMVS: https://github.com/pmoulon/CMVS-PMVS
+- Qt creator 5.5.1: https://www.qt.io/download
 
 ### Other Prerequisite
 
@@ -39,16 +43,17 @@ Images dataset in Google Drive:
 
 ### How to make
 
-This is a ros package project and depends of openMVG and Pmvs2.
+This is depends of openMVG, PCL, OpenCV, Qt and CMVS-PMVS, please install dependencies before.
 * Download the src code and Unpack .zip
 
-catkin_ws/src:
+/src:
   	
-	iTree3DMap - src 
-		   - include
+	iTree3DMap - include
 		   - libraries
-		   - build
-		   
+		   - src
+		   - CMakeLists.txt
+		   - main.cpp
+		   		   
 * replace the "SfM_SequentialPipeline.py" in openMVG/openMVG_Build/software/SfM/ for "SfM_SequentialPipeline.py" of repository   
 * If pmvs2 binary file is not working, download and compile cmvs-pmvs library and replace the pmvs2 bin to /programs folder of the package 
 
