@@ -1,6 +1,5 @@
 # 3D Mapping of individual tree with OpenMVG-PMVS2
-<center>
-*Note:* This project is a photogrammetric system for dendrometric feature estimation of individual trees. The purpose of this project is to do a 3D reconstruction of an individual tree using Open Multiple View Geometry (openMVG) and get dendrometry estimation (trunk at breast height (DBH), tree crown height, total tree height, crown volume, morphic factor and percentage crown missing) of a stem tree. For that, were used OpenMVG and PMVS for 3D Mapping, a circular pattern for scale factor estimation, PCL Library and DBScan for segmentation and Euclidean distance for dendrometric feature estimation.</center>
+<center>*Note:* This project is a photogrammetric system for dendrometric feature estimation of individual trees. The purpose of this project is to do a 3D reconstruction of an individual tree using Open Multiple View Geometry (openMVG) and get dendrometry estimation (trunk at breast height (DBH), tree crown height, total tree height, crown volume, morphic factor and percentage crown missing) of a stem tree. For that, were used OpenMVG and PMVS for 3D Mapping, a circular pattern for scale factor estimation, PCL Library and DBScan for segmentation and Euclidean distance for dendrometric feature estimation.</center>
 
 ----------------------
 ## Example
