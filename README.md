@@ -32,7 +32,7 @@ Images dataset in Google Drive:
 ### Prerequisite
 
 - OpenCV 3.4.1: https://github.com/opencv
-- PCL 1.8.1: https://github.com/PointCloudLibrary/pcl
+- PCL 1.8.1: https://github.com/PointCloudLibrary/pcl/tree/pcl-1.8.1
 - OpenMVG:https://github.com/openMVG/openMVG
 - CMVS-PMVS: https://github.com/pmoulon/CMVS-PMVS
 - Qt creator 5.5.1: https://www.qt.io/download
