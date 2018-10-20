@@ -29,6 +29,9 @@ Images dataset in Google Drive:
 ### PCD files
 * https://drive.google.com/drive/folders/1sW4oqcaKPsupEaSFkoGAgdHjv6ydwUFF?usp=sharing
 
+### Ground Truth Data
+*
+
 ### Prerequisite
 
 - OpenCV 3.4.1: https://github.com/opencv/opencv/tree/3.4.1
