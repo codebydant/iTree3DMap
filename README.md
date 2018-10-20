@@ -16,15 +16,13 @@ To build use CMake minimum required 3.5.1 : https://github.com/Kitware/CMake
 ### Dataset
 
 Images dataset in Google Drive:
-<p align="justify">
 * Tree1: https://drive.google.com/drive/folders/15e5q8XZuJUcQLk_ynZeljlkJmXFAAqVG?usp=sharing
 * Tree2: https://drive.google.com/drive/folders/1SHkres6Ex0UFzMuqG9V7CBDIEz4nIDf5?usp=sharing
 * Tree3: https://drive.google.com/drive/folders/19hX1J3fSw8WvX7-ma4me7_hjh9lAjsk-?usp=sharing
 * Tree4: https://drive.google.com/drive/folders/1cN7NyDK1VAGgMcARtP4hV0MdVsHLNZc_?usp=sharing
 * Tree5: https://drive.google.com/drive/folders/1ifLVliqBYHj6_6wCBpN2zcHa5HV4F6Rq?usp=sharing
 * Tree6: https://drive.google.com/drive/folders/1cHlqOBxYP0mTnO-Y9pluAx98Ey32ENKt?usp=sharing
-</p
-	>
+
 ### PCD files
 * https://drive.google.com/drive/folders/1sW4oqcaKPsupEaSFkoGAgdHjv6ydwUFF?usp=sharing
 
@@ -55,6 +53,7 @@ The following libraries must have installed:
 ### How to make
 <p align="justify">
 This project depends of openMVG, PCL, OpenCV, Qt and CMVS-PMVS, please compiled dependencies before.
+	
 * Download the src code and Unpack .zip
 
 /src:
@@ -73,20 +72,20 @@ Within build folder, compile with cmake:
 
     cmake ../
     make
- </p>
- 
+ </p> 
 ### Test
 
 	cd /build/bin
 	./itree_3dmap		
 
 *Note:*
+<p align="justify">
 Just for OpenMVG compilation: If OpenMVG compiled without error and is not working, add this line to the cmake command for compilation:
 
 	cmake -DTARGET_ARCHITECTURE=generic ../src/
 
 and compile again. 
-
+</p>
 
 
 
