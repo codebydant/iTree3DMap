@@ -58,7 +58,7 @@ This project depends of openMVG, PCL, OpenCV, Qt and CMVS-PMVS, please install d
 		   - CMakeLists.txt
 		   - main.cpp
 		   		   
-* replace the "SfM_SequentialPipeline.py" in openMVG/openMVG_Build/software/SfM/ for "SfM_SequentialPipeline.py" of repository   
+* replace the "SfM_SequentialPipeline.py" in openMVG/openMVG_Build/software/SfM/ for "SfM_SequentialPipeline.py" of repository.
 * If pmvs2 binary file is not working, download and compile cmvs-pmvs library and replace the pmvs2 bin to /programs folder of the package 
 
 Compile with cmake:
