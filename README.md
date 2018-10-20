@@ -10,19 +10,21 @@
 <img src="./example/system.png" align="center" height="500" width="640"><br>
 
 ## Build cmake
-
+<p align="justify">
 To build use CMake minimum required 3.5.1 : https://github.com/Kitware/CMake
-
+</p>
 ### Dataset
 
 Images dataset in Google Drive:
+<p align="justify">
 * Tree1: https://drive.google.com/drive/folders/15e5q8XZuJUcQLk_ynZeljlkJmXFAAqVG?usp=sharing
 * Tree2: https://drive.google.com/drive/folders/1SHkres6Ex0UFzMuqG9V7CBDIEz4nIDf5?usp=sharing
 * Tree3: https://drive.google.com/drive/folders/19hX1J3fSw8WvX7-ma4me7_hjh9lAjsk-?usp=sharing
 * Tree4: https://drive.google.com/drive/folders/1cN7NyDK1VAGgMcARtP4hV0MdVsHLNZc_?usp=sharing
 * Tree5: https://drive.google.com/drive/folders/1ifLVliqBYHj6_6wCBpN2zcHa5HV4F6Rq?usp=sharing
 * Tree6: https://drive.google.com/drive/folders/1cHlqOBxYP0mTnO-Y9pluAx98Ey32ENKt?usp=sharing
-
+</p
+	>
 ### PCD files
 * https://drive.google.com/drive/folders/1sW4oqcaKPsupEaSFkoGAgdHjv6ydwUFF?usp=sharing
 
@@ -30,6 +32,7 @@ Images dataset in Google Drive:
 * https://docs.google.com/spreadsheets/d/1cs-I-1BxetnAPiWe4e07TfKXyPMTo7x_rN72FC26kHU/edit?usp=sharing
 
 ### Prerequisite (just compiled)
+<p align="justify">
 For this project it is necessary to have compiled the following libraries (it is not necessary to have installed):
 
 - OpenCV 3.4.1: https://github.com/opencv/opencv/tree/3.4.1
@@ -38,6 +41,7 @@ For this project it is necessary to have compiled the following libraries (it is
 - CMVS-PMVS: https://github.com/pmoulon/CMVS-PMVS
 
 *Note:* Just set the path to build directory of each library at principal CMakeList.txt
+ </p>
  
 ### Other Prerequisite (installed)
 The following libraries must have installed:
@@ -49,6 +53,7 @@ The following libraries must have installed:
 - Runit
 
 ### How to make
+<p align="justify">
 This project depends of openMVG, PCL, OpenCV, Qt and CMVS-PMVS, please compiled dependencies before.
 * Download the src code and Unpack .zip
 
@@ -68,7 +73,8 @@ Within build folder, compile with cmake:
 
     cmake ../
     make
- 	 
+ </p>
+ 
 ### Test
 
 	cd /build/bin
