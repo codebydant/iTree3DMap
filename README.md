@@ -87,6 +87,3 @@ Just for OpenMVG compilation: If OpenMVG compiled without error and is not worki
 
 and compile again. 
 </p>
-
-
-
