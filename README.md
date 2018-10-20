@@ -44,7 +44,7 @@ Images dataset in Google Drive:
 
 ### How to make
 
-This is depends of openMVG, PCL, OpenCV, Qt and CMVS-PMVS, please install dependencies before.
+This project depends of openMVG, PCL, OpenCV, Qt and CMVS-PMVS, please install dependencies before.
 * Download the src code and Unpack .zip
 
 /src:
