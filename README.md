@@ -1,6 +1,6 @@
 # 3D Mapping of individual tree with OpenMVG-PMVS2
 
-*Note:* This project is a photogrammetric system for dendrometric feature estimation of individual trees. The purpose of this project is to do a 3D reconstruction of an individual tree using Open Multiple View Geometry (openMVG) and get dendrometry estimation (trunk at breast height (DBH), tree crown height, total tree height, crown volume, morphic factor and percentage crown missing) of a stem tree. 
+*Note:* This project is a photogrammetric system for dendrometric feature estimation of individual trees. The purpose of this project is to do a 3D reconstruction of an individual tree using Open Multiple View Geometry (openMVG) and get dendrometry estimation (trunk at breast height (DBH), tree crown height, total tree height, crown volume, morphic factor and percentage crown missing) of a stem tree. For that, were used OpenMVG and PMVS for 3D Mapping, a circular pattern for scale factor estimation, PCL Library and DBScan for segmentation and Euclidean distance for dendrometric feature estimation.
 
 ----------------------
 ## Example
@@ -8,11 +8,11 @@
 <img src="./example/tree.jpg" align="center" height="500" width="640"><br>
 <img src="./example/system.png" align="center" height="500" width="640"><br>
 
-## Build 
+## Build cmake
 
 To build use CMake minimum required 3.5.1 : https://github.com/Kitware/CMake
 
-### Datasets
+### Dataset
 
 Images dataset in Google Drive:
 * Tree1: https://drive.google.com/drive/folders/15e5q8XZuJUcQLk_ynZeljlkJmXFAAqVG?usp=sharing
@@ -28,22 +28,27 @@ Images dataset in Google Drive:
 ### Ground Truth Data
 * https://docs.google.com/spreadsheets/d/1cs-I-1BxetnAPiWe4e07TfKXyPMTo7x_rN72FC26kHU/edit?usp=sharing
 
-### Prerequisite
+### Prerequisite (just compiled)
+For this project it is necessary to have compiled the following libraries (it is not necessary to have installed):
 
 - OpenCV 3.4.1: https://github.com/opencv/opencv/tree/3.4.1
 - PCL 1.8.1: https://github.com/PointCloudLibrary/pcl/tree/pcl-1.8.1
 - OpenMVG:https://github.com/openMVG/openMVG
 - CMVS-PMVS: https://github.com/pmoulon/CMVS-PMVS
-- Qt creator 5.5.1: https://www.qt.io/download
 
-### Other Prerequisite
+*Note:* Just set the path to build directory of each library at principal CMakeList.txt
+ 
+### Other Prerequisite (installed)
+The following libraries must have installed:
 
+- Qt creator: https://www.qt.io/download
 - Boost
 - Eigen3
+- Cereal
+- Runit
 
 ### How to make
-
-This project depends of openMVG, PCL, OpenCV, Qt and CMVS-PMVS, please install dependencies before.
+This project depends of openMVG, PCL, OpenCV, Qt and CMVS-PMVS, please compiled dependencies before.
 * Download the src code and Unpack .zip
 
 /src:
@@ -53,11 +58,12 @@ This project depends of openMVG, PCL, OpenCV, Qt and CMVS-PMVS, please install d
 		   - src
 		   - CMakeLists.txt
 		   - main.cpp
-		   		   
-* replace the "SfM_SequentialPipeline.py" in openMVG/openMVG_Build/software/SfM/ for "SfM_SequentialPipeline.py" of repository.
-* If pmvs2 binary file is not working, download and compile cmvs-pmvs library and replace the pmvs2 bin to /programs folder of the package 
+		   
+* Once OpenMVG was compiled, just set the path build directory on...		   		   
+* Replace the "SfM_SequentialPipeline.py" file at openMVG/openMVG_Build/software/SfM/ for "SfM_SequentialPipeline.py" file of this project.
+* If pmvs2 binary file is not working, download and compile cmvs-pmvs library and replace the pmvs2 bin to /libraries folder of the package 
 
-Compile with cmake:
+Within build folder, compile with cmake:
 
     cmake ../
     make
@@ -68,13 +74,11 @@ Compile with cmake:
 	./itree_3dmap		
 
 *Note:*
-If OpenCV are not install. just compiled. please set the path to the current build directory in CMakeList.txt file.
-(equal to pcl 1.8.1) <--
-If openMVG compile without error and is not working, add this to the cmake command line for compilation:
+Just for OpenMVG compilation: If OpenMVG compiled without error and is not working, add this line to the cmake command for compilation:
 
-	-DTARGET_ARCHITECTURE=generic
+	cmake -DTARGET_ARCHITECTURE=generic ../src/
 
-and try again.
+and compile again. 
 
 
 
