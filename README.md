@@ -31,7 +31,7 @@ Images dataset in Google Drive:
 
 ### Prerequisite
 
-- OpenCV 3.4.1: https://github.com/opencv
+- OpenCV 3.4.1: https://github.com/opencv/opencv/tree/3.4.1
 - PCL 1.8.1: https://github.com/PointCloudLibrary/pcl/tree/pcl-1.8.1
 - OpenMVG:https://github.com/openMVG/openMVG
 - CMVS-PMVS: https://github.com/pmoulon/CMVS-PMVS
