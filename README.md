@@ -30,7 +30,7 @@ Images dataset in Google Drive:
 * https://drive.google.com/drive/folders/1sW4oqcaKPsupEaSFkoGAgdHjv6ydwUFF?usp=sharing
 
 ### Ground Truth Data
-*
+* https://docs.google.com/spreadsheets/d/1cs-I-1BxetnAPiWe4e07TfKXyPMTo7x_rN72FC26kHU/edit?usp=sharing
 
 ### Prerequisite
 
