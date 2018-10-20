@@ -1,4 +1,4 @@
-# 3D Mapping of individual tree with OpenMVG-PMVS2
+# 3D Dendrometric feature estimation of an individual tree with OpenMVG-PMVS2
 <p align="justify">
 *Note:* This project is a photogrammetric system for dendrometric feature estimation of individual trees. The purpose of this project is to do a 3D reconstruction of an individual tree using Open Multiple View Geometry (openMVG) and get dendrometry estimation (trunk at breast height (DBH), tree crown height, total tree height, crown volume, morphic factor and percentage crown missing) of a stem tree. For that, were used OpenMVG and PMVS for 3D Mapping, a circular pattern for scale factor estimation, PCL Library and DBScan for segmentation and Euclidean distance for dendrometric feature estimation.
 </p>
@@ -65,7 +65,7 @@ This project depends of openMVG, PCL, OpenCV, Qt and CMVS-PMVS, please compiled 
 		   - main.cpp
 		   
 * Once OpenMVG was compiled, just set the path build directory on...		   		   
-* Replace the "SfM_SequentialPipeline.py" file at openMVG/openMVG_Build/software/SfM/ for "SfM_SequentialPipeline.py" file of this project.
+* Replace the "SfM_SequentialPipeline.py" file at OpenMVG/openMVG_Build/software/SfM/ for "SfM_SequentialPipeline.py" file of this project.
 * If pmvs2 binary file is not working, download and compile cmvs-pmvs library and replace the pmvs2 bin to /libraries folder of the package 
 
 Within build folder, compile with cmake:
