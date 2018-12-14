@@ -11,7 +11,10 @@
 
 ## Build cmake
 <p align="justify">
-To build use CMake minimum required 3.5.1 : https://github.com/Kitware/CMake
+To build use CMake minimum required 3.5.1 : https://github.com/Kitware/CMake or:
+					
+	$ sudo apt-get install cmake && cmake-gui -> This install cmake-3.5.1
+	
 </p>
 
 ### Dataset
@@ -28,6 +31,15 @@ Images dataset in Google Drive:
 
 ### Ground Truth Data
 * https://docs.google.com/spreadsheets/d/1cs-I-1BxetnAPiWe4e07TfKXyPMTo7x_rN72FC26kHU/edit?usp=sharing
+
+### Dependencies
+- Eigen3: http://eigen.tuxfamily.org/index.php?title=Main_Page
+- Glut (OpenGL): 
+
+		$ sudo apt-get install libglu1-mesa-dev && freeglut3-dev && mesa-common-dev
+
+
+
 
 ### Prerequisite (just compiled)
 <p align="justify">
