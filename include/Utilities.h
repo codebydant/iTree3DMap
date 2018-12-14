@@ -79,6 +79,12 @@
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkTextActor.h>
 #include <vtkTextProperty.h>
+#include <vtkWindowToImageFilter.h>
+#include <vtkPNGWriter.h>
+#include <vtkGraphicsFactory.h>
+#include <vtkRegularPolygonSource.h>
+#include <vtkPlaneSource.h>
+#include <vtkSphereSource.h>
 
 #include <tinyxml2.h>
 #include <X11/Xlib.h>
