@@ -185,7 +185,7 @@ bool Utilities::run_openMVG(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D, std::
   }
 
   /*FOCAL LENGTH*/
-/*
+  /*
   double n=-1;  
   while(true){
 
@@ -261,11 +261,12 @@ bool Utilities::run_openMVG(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D, std::
   folder_name += "/";
   folder_name += project_name;
 
-  dont_care = std::system(folder_name.c_str());
+  //dont_care = std::system(folder_name.c_str());
  */
   output_dir += "/";
   output_dir += project_name;
   output_path = output_dir;
+ 
  /*
   std::string output_pcd_files = "3D_Mapping";
   std::string folder_name2 = "mkdir ";
@@ -275,8 +276,10 @@ bool Utilities::run_openMVG(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D, std::
 
   dont_care = std::system(folder_name2.c_str());
 
+
   std::string command = "python ";
-  std::string openMVG = "/home/daniel/Documents/iTree3DMap/libraries/openMVG/build/software/SfM/SfM_SequentialPipeline.py ";
+  std::string openMVG = "SfM_SequentialPipeline.py ";
+ // std::string openMVG = "/home/daniel/Documents/iTree3DMap/libraries/openMVG/build/software/SfM/SfM_SequentialPipeline.py ";
  // std::string openMVG = "/home/daniel/Documents/iTree3DMap/libraries/openMVG/build/software/SfM/SfM_GlobalPipeline.py ";
 
   command += openMVG;
@@ -293,8 +296,10 @@ bool Utilities::run_openMVG(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D, std::
     PCL_ERROR("Failed. SfM_SequentialPipeline.py not found\n");
     return false;
   }
-
   */
+  
+  
+
 
   PCL_INFO("\n3D Mapping --> [COMPLETE].");
   auto end = std::chrono::high_resolution_clock::now();
@@ -383,7 +388,7 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,dou
   [-C|--CONTROL_POINTS] export control points
   */
 /*
-  std::string command = "/home/daniel/Documents/iTree3DMap/libraries/openMVG/build/Linux-x86_64-Release/openMVG_main_ConvertSfM_DataFormat -i ";
+  std::string command = "openMVG_main_ConvertSfM_DataFormat -i ";
   command += output_dir;
   command += "/reconstruction_sequential/sfm_data.bin -o ";
   command += output_dir;
@@ -528,7 +533,7 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,dou
 
           PCL_INFO("\nChoose a image pattern reference\n");
 
-          std::string command2 = "/home/daniel/Documents/iTree3DMap/libraries/control_Image_Registration/build/control_point_Reg ";
+          std::string command2 ="./control_point_Reg ";
           command2 += output_dir;
           command2 += "/reconstruction_sequential/sfm_data.xml ";
           command2 += output_dir;
@@ -1008,6 +1013,15 @@ cv::minEnclosingCircle(contours,center,radiusR);
   PCL_INFO("\n\nModel reference: %f",Ref_PCL);
   PCL_INFO("\nscale_factor: %f",scale_factor);
 
+  std::string scaleFactorFile = output_dir;
+  scaleFactorFile += "/scale_factor.txt";
+
+  std::ofstream ofs(scaleFactorFile.c_str());
+  ofs << "Real reference: " << W_reference << "cm" << std::endl
+      << "Model reference: " << Ref_PCL << " pt3d" << std::endl
+      << "Scale factor: " << scale_factor << " cm/pt3d"<< std::endl;
+  ofs.close();
+
   auto end = std::chrono::high_resolution_clock::now();
   auto difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
   PCL_INFO("\nScale factor time: %lu %s",difference,"seconds");
@@ -1309,7 +1323,7 @@ bool Utilities::createPMVS_Files(){
   std::cout << "\n------------------------------------------" << std::endl;
   std::cout << blue <<"Creating files for PMVS2..." << reset << std::endl;
 
-  std::string command2 = "../libraries/openMVG/openMVG_Build/Linux-x86_64-RELEASE/openMVG_main_openMVG2PMVS -i ";
+  std::string command2 = "./openMVG_main_openMVG2PMVS -i ";
   command2 += output_dir;
   command2 += "/reconstruction_sequential/sfm_data.bin -o ";
   command2 += output_dir;
@@ -1333,12 +1347,12 @@ bool Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
   std::cout << "------------------------------------------" << std::endl;
   std::cout << blue << "Densify cloud process initializing..." << reset << std::endl;
   /*
-  std::string command3 = "../libraries/pmvs2 ";
+  std::string command3 = "pmvs2 ";
   command3 += output_dir;
   command3 += "/PMVS/ ";
   command3 += "pmvs_options.txt";
 
-  int dont_care = std::system("chmod 771 ../libraries/pmvs2");
+  int dont_care = std::system("chmod 771 pmvs2");
   dont_care = std::system(command3.c_str());
 
   if(dont_care > 0){

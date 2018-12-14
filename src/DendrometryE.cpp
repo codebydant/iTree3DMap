@@ -354,7 +354,16 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
   float volume2 = volumeOfMesh(mesh2);
 
   int canopy_missing_percentage = (int)std::abs(((volume2 - volume1)/volume2)*100);
-  canopy_missing_percentage = 100 - canopy_missing_percentage;
+  
+
+          std::string canMissingProgram = "/home/daniel/Documents/canopyMissing/build/bin/canopyMissing ";
+          canMissingProgram += output_dir;
+          canMissingProgram += "/3D_Mapping/MAP3D_crown_segmented.pcd ";
+          canMissingProgram += output_dir;
+
+        //  int dont_care = std::system(canMissingProgram.c_str());
+      
+  //canopy_missing_percentage = 100 - canopy_missing_percentage;
 
   std::cout << "\n*** Measurements ***" << std::endl;
   std::cout << "---------------------------------------" << std::endl;

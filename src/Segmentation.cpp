@@ -77,7 +77,7 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
            answer.clear();
            setGui= true;
 
-           std::string callParametersGui = "/home/daniel/Documents/iTree3DMap/libraries/gui_Trunk_SegParam/build/interfaz ";
+           std::string callParametersGui = "./gui-Trunk ";
            callParametersGui += output_dir_path;
            callParametersGui += "/trunk_parameters.txt ";
            callParametersGui += output_dir_path;
@@ -119,7 +119,7 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
 
           setGui = true;
 
-          std::string callParametersGui = "/home/daniel/Documents/iTree3DMap/libraries/gui_Trunk_SegParam/build/interfaz ";
+          std::string callParametersGui = "./gui-Trunk ";
           callParametersGui += output_dir_path;
           callParametersGui += "/trunk_parameters.txt ";
           callParametersGui += output_dir_path;
@@ -225,7 +225,7 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
           setGui2= true;
 
           int dont_care;
-          std::string callParametersGui = "/home/daniel/Documents/iTree3DMap/libraries/gui_Crown_SegParam/build/interfaz ";
+          std::string callParametersGui = "./gui-Crown ";
           callParametersGui += output_dir_path;
           callParametersGui += "/crown_parameters.txt ";
           callParametersGui += output_dir_path;
@@ -263,7 +263,7 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
           setGui2= true;
 
           int dont_care;
-          std::string callParametersGui = "/home/daniel/Documents/iTree3DMap/libraries/gui_Crown_SegParam/build/interfaz ";
+          std::string callParametersGui = "./gui-Crown ";
           callParametersGui += output_dir_path;
           callParametersGui += "/crown_parameters.txt ";
           callParametersGui += output_dir_path;
@@ -309,8 +309,8 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
   pcl::transformPointCloud(*cloud_temporal, *cloud, align_cloud);
   */
 
-  std::cout << "XYZRGB original:" << cloud->points.at(0) << std::endl;
-  std::cout << "XYZ info:" << cloud_xyz_aligned->points.at(0) << std::endl;
+  //std::cout << "XYZRGB original:" << cloud->points.at(0) << std::endl;
+  //std::cout << "XYZ info:" << cloud_xyz_aligned->points.at(0) << std::endl;
 
   for(int i=0;i<cloud_xyz->points.size();i++){
 
@@ -338,8 +338,10 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
       cloud_aligned->points.push_back(pt);
     }
 
- std::cout << "XYZRGB final:" << cloud_aligned->points.at(0) << std::endl;
+ //std::cout << "XYZRGB final:" << cloud_aligned->points.at(0) << std::endl;
  std::cout << "Segmentation proccess --> [OK]" << std::endl;
+
+// canopyMissing(crown_cloud_segmented);
 
   return true;
 
@@ -453,6 +455,12 @@ bool Segmentation::trunkSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
   sor2.setMeanK(80);
   sor2.setStddevMulThresh(1.0);
   sor2.filter(*trunk_seg_filtered);
+  
+  if(trunk_seg_filtered->points.size() <= 0){
+     PCL_ERROR("Could not get cluster!\n");
+     return false;
+  }
+
 
   std::string prefix = output_dir_path;
   prefix += "/3D_Mapping/";
@@ -605,7 +613,7 @@ bool Segmentation::crownSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
       file.close();
   }
 
-  std::string command = "/home/daniel/Documents/iTree3DMap/libraries/DBScan_Octrees-master/build/bin/dbscan ";
+  std::string command = "./dbscan ";
   command += output_dir_path;
   command += "/3D_Mapping/MAP3D_crown_segmented.pcd ";
   command += std::to_string(octreeResolution);
@@ -798,7 +806,7 @@ bool Segmentation::crownSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
 
 bool Segmentation::DBScan(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_segmented,pcl::PointXYZ& minTrunkHeight){
 
-  std::string command = "/home/daniel/Documents/iTree3DMap/libraries/DBScan_Octrees-master/build/bin/dbscan ";
+  std::string command = "./dbscan ";
   command += output_dir_path;
   command += "/3D_Mapping/MAP3D_trunk_segmented.pcd 3 40 5 10 ";//40 10 1000
   command += output_dir_path;
