@@ -56,9 +56,8 @@ private:
   // -- DOCUMENT
   Document m_doc;
   std::string m_sfm_data_filename;
-  // -- END DOCUMENT
 
-  private slots:
+private slots:
 
   void doubleClickImageList();
   void openProject(char** argv);

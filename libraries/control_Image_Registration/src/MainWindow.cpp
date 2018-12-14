@@ -259,7 +259,7 @@ void MainWindow::createPanel(char** argv){
 }
 
 void MainWindow::createConnections(){
-  connect (m_treeView_Images,SIGNAL(activated(const QModelIndex &)),this,SLOT(doubleClickImageList()));
+  connect(m_treeView_Images,SIGNAL(activated(const QModelIndex &)),this,SLOT(doubleClickImageList()));
   connect(button, SIGNAL(clicked()), this, SLOT(close()));
   connect(buttonOkParams, SIGNAL(clicked()), this, SLOT(setParameters()));
 }
