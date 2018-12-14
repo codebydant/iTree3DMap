@@ -37,31 +37,52 @@ Images dataset in Google Drive:
 - Glut (OpenGL): 
 
 		$ sudo apt-get install libglu1-mesa-dev && freeglut3-dev && mesa-common-dev
+		
+- Blas and Lapack: 
 
+		$ sudo apt-get install liblapack-dev && libblas-dev 
+		$ sudo apt-get install libgoogle-glog-dev
+- Boost:
 
+		$ sudo apt-get install libboost-all-dev
+		
+- Cereal:
+ 
+ 		$ sudo apt-get install gcc-multilib g++-multilib
+		$ Download the source code, compile and install: https://github.com/USCiLab/cereal
+		
+- Flann: https://github.com/mariusmuja/flann -> compile and install
 
+- TinyXML2: https://github.com/leethomason/tinyxml2 -> compile and install
+
+- GTK2.0: 
+
+		$ sudo apt-get install libgtk2.0-dev
+		
+- QT creator:
+
+		$ sudo apt-get install qtcreator
+
+		$ sudo apt-get install git build-essential qt5-default qtscript5-dev libssl-dev qttools5-dev qttools5-dev-tools 
+		  qtmultimedia5-dev libqt5svg5-dev libqt5webkit5-dev libsdl2-dev libasound2 libxmu-dev libxi-dev freeglut3-dev 
+		  libasound2-dev libjack-jackd2-dev libxrandr-dev libqt5xmlpatterns5-dev libqt5xmlpatterns5
+		  libqt5xmlpatterns5-private-dev
+		  
+- VTK: https://github.com/Kitware/VTK
+
+- OpenMVG:https://github.com/openMVG/openMVG
+- CMVS-PMVS: https://github.com/pmoulon/CMVS-PMVS
 
 ### Prerequisite (just compiled)
 <p align="justify">
 For this project it is necessary to have compiled the following libraries (it is not necessary to have installed):
 
 - OpenCV 3.4.1: https://github.com/opencv/opencv/tree/3.4.1
-- PCL 1.8.1: https://github.com/PointCloudLibrary/pcl/tree/pcl-1.8.1
-- OpenMVG:https://github.com/openMVG/openMVG
-- CMVS-PMVS: https://github.com/pmoulon/CMVS-PMVS
+- PCL 1.8.1 or 1.9.1: https://github.com/PointCloudLibrary/pcl
 
 *Note:* Just set the path to build directory of each library at principal CMakeList.txt
  </p>
  
-### Other Prerequisite (installed)
-The following libraries must have installed:
-
-- Qt creator: https://www.qt.io/download
-- Boost
-- Eigen3
-- Cereal
-- Runit
-
 ### How to make
 <p align="justify">
 This project depends of openMVG, PCL, OpenCV, Qt and CMVS-PMVS, please compiled dependencies before.
