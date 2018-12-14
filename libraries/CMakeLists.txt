@@ -1,0 +1,6 @@
+add_subdirectory(control_Image_Registration)
+add_subdirectory(DBScan_Octrees-master)
+add_subdirectory(gui_Crown_SegParam)
+add_subdirectory(gui_Trunk_SegParam)
+
+
