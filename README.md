@@ -114,9 +114,8 @@ Within build folder, compile with cmake:
 
 *Note:*
 <p align="justify">
-Just for OpenMVG compilation: If OpenMVG compiled without error and is not working, add this line to the cmake command for compilation:
+Just for OpenMVG compilation: If OpenMVG compiled without error and is not working; compile OpenMVG with this line:
 
 	cmake -DTARGET_ARCHITECTURE=generic ../src/
 
-and compile again. 
 </p>
