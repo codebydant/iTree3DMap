@@ -107,13 +107,13 @@ public:
      std::map<const int,std::map<const int,cv::Point2d>> feat_ref;// [id image,[id pt2d, pt2d]]
    };
 
-   static bool run_openMVG(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D, std::string& output_path);
+   static bool run_openMVG(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D, std::string& output_path,bool& projectFound);
    static bool createPMVS_Files();
-   static bool densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_cloud);
+   static bool densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_cloud,bool& projectFound);
    static bool uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
-                                  pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,const double scale=2);
+                                  pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,bool& projectFound,double& scale);
    static void help();
-   static bool getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,double& scale_factor);
+   static bool getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,double& scale_factor,bool& projectFound);
 
    static bool loadSFM_XML_Data(cv::Mat_<double>& intrinsic,
                                 std::vector<cv::Matx34d>& cameras_poses);
