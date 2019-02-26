@@ -361,7 +361,7 @@ void Dendrometry::estimate(const pcl::PointCloud<pcl::PointXYZ>::Ptr& trunk_clou
           canMissingProgram += "/3D_Mapping/MAP3D_crown_segmented.pcd ";
           canMissingProgram += output_dir;
 
-        //  int dont_care = std::system(canMissingProgram.c_str());
+     //     int dont_care = std::system(canMissingProgram.c_str());
       
   //canopy_missing_percentage = 100 - canopy_missing_percentage;
 

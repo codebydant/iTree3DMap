@@ -77,7 +77,7 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
            answer.clear();
            setGui= true;
 
-           std::string callParametersGui = "./gui-Trunk ";
+           std::string callParametersGui = "gui-Trunk ";
            callParametersGui += output_dir_path;
            callParametersGui += "/trunk_parameters.txt ";
            callParametersGui += output_dir_path;
@@ -119,7 +119,7 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
 
           setGui = true;
 
-          std::string callParametersGui = "./gui-Trunk ";
+          std::string callParametersGui = "gui-Trunk ";
           callParametersGui += output_dir_path;
           callParametersGui += "/trunk_parameters.txt ";
           callParametersGui += output_dir_path;
@@ -225,7 +225,7 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
           setGui2= true;
 
           int dont_care;
-          std::string callParametersGui = "./gui-Crown ";
+          std::string callParametersGui = "gui-Crown ";
           callParametersGui += output_dir_path;
           callParametersGui += "/crown_parameters.txt ";
           callParametersGui += output_dir_path;
@@ -263,7 +263,7 @@ bool Segmentation::extractTree(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& clo
           setGui2= true;
 
           int dont_care;
-          std::string callParametersGui = "./gui-Crown ";
+          std::string callParametersGui = "gui-Crown ";
           callParametersGui += output_dir_path;
           callParametersGui += "/crown_parameters.txt ";
           callParametersGui += output_dir_path;
@@ -613,7 +613,7 @@ bool Segmentation::crownSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
       file.close();
   }
 
-  std::string command = "./dbscan ";
+  std::string command = "dbscan ";
   command += output_dir_path;
   command += "/3D_Mapping/MAP3D_crown_segmented.pcd ";
   command += std::to_string(octreeResolution);
@@ -806,7 +806,7 @@ bool Segmentation::crownSegmentation(const pcl::PointCloud<pcl::PointXYZ>::Ptr& 
 
 bool Segmentation::DBScan(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_segmented,pcl::PointXYZ& minTrunkHeight){
 
-  std::string command = "./dbscan ";
+  std::string command = "dbscan ";
   command += output_dir_path;
   command += "/3D_Mapping/MAP3D_trunk_segmented.pcd 3 40 5 10 ";//40 10 1000
   command += output_dir_path;

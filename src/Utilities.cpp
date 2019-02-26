@@ -9,6 +9,11 @@ const std::string yellow("\033[0;33m");
 const std::string reset("\033[0m");
 const std::string green("\033[0;32m");
 
+inline bool exists_file (const std::string& name) {
+  struct stat buffer;   
+  return (stat (name.c_str(), &buffer) == 0); 
+}
+
 // This function displays the help
 void Utilities::help(){
   std::cout << green << "===============================================\n"
@@ -21,7 +26,7 @@ void Utilities::help(){
             << "===============================================" << reset << std::endl;
 }
 
-bool Utilities::run_openMVG(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D, std::string& output_path){
+bool Utilities::run_openMVG(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D, std::string& output_path,bool& projectFound){
 
   std::cout << "\n************************************************" << std::endl;
   std::cout << "              3D MAPPING                      " << std::endl;
@@ -183,192 +188,213 @@ bool Utilities::run_openMVG(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D, std::
       break;
     }
   }
-
-  /*FOCAL LENGTH*/
-  /*
-  double n=-1;  
-  while(true){
-
-    if(focal_length.size()<=0){
-
-        std::cout << blue << "\nEnter the focal length:\n" << reset
-                  << "------------------------------------------" << "\n" << "->" << std::flush;
-        std::string f;
-        std::getline(std::cin,f);
-        n = std::strtod(f.c_str(),NULL);
-
-        if(not is_number(f)){
-            PCL_ERROR("Error: enter a valid focal length\n");
-            f.clear();
-            n = -1;
-            continue;
-        }
-
-        if(n<=0){
-            PCL_ERROR("Error: enter a valid focal_length\n");
-            n = -1;
-            f.clear();
-            continue;
-          }else{
-            //std::ostringstream strs;
-            //strs << n;
-            //focal_length = strs.str();
-            focal_length = f;
-            //std::cout << "Using focal length:" << yellow << focal_length << reset << std::endl;
-          }
-   }
-
-    if(focal_length.size()>0){
-
-      std::string answer;
-      bool focalOk = false;
-
-      std::cout << "\nfocal length = " << yellow << focal_length << reset << " are you sure? (yes/no)" << std::endl;
-      std::cout << "->" << std::flush;
-      std::getline(std::cin, answer);
-      if(answer.empty()){
-        PCL_ERROR("Nothing entered.\n");
-        answer.clear();
-        continue;
-      }
-
-      if(answer == "yes"){
-        focalOk = true;
-      }else if(answer == "no"){
-        focalOk = false;
-        focal_length.clear();
-        n = -1;
-        answer.clear();
-        continue;
-      }else{
-        PCL_ERROR("%s %s",answer.c_str(),"is not a valid answer.\n");
-        focalOk = false;
-        n = -1;
-        answer.clear();
-        continue;
-      }
-
-    if(focalOk){
-      std::cout << yellow << "Using focal length:" << focal_length << reset << std::endl;
-      break;
-    }
-   }
- }
-
-  int dont_care;
-  std::string folder_name = "mkdir ";
-  folder_name += output_dir;
-  folder_name += "/";
-  folder_name += project_name;
-
-  //dont_care = std::system(folder_name.c_str());
- */
+  
+  //std::string projectDIR = output_dir;
+  
   output_dir += "/";
   output_dir += project_name;
   output_path = output_dir;
+  
+  std::string check1 = output_dir;
+  check1 += "/3D_Mapping/MAP3D.pcd";
+  std::string check2 = output_dir;
+  check2 += "/matches/geometric_matches";
+  std::string check3 = output_dir;
+  check3 += "/reconstruction_sequential/sfm_data.bin";
+  
+
+  bool fileIsFound = false;
+  projectFound =  false;
+  
+  fileIsFound = exists_file(check1);
+  fileIsFound = exists_file(check2);
+  fileIsFound = exists_file(check3);
+  
+  int dont_care;
+  
+  if(fileIsFound == true and fileIsFound == true and fileIsFound == true){
+  
+    std::cout << blue << "\nProject Found!" << reset << std::endl;
+    projectFound = true;
+  
+  }else{  
+      
+      std::string folder_name = "mkdir ";
+      folder_name += output_dir;
+      //folder_name += "/";
+      //folder_name += project_name;
+
+      dont_care = std::system(folder_name.c_str());
+      
+      projectFound = false;
+  
+  }
+   
+
+  /*FOCAL LENGTH*/
+  if(projectFound == false){
  
- /*
-  std::string output_pcd_files = "3D_Mapping";
-  std::string folder_name2 = "mkdir ";
-  folder_name2 += output_dir;
-  folder_name2 += "/";
-  folder_name2 += output_pcd_files;
+      double n=-1;  
+      while(true){
 
-  dont_care = std::system(folder_name2.c_str());
+        if(focal_length.size()<=0){
 
+            std::cout << blue << "\nEnter the focal length:\n" << reset
+                      << "------------------------------------------" << "\n" << "->" << std::flush;
+            std::string f;
+            std::getline(std::cin,f);
+            n = std::strtod(f.c_str(),NULL);
 
-  std::string command = "python ";
-  std::string openMVG = "SfM_SequentialPipeline.py ";
- // std::string openMVG = "/home/daniel/Documents/iTree3DMap/libraries/openMVG/build/software/SfM/SfM_SequentialPipeline.py ";
- // std::string openMVG = "/home/daniel/Documents/iTree3DMap/libraries/openMVG/build/software/SfM/SfM_GlobalPipeline.py ";
+            if(not is_number(f)){
+                PCL_ERROR("Error: enter a valid focal length\n");
+                f.clear();
+                n = -1;
+                continue;
+            }
 
-  command += openMVG;
-  command += input_dir;
-  command += " ";
-  command += output_dir;
-  command += " ";
-  command += focal_length;
+            if(n<=0){
+                PCL_ERROR("Error: enter a valid focal_length\n");
+                n = -1;
+                f.clear();
+                continue;
+              }else{
+                //std::ostringstream strs;
+                //strs << n;
+                //focal_length = strs.str();
+                focal_length = f;
+                //std::cout << "Using focal length:" << yellow << focal_length << reset << std::endl;
+              }
+       }
 
-  std::cout << blue << "\n3D Mapping with openMVG initializing..." << reset << std::endl;
-  dont_care = std::system(command.c_str());
+        if(focal_length.size()>0){
 
-  if(dont_care > 0){
-    PCL_ERROR("Failed. SfM_SequentialPipeline.py not found\n");
-    return false;
-  }
-  */
+          std::string answer;
+          bool focalOk = false;
+
+          std::cout << "\nfocal length = " << yellow << focal_length << reset << " are you sure? (yes/no)" << std::endl;
+          std::cout << "->" << std::flush;
+          std::getline(std::cin, answer);
+          if(answer.empty()){
+            PCL_ERROR("Nothing entered.\n");
+            answer.clear();
+            continue;
+          }
+
+          if(answer == "yes"){
+            focalOk = true;
+          }else if(answer == "no"){
+            focalOk = false;
+            focal_length.clear();
+            n = -1;
+            answer.clear();
+            continue;
+          }else{
+            PCL_ERROR("%s %s",answer.c_str(),"is not a valid answer.\n");
+            focalOk = false;
+            n = -1;
+            answer.clear();
+            continue;
+          }
+
+        if(focalOk){
+          std::cout << yellow << "Using focal length:" << focal_length << reset << std::endl;
+          break;
+        }
+       }
+     }
+     
+      std::string folder_name2 = "mkdir ";
+      folder_name2 += output_dir;
+      folder_name2 += "/";
+      folder_name2 += "3D_Mapping";
+
+      dont_care = std::system(folder_name2.c_str());
+      
+      //Choose SFM approach - Incremental or Global
+      std::string command = "python ";
+      std::string openMVG = "SfM_SequentialPipeline.py ";
+      //std::string openMVG = "SfM_GlobalPipeline.py ";
+
+      command += openMVG;
+      command += input_dir;
+      command += " ";
+      command += output_dir;
+      command += " ";
+      command += focal_length;
+
+      std::cout << blue << "\n3D Mapping with openMVG initializing..." << reset << std::endl;
+      dont_care = std::system(command.c_str());
+
+      if(dont_care > 0){
+        PCL_ERROR("Failed. SfM_SequentialPipeline.py not found\n");
+        return false;
+      }
+      
+      PCL_INFO("\n3D Mapping --> [COMPLETE].");
+      auto end = std::chrono::high_resolution_clock::now();
+      auto difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+      PCL_INFO("\n3D mapping time: %li %s",difference,"seconds");
+      std::cout << std::endl;
   
-  
+   }       
 
+      pcl::console::TicToc tt;
 
-  PCL_INFO("\n3D Mapping --> [COMPLETE].");
-  auto end = std::chrono::high_resolution_clock::now();
-  auto difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-  PCL_INFO("\n3D mapping time: %li %s",difference,"seconds");
-  std::cout << std::endl;
+      std::string prefix = output_dir;
+      prefix += "/3D_Mapping/";
+      std::string prefix1 = prefix;
+      prefix1 +="MAP3D.pcd";
 
-  pcl::console::TicToc tt;
+      std::string prefix2 = prefix;
+      prefix2 += "MAP3D.ply";
 
-  std::string prefix = output_dir;
-  prefix += "/3D_Mapping/";
-  std::string prefix1 = prefix;
-  prefix1 +="MAP3D.pcd";
+      std::string polyFile = output_dir;
+      polyFile += "/reconstruction_sequential/colorized.ply";
 
-  std::string prefix2 = prefix;
-  prefix2 += "MAP3D.ply";
+      pcl::PolygonMesh polyMesh;
+      //pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>());
 
-  std::string polyFile = output_dir;
-  polyFile += "/reconstruction_sequential/colorized.ply";
+      std::cout << "\nGetting cloud from 3D reconstruction..." << std::endl;
 
-  pcl::PolygonMesh polyMesh;
-  //pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>());
-
-  std::cout << "\nGetting cloud from 3D reconstruction..." << std::endl;
-
-  if(pcl::io::loadPLYFile(polyFile.c_str(),*Map3D) == -1){
-      return false;
-  }
-  if(Map3D->points.size()<=0 or Map3D->points.at(0).x <=0 and Map3D->points.at(0).y <=0 and Map3D->points.at(0).z <=0){
-      pcl::console::print_warn("\nloadPLYFile could not read the cloud, attempting to loadPolygonFile...");
-      pcl::io::loadPolygonFile(polyFile.c_str(), polyMesh);
-      pcl::fromPCLPointCloud2(polyMesh.cloud, *Map3D);
+      if(pcl::io::loadPLYFile(polyFile.c_str(),*Map3D) == -1){
+          return false;
+      }
       if(Map3D->points.size()<=0 or Map3D->points.at(0).x <=0 and Map3D->points.at(0).y <=0 and Map3D->points.at(0).z <=0){
-          pcl::console::print_warn("\nloadPolygonFile could not read the cloud, attempting to PLYReader...");
-          pcl::PLYReader plyRead;
-          plyRead.read(polyFile.c_str(),*Map3D);
+          pcl::console::print_warn("\nloadPLYFile could not read the cloud, attempting to loadPolygonFile...");
+          pcl::io::loadPolygonFile(polyFile.c_str(), polyMesh);
+          pcl::fromPCLPointCloud2(polyMesh.cloud, *Map3D);
           if(Map3D->points.size()<=0 or Map3D->points.at(0).x <=0 and Map3D->points.at(0).y <=0 and Map3D->points.at(0).z <=0){
-              pcl::console::print_error("\nError. ply file is not compatible.\n");
-              return false;
+              pcl::console::print_warn("\nloadPolygonFile could not read the cloud, attempting to PLYReader...");
+              pcl::PLYReader plyRead;
+              plyRead.read(polyFile.c_str(),*Map3D);
+              if(Map3D->points.size()<=0 or Map3D->points.at(0).x <=0 and Map3D->points.at(0).y <=0 and Map3D->points.at(0).z <=0){
+                  pcl::console::print_error("\nError. ply file is not compatible.\n");
+                  return false;
+                }
             }
         }
-    }
 
-  if(Map3D->points.size()<=0){
-    PCL_ERROR("Could not load: colorized.ply\n");
-    return false;
-  }
+      if(Map3D->points.size()<=0){
+        PCL_ERROR("Could not load: colorized.ply\n");
+        return false;
+      }
 
-  pcl::console::print_info ("[done, ");
-  pcl::console::print_value ("%g", tt.toc ());
-  pcl::console::print_info (" ms : ");
-  pcl::console::print_value ("%d", Map3D->points.size ());
-  pcl::console::print_info (" points]\n");
+      pcl::console::print_info ("[done, ");
+      pcl::console::print_value ("%g", tt.toc ());
+      pcl::console::print_info (" ms : ");
+      pcl::console::print_value ("%d", Map3D->points.size ());
+      pcl::console::print_info (" points]\n");
 
-  pcl::io::savePCDFileBinary(prefix1.c_str(), *Map3D);
-  pcl::PLYWriter writer;
-  writer.write(prefix2.c_str(), *Map3D, false, false);
+      pcl::io::savePCDFileBinary(prefix1.c_str(), *Map3D);
+      pcl::PLYWriter writer;
+      writer.write(prefix2.c_str(), *Map3D, false, false);
 
-  return true;
+      return true;
+      
 }
 
-bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,double& scale_factor){
+bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,double& scale_factor,bool& projectFound){
 
-  std::cout << "\n************************************************" << std::endl;
-  std::cout << "              SCALE FACTOR                      " << std::endl;
-  std::cout << "************************************************" << std::endl;
-
-  std::cout << blue << "Converting sfm_data.bin to sfm_data.xml..." << reset << std::endl;
-  std::cout << "------------------------------------------" << std::endl;
   auto start = std::chrono::high_resolution_clock::now();
 
   /*
@@ -387,22 +413,33 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,dou
   [-S|--STRUCTURE] export structure
   [-C|--CONTROL_POINTS] export control points
   */
-/*
-  std::string command = "openMVG_main_ConvertSfM_DataFormat -i ";
-  command += output_dir;
-  command += "/reconstruction_sequential/sfm_data.bin -o ";
-  command += output_dir;
-  command += "/reconstruction_sequential/sfm_data.xml -V -I -E -S";
+  
+  if(projectFound == false){
+  
+      std::cout << "\n************************************************" << std::endl;
+      std::cout << "              SCALE FACTOR                      " << std::endl;
+      std::cout << "************************************************" << std::endl;
 
-  int dont_care = std::system(command.c_str());
-  if(dont_care > 0){
-   PCL_ERROR("Failed. Could not convert sfm_data.bin to xml\n");
-   return false;
+      std::cout << blue << "Converting sfm_data.bin to sfm_data.xml..." << reset << std::endl;
+      std::cout << "------------------------------------------" << std::endl;
+
+      std::string command = "openMVG_main_ConvertSfM_DataFormat -i ";
+      command += output_dir;
+      command += "/reconstruction_sequential/sfm_data.bin -o ";
+      command += output_dir;
+      command += "/reconstruction_sequential/sfm_data.xml -V -I -E -S";
+
+      int dont_care = std::system(command.c_str());
+      if(dont_care > 0){
+       PCL_ERROR("Failed. Could not convert sfm_data.bin to xml\n");
+       return false;
+      }
+
+      std::cout << "Created xml file in:" << yellow << output_dir
+                << "/reconstruction_sequential/sfm_data.xml" << reset << std::endl;
+            
   }
 
-  std::cout << "Created xml file in:" << yellow << output_dir
-            << "/reconstruction_sequential/sfm_data.xml" << reset << std::endl;
-*/
   cv::Mat_<double> intrinsic;
   std::vector<cv::Matx34d> cameras_poses;
 
@@ -533,7 +570,7 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,dou
 
           PCL_INFO("\nChoose a image pattern reference\n");
 
-          std::string command2 ="./control_point_Reg ";
+          std::string command2 = "control_point_Reg ";
           command2 += output_dir;
           command2 += "/reconstruction_sequential/sfm_data.xml ";
           command2 += output_dir;
@@ -899,7 +936,7 @@ cv::minEnclosingCircle(contours,center,radiusR);
     }
 
   cv::projectPoints(points3d,rvec,tvec,intrinsic,cv::Mat(),projected_points);
-  std::cout << yellow << "\nPoints projected:" << reset << projected_points.size()<< std::endl;
+  std::cout << yellow << "\nPoints projected:" << reset << projected_points.size() << std::endl;
   double error;
   pcl::PointXYZ ptt1,pt2;
 
@@ -963,9 +1000,84 @@ cv::minEnclosingCircle(contours,center,radiusR);
             << std::endl;
   std::cout << "Error: " << it2->first << std::endl;
   std::cout << "Point3D:" << it2->second.second << std::endl;
+  
+  int pos1, pos2;
 
-  ptt1.z = pt2.z;
-  ptt1.x = pt2.x;
+  for(int i=0; i< Map3D->points.size(); i++){
+      pcl::PointXYZRGB pt = Map3D->points.at(i);      
+      
+      if(pt.x == ptt1.x and pt.y == ptt1.y and pt.z == ptt1.z){   
+      
+        pos1 = i;                      
+        break;        
+      }   
+  }
+  
+    for(int i=0; i< Map3D->points.size(); i++){
+      pcl::PointXYZRGB pt = Map3D->points.at(i);      
+      
+      if(pt.x == pt2.x and pt.y == pt2.y and pt.z == pt2.z){   
+      
+        pos2 = i;                      
+        break;        
+      }   
+  }
+  
+  std::cout << "primer punto: " << pos1 << std::endl;
+  std::cout << "segundo punto: " << pos2 << std::endl;
+
+ // ptt1.z = pt2.z;
+ // ptt1.x = pt2.x;
+  
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_xyz (new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_transform (new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::copyPointCloud(*Map3D,*cloud_xyz);
+  
+  pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+  pcl::PointIndices::Ptr floor_inliers (new pcl::PointIndices);
+  pcl::SACSegmentation<pcl::PointXYZRGB> seg;
+  seg.setOptimizeCoefficients (true);
+  seg.setModelType (pcl::SACMODEL_PLANE);
+  seg.setMethodType (pcl::SAC_RANSAC);
+  seg.setDistanceThreshold(100);
+  seg.setInputCloud (Map3D);
+  seg.segment (*floor_inliers, *coefficients);
+
+  Eigen::Matrix<float, 1, 3> normal_vector_plane_tree, normal_vector_plane_xy, rotation_vector;
+
+  normal_vector_plane_tree[0] = coefficients->values[0];
+  normal_vector_plane_tree[1] = coefficients->values[1];
+  normal_vector_plane_tree[2] = coefficients->values[2];
+
+  std::cout << "\nnormal vector plane tree:\n" << normal_vector_plane_tree << std::endl;
+
+  normal_vector_plane_xy[0] = 0.0;
+  normal_vector_plane_xy[1] = 0.0;
+  normal_vector_plane_xy[2] = 1.0;
+
+  std::cout << "\nnormal vector plane XY:\n" << normal_vector_plane_xy << std::endl;
+
+  rotation_vector = normal_vector_plane_tree.cross(normal_vector_plane_xy);
+  std::cout << "\nrotation axis vector:\n "<< rotation_vector << std::endl;
+  
+  std::cout << "\nrotation axis module:\n "<< rotation_vector.norm() << std::endl;
+  
+  rotation_vector /= rotation_vector.norm();
+  std::cout << "\nrotation axis normalized:\n "<< rotation_vector << std::endl;
+  
+  std::cout << "\nrotation axis normalized module:\n "<< rotation_vector.norm() << std::endl;
+
+  float theta = acos((normal_vector_plane_xy.dot(normal_vector_plane_tree))/std::sqrt(std::pow(coefficients->values[0],2) +
+                                                                                      std::pow(coefficients->values[1],2) + 
+                                                                                      std::pow(coefficients->values[2],2)));
+                                                                                      
+  std::cout << "\nrotation angle(rad): " << theta << std::endl;  
+
+  Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+  transform.rotate(Eigen::AngleAxisf(theta, rotation_vector));
+  
+  std::cout << "\nTransformation matrix: " << "\n" << transform.matrix() << std::endl;
+  pcl::transformPointCloud (*cloud_xyz, *cloud_transform, transform);
 /*
   Eigen::Affine3f transform_1 = Eigen::Affine3f::Identity();
   Eigen::Affine3f transform_2 = Eigen::Affine3f::Identity();
@@ -974,8 +1086,7 @@ cv::minEnclosingCircle(contours,center,radiusR);
   std::cout << "trans2:" << transform_2.matrix() << std::endl;
   std::cout << "trans3:" << transform_3.matrix() << std::endl;
 
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_trans (new pcl::PointCloud<pcl::PointXYZ>());
-  //alignCloudSFM(Map3D,cloud_trans,transform_1,transform_2,transform_3);
+
 
   Eigen::Affine3f T = Eigen::Affine3f::Identity();
   T = transform_1*transform_2*transform_3;
@@ -985,16 +1096,44 @@ cv::minEnclosingCircle(contours,center,radiusR);
   std::cout << "trans3:" << transform_3.matrix() << std::endl;
 
   std::cout << "ptt1 before:" << ptt1 << std::endl;
+  */
+  
+   //Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
+   pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud3 (new pcl::PointCloud<pcl::PointXYZ>());
+
+  Eigen::Affine3f transform_1 = Eigen::Affine3f::Identity();
+
+
+  // Define a rotation matrix (see https://en.wikipedia.org/wiki/Rotation_matrix)
+  float betha = M_PI; // The angle of rotation in radians
+  transform_1.rotate (Eigen::AngleAxisf(betha, Eigen::Vector3f::UnitY()));
+
+  std::cout << "Executing the transformation..." << std::endl;
+  pcl::transformPointCloud (*cloud_transform, *output_cloud3, transform_1);
+
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>());
+
+  Eigen::Affine3f transform_3 = Eigen::Affine3f::Identity();
+  float ghama = M_PI/2; // The angle of rotation in radians
+  transform_3.rotate (Eigen::AngleAxisf(ghama, Eigen::Vector3f::UnitX()));
+  pcl::transformPointCloud (*output_cloud3, *cloud_filtered, transform_3);
+
+  
+  
+  ptt1 = cloud_filtered->points.at(pos1);
+  pt2 =  cloud_filtered->points.at(pos2);
+  
 
   Eigen::Vector3f point1 (ptt1.x, ptt1.y, ptt1.z);
   Eigen::Vector3f point2 (pt2.x, pt2.y, pt2.z);
 
-  point1 = T*point1;
-  point2 = T*point2;
+ // point1 = T*point1;
+ // point2 = T*point2;
 
   std::cout << "pt1 after:" << point1 << std::endl;
   std::cout << "pt1 after:" << point2 << std::endl;
 
+ /*
   ptt1.x = point1[0];
   ptt1.y = point1[1];
   ptt1.z = point1[2];
@@ -1002,10 +1141,10 @@ cv::minEnclosingCircle(contours,center,radiusR);
   pt2.x = point2[0];
   pt2.y = point2[1];
   pt2.z = point2[2];
-
-
-  vtkVisualizer(cloud_trans,ptt1,pt2);
 */
+
+  //Utilities::vtkVisualizer(cloud_filtered,ptt1,pt2);
+
   double Ref_PCL = pcl::geometry::distance(ptt1,pt2);
   double W_reference = std::stold(world_reference);
 
@@ -1323,7 +1462,7 @@ bool Utilities::createPMVS_Files(){
   std::cout << "\n------------------------------------------" << std::endl;
   std::cout << blue <<"Creating files for PMVS2..." << reset << std::endl;
 
-  std::string command2 = "./openMVG_main_openMVG2PMVS -i ";
+  std::string command2 = "openMVG_main_openMVG2PMVS -i ";
   command2 += output_dir;
   command2 += "/reconstruction_sequential/sfm_data.bin -o ";
   command2 += output_dir;
@@ -1338,28 +1477,32 @@ bool Utilities::createPMVS_Files(){
   return true;
 }
 
-bool Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_cloud4){
+bool Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_cloud4, bool& projectFound){
 
-  std::cout << "\n************************************************" << std::endl;
-  std::cout << "              DENSIFICATION                      " << std::endl;
-  std::cout << "************************************************" << std::endl;
+  if(projectFound == false){
 
-  std::cout << "------------------------------------------" << std::endl;
-  std::cout << blue << "Densify cloud process initializing..." << reset << std::endl;
-  /*
-  std::string command3 = "pmvs2 ";
-  command3 += output_dir;
-  command3 += "/PMVS/ ";
-  command3 += "pmvs_options.txt";
+      std::cout << "\n************************************************" << std::endl;
+      std::cout << "              DENSIFICATION                      " << std::endl;
+      std::cout << "************************************************" << std::endl;
 
-  int dont_care = std::system("chmod 771 pmvs2");
-  dont_care = std::system(command3.c_str());
+      std::cout << "------------------------------------------" << std::endl;
+      std::cout << blue << "Densify cloud process initializing..." << reset << std::endl;
+      
+      std::string command3 = "pmvs2 ";
+      command3 += output_dir;
+      command3 += "/PMVS/ ";
+      command3 += "pmvs_options.txt";
 
-  if(dont_care > 0){
-   std::cout << "Failed. ./pmvs2 no found" << std::endl;
-   std::exit(-1);
+      int dont_care = std::system("chmod 771 pmvs2");
+      dont_care = std::system(command3.c_str());
+
+      if(dont_care > 0){
+       std::cout << "Failed. ./pmvs2 no found" << std::endl;
+       std::exit(-1);
+      }
+  
   }
-*/
+
   std::string cloudPLY = output_dir;
   cloudPLY += "/PMVS/models/pmvs_options.txt.ply";
 
@@ -1379,10 +1522,11 @@ bool Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
   seg.setDistanceThreshold(100);
   seg.setInputCloud (output_cloud);
   seg.segment (*floor_inliers, *coefficients);
+  /*
   std::cout << "Floor Plane Model coefficients:\n" << coefficients->values[0] << "\n"
             << coefficients->values[1] << "\n"
             << coefficients->values[2] << "\n"
-            << coefficients->values[3] << std::endl;
+            << coefficients->values[3] << std::endl;*/
 
   Eigen::Matrix<float, 1, 3> floor_plane_normal_vector, xy_plane_normal_vector, rotation_vector;
 
@@ -1390,22 +1534,22 @@ bool Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
   floor_plane_normal_vector[1] = coefficients->values[1];
   floor_plane_normal_vector[2] = coefficients->values[2];
 
-  std::cout << "\nFloor plane normal vector:\n" << floor_plane_normal_vector << std::endl;
+  //std::cout << "\nFloor plane normal vector:\n" << floor_plane_normal_vector << std::endl;
 
   xy_plane_normal_vector[0] = 0.0;
   xy_plane_normal_vector[1] = 0.0;
   xy_plane_normal_vector[2] = 1.0;
 
-  std::cout << "\nXY plane normal vector:\n" <<xy_plane_normal_vector << std::endl;
+  //std::cout << "\nXY plane normal vector:\n" <<xy_plane_normal_vector << std::endl;
 
   rotation_vector = xy_plane_normal_vector.cross(floor_plane_normal_vector);
-  std::cout << "\nRotation Vector: "<< rotation_vector << std::endl;
+  //std::cout << "\nRotation Vector: "<< rotation_vector << std::endl;
 
   float theta = -atan2(rotation_vector.norm(), xy_plane_normal_vector.dot(floor_plane_normal_vector));
 
   Eigen::Affine3f transform_2 = Eigen::Affine3f::Identity();
   transform_2.rotate (Eigen::AngleAxisf (theta, rotation_vector));
-  std::cout << "\nTransformation matrix: " << std::endl << transform_2.matrix() << std::endl;
+  //std::cout << "\nTransformation matrix: " << std::endl << transform_2.matrix() << std::endl;
   pcl::transformPointCloud (*output_cloud, *output_cloud2, transform_2);
 
   //Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
@@ -1416,7 +1560,7 @@ bool Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
   float betha = M_PI; // The angle of rotation in radians
   transform_1.rotate (Eigen::AngleAxisf(betha, Eigen::Vector3f::UnitY()));
 
-  std::cout << "Executing the transformation..." << std::endl;
+  //std::cout << "Executing the transformation..." << std::endl;
   pcl::transformPointCloud (*output_cloud2, *output_cloud3, transform_1);
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB>());
@@ -1433,79 +1577,90 @@ bool Utilities::densifyWithPMVS(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& output_c
   pass.setFilterLimits(-1000, 0);
   pass.setFilterLimitsNegative(true);
   pass.filter(*output_cloud4);
+  
+  if(projectFound == false){
 
-  std::cout << yellow <<"\nDensify proccess --> [OK]" << reset << std::endl;
-  std::cout << "Saving dense 3d mapping file with prefix --> MAP3D_dense.pcd" << std::endl;
-  std::cout << "Dense points:" << output_cloud4->points.size() << std::endl;
+      std::cout << yellow <<"\nDensify proccess --> [OK]" << reset << std::endl;
+      std::cout << "Saving dense 3d mapping file with prefix --> MAP3D_dense.pcd" << std::endl;
+      std::cout << "Dense points:" << output_cloud4->points.size() << std::endl;
 
-  std::string prefix = output_dir;
-  prefix += "/3D_Mapping/";
-  std::string prefix1 = prefix;
-  prefix1 += "MAP3D_dense.pcd";
+      std::string prefix = output_dir;
+      prefix += "/3D_Mapping/";
+      std::string prefix1 = prefix;
+      prefix1 += "MAP3D_dense.pcd";
 
-  std::string prefix2 = prefix;
-  prefix2 += "MAP3D_dense.ply";
+      std::string prefix2 = prefix;
+      prefix2 += "MAP3D_dense.ply";
 
-  pcl::io::savePCDFileBinary(prefix1.c_str(), *output_cloud4);
-  pcl::io::savePLYFileBinary(prefix2.c_str(), *output_cloud4);
+      pcl::io::savePCDFileBinary(prefix1.c_str(), *output_cloud4);
+      pcl::io::savePLYFileBinary(prefix2.c_str(), *output_cloud4);
+  
+  }
 
   return true;
-
-  std::cout << "\n------------------------------------------" << std::endl; 
+ 
 }
 
 bool Utilities::uniformScaling(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
-                               pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,const double scale){
+                               pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_scaled,bool& projectFound,double& scale){
+                               
+  if(projectFound == false){
 
-  std::cout << "\n************************************************" << std::endl;
-  std::cout << "              UNIFORM SCALING                      " << std::endl;
-  std::cout << "************************************************" << std::endl;
+      std::cout << "\n************************************************" << std::endl;
+      std::cout << "              UNIFORM SCALING                      " << std::endl;
+      std::cout << "************************************************" << std::endl;
 
-  PCL_INFO("Scaling pointcloud to real measurements...\n");
-  if(cloud->points.size() <= 0){
-    PCL_ERROR("Input point cloud has no data!\n");
-    return false;
-  }
+      PCL_INFO("Scaling pointcloud to real measurements...\n");
+      if(cloud->points.size() <= 0){
+        PCL_ERROR("Input point cloud has no data!\n");
+        return false;
+      }
+      
+   }
 
-  Eigen::MatrixXf scale_matrix(4,4);
+      Eigen::MatrixXf scale_matrix(4,4);
 
-                                            //Uniform scaling: vx = vy = vz = s --> Common scale factor
-  scale_matrix << scale,  0,    0,    0,    //       |vx  0   0   0|
-                   0,   scale,  0,    0,    //  Sv = |0   vy  0   0| => Scale matrix
-                   0,     0,  scale,  0,    //       |0   0   vz  0|
-                   0,     0,    0,    1;    //       |0   0   0   1|
-                                            //https://en.wikipedia.org/wiki/Scaling_(geometry)
+                                                //Uniform scaling: vx = vy = vz = s --> Common scale factor
+      scale_matrix << scale,  0,    0,    0,    //       |vx  0   0   0|
+                       0,   scale,  0,    0,    //  Sv = |0   vy  0   0| => Scale matrix
+                       0,     0,  scale,  0,    //       |0   0   vz  0|
+                       0,     0,    0,    1;    //       |0   0   0   1|
+                                                //https://en.wikipedia.org/wiki/Scaling_(geometry)
+                                                
+   if(projectFound == false){
 
-  std::cout << "Here is the matrix scale factor:\n" << scale_matrix << std::endl;
+      std::cout << "Here is the matrix scale factor:\n" << scale_matrix << std::endl;
+      PCL_INFO("Executing the transformation...");
+      
+    }
+      pcl::transformPointCloud(*cloud, *cloud_scaled, scale_matrix);  
 
-  PCL_INFO("Executing the transformation...");
-  pcl::transformPointCloud(*cloud, *cloud_scaled, scale_matrix);  
+      std::string prefix1 = output_dir;
+      std::string output_pcd_files = "3D_Mapping";
+      prefix1 += "/";
+      prefix1 += output_pcd_files;
+      prefix1 += "/";
+      prefix1 += "MAP3D_scaled.pcd";
 
-  std::string prefix1 = output_dir;
-  std::string output_pcd_files = "3D_Mapping";
-  prefix1 += "/";
-  prefix1 += output_pcd_files;
-  prefix1 += "/";
-  prefix1 += "MAP3D_scaled.pcd";
+      std::string prefix2 = output_dir;
+      prefix2 += "/";
+      prefix2 += output_pcd_files;
+      prefix2 += "/";
+      prefix2 += "MAP3D_scaled.ply";
 
-  std::string prefix2 = output_dir;
-  prefix2 += "/";
-  prefix2 += output_pcd_files;
-  prefix2 += "/";
-  prefix2 += "MAP3D_scaled.ply";
+      //PCL_INFO("\nSaved in: %s %s %s",prefix1.c_str(),"and",prefix2.c_str());
+      std::cout << std::endl;
 
-  PCL_INFO("\nSaved in: %s %s %s",prefix1.c_str(),"and",prefix2.c_str());
-  std::cout << std::endl;
+      pcl::io::savePCDFileBinary(prefix1.c_str(), *cloud_scaled);
+      pcl::io::savePLYFileBinary(prefix2.c_str(), *cloud_scaled); 
 
-  pcl::io::savePCDFileBinary(prefix1.c_str(), *cloud_scaled);
-  pcl::io::savePLYFileBinary(prefix2.c_str(), *cloud_scaled); 
+      if(cloud_scaled->points.size()<=0){
+        PCL_ERROR("Could not scaled point cloud.");
+        return false;
+      }
 
-  if(cloud_scaled->points.size()<=0){
-    PCL_ERROR("Could not scaled point cloud.");
-    return false;
-  }
-
-  return true;
+      return true;
+  
 }
 
 bool Utilities::alignCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
