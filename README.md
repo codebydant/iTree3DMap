@@ -80,12 +80,12 @@ For this project it is necessary to have compiled the following libraries (it is
 - OpenCV 3.4.1: https://github.com/opencv/opencv/tree/3.4.1
 - PCL 1.8.1 or 1.9.1: https://github.com/PointCloudLibrary/pcl
 
-*Note:* Just set the path to build directory of each library at principal CMakeList.txt
+*Note:* Just set the path to the build directory of each library in the principal CMakeList.txt
  </p>
  
 ### How to make
 <p align="justify">
-This project depends of openMVG, PCL, OpenCV, Qt and CMVS-PMVS, please compiled dependencies before.
+This project depends of openMVG, PCL, OpenCV, Qt and CMVS-PMVS, please compile the dependencies before.
 	
 * Download the src code and Unpack .zip
 
@@ -97,9 +97,9 @@ This project depends of openMVG, PCL, OpenCV, Qt and CMVS-PMVS, please compiled 
 		   - CMakeLists.txt
 		   - main.cpp
 		   
-* Once OpenMVG was compiled, just set the path build directory on...		   		   
-* Replace the "SfM_SequentialPipeline.py" file at OpenMVG/openMVG_Build/software/SfM/ for "SfM_SequentialPipeline.py" file of this project.
-* If pmvs2 binary file is not working, download and compile cmvs-pmvs library and replace the pmvs2 bin to /libraries folder of the package 
+* Once OpenMVG was compiled, just set the path build directory in the CMakeList.txt		   		   
+* Edit the "SfM_SequentialPipeline.py" file in the project build directorie (ItreeMapper_Build) with your own OpenMVG path directorie.
+* If pmvs2 binary file is not working, download and compile the cmvs-pmvs library and replace the pmvs2 bin to /libraries folder of the package 
 
 Within build folder, compile with cmake:
 
