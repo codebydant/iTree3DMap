@@ -14,8 +14,9 @@ int main(void){
   STEP 1: 3D MAPPING
   **************************/
   std::string output_dir;
+  bool projectFound;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr Map3D (new pcl::PointCloud<pcl::PointXYZRGB>());
-  bool success = Utilities::run_openMVG(Map3D,output_dir);
+  bool success = Utilities::run_openMVG(Map3D,output_dir,projectFound);
   if(not success){
     PCL_ERROR("Could not get 3D Model. Failed dendrometric estimation.\n");
     return -1;
@@ -25,10 +26,10 @@ int main(void){
   STEP 2: GET SCALE FACTOR
   **************************/
   double scale=0;
-  success = Utilities::getScaleFactor(Map3D,scale);
+  success = Utilities::getScaleFactor(Map3D,scale,projectFound);
   if(not success or scale <=0){
     PCL_WARN("Using scale factor = 120.128\n");
-    scale = 120.128;
+    scale = 127.128;
   }
 
   std::cout << "\nMap3D points:" << Map3D->points.size() << std::endl;
@@ -38,21 +39,26 @@ int main(void){
   **************************/
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr Map3DDense (new pcl::PointCloud<pcl::PointXYZRGB>());
   auto start = std::chrono::high_resolution_clock::now();
-  //success = Utilities::createPMVS_Files();
-  success = Utilities::densifyWithPMVS(Map3DDense);
+  if(projectFound == false){
+    success = Utilities::createPMVS_Files();
+  }
+  success = Utilities::densifyWithPMVS(Map3DDense,projectFound);
   if(not success or Map3DDense->points.empty()){
     PCL_ERROR("Could not densify the points.");
     return -1;
   }
   auto end = std::chrono::high_resolution_clock::now();
   auto difference = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-  std::cout << "Dense map time: " << difference << " seconds" << std::endl;
+  if(projectFound == false){
+      std::cout << "Dense map time: " << difference << " seconds" << std::endl;
+  }
 
   /*************************
   STEP 4: UNIFORM SCALING
   **************************/
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_3dMap_scaled (new pcl::PointCloud<pcl::PointXYZRGB>());
-  Utilities::uniformScaling(Map3DDense,cloud_3dMap_scaled,scale);
+  Utilities::uniformScaling(Map3DDense,cloud_3dMap_scaled,projectFound,scale);
+  
  
   /*************************
   STEP 5: SEGMENTATION

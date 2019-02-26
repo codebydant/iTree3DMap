@@ -25,10 +25,10 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 # set corresponding package directories
 set(OpenCV_DIR /opt/opencv-3.4.1/build)
-set(PCL_DIR /opt/pcl-1.9.1/build)
-set(tinyXM_DIR /opt/tinyxml2-master/build)
-set(OpenMVG_PATH /opt/openMVG/openMVG_Build)
-set(PMVS2_DIR /opt/CMVS-PMVS-master/build)
+set(PCL_DIR /opt/pcl-1.8.1/build)
+set(tinyXM_DIR /opt/tinyxml2/build)
+set(OpenMVG_PATH /opt/openMVG/build)
+set(PMVS2_DIR /opt/CMVS-PMVS-master/program/build)
 
 #set the CMP0074 policy to old behavior (disable warnings) (CMake 3.12.0-rc1)
 if(${CMAKE_VERSION} MATCHES 3.12.0)
@@ -66,7 +66,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 ##############################################################################
 # PACKAGES
 ##############################################################################
-find_package(OpenMVG REQUIRED PATHS ${OpenMVG_PATH})
+find_package(OpenMVG REQUIRED ${OpenMVG_PATH})
 if(OpenMVG_FOUND)
     message(STATUS "    version: ${OPENMVG_VERSION}")
     #set(OpenMVG_isFound true CACHE BOOL "openMVG FOUND")
@@ -213,7 +213,7 @@ target_link_libraries(${PROJECT_NAME}
 #configure_file(${OpenMVG_PATH}/Linux-x86_64-Release/openMVG_main_ConvertSfM_DataFormat ${CMAKE_CURRENT_BINARY_DIR}/bin COPYONLY)
 #configure_file(${OpenMVG_PATH}/Linux-x86_64-Release/openMVG_main_openMVG2PMVS ${CMAKE_CURRENT_BINARY_DIR}/bin COPYONLY)
 #configure_file(${OpenMVG_PATH}/Linux-x86_64-Release/openMVG_main_openMVG2PMVS ${CMAKE_CURRENT_BINARY_DIR}/bin COPYONLY)
-file(COPY ${OpenMVG_PATH}/software/SfM/SfM_SequentialPipeline.py DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+file(COPY include/SfM_SequentialPipeline.py DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 file(COPY ${OpenMVG_PATH}/Linux-x86_64-Release/openMVG_main_ConvertSfM_DataFormat DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 file(COPY ${OpenMVG_PATH}/Linux-x86_64-Release/openMVG_main_openMVG2PMVS DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 file(COPY ${PMVS2_DIR}/main/pmvs2 DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
