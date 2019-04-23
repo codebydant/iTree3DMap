@@ -78,7 +78,7 @@ Images dataset in Google Drive:
 For this project it is necessary to have compiled the following libraries (it is not necessary to have installed):
 
 - OpenCV 3.4.1: https://github.com/opencv/opencv/tree/3.4.1
-- PCL 1.8.1 or 1.9.1: https://github.com/PointCloudLibrary/pcl
+- PCL 1.8.1 or 1.9.1: https://github.com/PointCloudLibrary/pcl/tree/pcl-1.8.1
 
 *Note:* Just set the path to the build directory of each library in the principal CMakeList.txt
  </p>
