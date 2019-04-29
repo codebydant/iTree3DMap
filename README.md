@@ -55,6 +55,17 @@ Images dataset in Google Drive:
 
 		$ sudo apt-get install liblz4-dev
 		$ sudo apt-get install libhdf5-dev
+		$ sudo apt-get install libgtest-dev  
+		(for gtest)
+		
+		cd /usr/src/gtest
+		sudo cmake CMakeLists.txt
+		sudo make
+		sudo cp *.a /usr/lib
+		create a gtest folder in usr/local/lib
+		sudo ln -s /usr/lib/libgtest.a /usr/local/lib/gtest/libgtest.a
+		sudo ln -s /usr/lib/libgtest_main.a /usr/local/lib/gtest/libgtest_main.a
+		
 		$ https://github.com/mariusmuja/flann -> compile and install
 
 - TinyXML2: https://github.com/leethomason/tinyxml2 -> compile and install
