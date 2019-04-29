@@ -51,7 +51,11 @@ Images dataset in Google Drive:
  		$ sudo apt-get install gcc-multilib g++-multilib
 		$ Download the source code, compile and install: https://github.com/USCiLab/cereal
 		
-- Flann: https://github.com/mariusmuja/flann -> compile and install
+- Flann: 
+
+		$ sudo apt-get install liblz4-dev
+		$ sudo apt-get install libhdf5-dev
+		$ https://github.com/mariusmuja/flann -> compile and install
 
 - TinyXML2: https://github.com/leethomason/tinyxml2 -> compile and install
 
