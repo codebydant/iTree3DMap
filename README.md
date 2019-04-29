@@ -36,7 +36,9 @@ Images dataset in Google Drive:
 - Eigen3: http://eigen.tuxfamily.org/index.php?title=Main_Page
 - Glut (OpenGL): 
 
-		$ sudo apt-get install libglu1-mesa-dev && freeglut3-dev && mesa-common-dev
+		$ sudo apt-get install libglu1-mesa-dev
+		$ sudo apt-get install freeglut3-dev
+		$ sudo apt-get install mesa-common-dev
 		
 - Blas and Lapack: 
 
@@ -83,7 +85,10 @@ Images dataset in Google Drive:
 		  libasound2-dev libjack-jackd2-dev libxrandr-dev libqt5xmlpatterns5-dev libqt5xmlpatterns5
 		  libqt5xmlpatterns5-private-dev
 		  
-- VTK: https://github.com/Kitware/VTK
+- VTK: 
+
+		$ sudo apt-get install xorg 
+		https://github.com/Kitware/VTK
 
 - OpenMVG:https://github.com/openMVG/openMVG
 - CMVS-PMVS: https://github.com/pmoulon/CMVS-PMVS
