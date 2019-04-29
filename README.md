@@ -13,7 +13,7 @@
 <p align="justify">
 To build use CMake minimum required 3.5.1 : https://github.com/Kitware/CMake or:
 					
-	$ sudo apt-get install cmake && cmake-gui -> This install cmake-3.5.1
+	$ sudo apt-get install cmake && cmake-gui && openssl && git -> This install cmake-3.5.1
 	
 </p>
 
