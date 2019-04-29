@@ -88,6 +88,7 @@ Images dataset in Google Drive:
 - VTK: 
 
 		$ sudo apt-get install xorg 
+		$ sudo apt-get install qhull-bin
 		https://github.com/Kitware/VTK
 
 - OpenMVG:https://github.com/openMVG/openMVG
