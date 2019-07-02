@@ -143,9 +143,8 @@ Just for OpenMVG compilation: If OpenMVG compiled without error and is not worki
 </p>
 
 Extra packages:
-* [Canopy Missing](https://github.com/danielTobon43/canopyMissing)
-for Q&A as well as support for troubleshooting, installation and debugging. Do
-remember to tag your questions with the tag `point-cloud-library`.
-* [Gitter channel](https://gitter.im/PointCloudLibrary/pcl) for live chat with
-other members of the PCL community and casual discussions
+* [Canopy Missing](https://github.com/danielTobon43/canopyMissing) C++ program for percentage canopy missing
+* [Pointcloud to Mesh channel](https://github.com/danielTobon43/pointcloudToMesh) C++ program to convert pcd to mesh
+* [Control image selector](https://github.com/danielTobon43/gui-Control-points) GUI interface for images
+* [Align point cloud](https://github.com/danielTobon43/align_pointcloud) C++ program for alignment pointcloud to axis
 
