@@ -147,4 +147,4 @@ Extra packages:
 * [Pointcloud to Mesh channel](https://github.com/danielTobon43/pointcloudToMesh) C++ program to convert pcd to mesh
 * [Control image selector](https://github.com/danielTobon43/gui-Control-points) GUI interface for images
 * [Align point cloud](https://github.com/danielTobon43/align_pointcloud) C++ program for alignment pointcloud to axis
-
+* [DBScan](https://github.com/danielTobon43/DBScan-PCL-Optimized) C++ program for clustering 3D points in a space
