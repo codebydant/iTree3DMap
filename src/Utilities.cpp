@@ -665,8 +665,21 @@ bool Utilities::getScaleFactor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& Map3D,dou
           cv::Mat img_copy = img.clone();
           cv::Mat gray;
 
-          cv::cvtColor(img_copy,gray,CV_BGR2GRAY);
-          std::vector<cv::Vec3f> circles(2,0);
+          #if CV_VERSION_MAJOR > 3
+
+
+            cv::cvtColor(img_copy,gray,cv::COLOR_BGR2GRAY);
+            std::vector<cv::Vec3f> circles(2,0);
+
+          #else
+             cv::cvtColor(img_copy,gray,CV_BGR2GRAY);
+             std::vector<cv::Vec3f> circles(2,0);
+
+
+          #endif
+
+         
+          
 
           std::cout << "\nFiltering...Canny!" << std::endl;
           cv::Canny(gray, gray, 100, 100*2,3);
@@ -705,8 +718,18 @@ cv::minEnclosingCircle(contours,center,radiusR);
           while(file >> dp >> minDist >> param1 >> param2 >> minRadius >> maxRadius){
           }
 
-          std::cout << "Detecting circles in image..." << std::endl;
-          cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT,dp, gray.rows/minDist, param1, param2, minRadius,maxRadius);
+          #if CV_VERSION_MAJOR > 3
+
+            std::cout << "Detecting circles in image..." << std::endl;
+            cv::HoughCircles(gray, circles, cv::HOUGH_GRADIENT,dp, gray.rows/minDist, param1, param2, minRadius,maxRadius);
+
+
+          #else
+
+            std::cout << "Detecting circles in image..." << std::endl;
+            cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT,dp, gray.rows/minDist, param1, param2, minRadius,maxRadius);
+
+          #endif
 
           cv::Point2d center_pattern1,center_pattern2;
           int radius = 0;
@@ -744,12 +767,27 @@ cv::minEnclosingCircle(contours,center,radiusR);
 
           std::cout << "\nPress [q] to continue!" << std::endl;
 
-          cv::namedWindow("pattern",CV_WINDOW_NORMAL);
-          cv::resizeWindow("pattern",640,480);
-          cv::moveWindow("pattern",std::round(x/2),0);
-          cv::imshow("pattern",img_copy);
-          cv::waitKey(0);
-          cv::destroyAllWindows();
+          #if CV_VERSION_MAJOR > 3
+
+            cv::namedWindow("pattern",cv::WINDOW_NORMAL);
+            cv::resizeWindow("pattern",640,480);
+            cv::moveWindow("pattern",std::round(x/2),0);
+            cv::imshow("pattern",img_copy);
+            cv::waitKey(0);
+            cv::destroyAllWindows();
+
+          #else
+            
+            cv::namedWindow("pattern",CV_WINDOW_NORMAL);
+            cv::resizeWindow("pattern",640,480);
+            cv::moveWindow("pattern",std::round(x/2),0);
+            cv::imshow("pattern",img_copy);
+            cv::waitKey(0);
+            cv::destroyAllWindows();
+     
+          #endif
+
+
 
           while(true){
 
