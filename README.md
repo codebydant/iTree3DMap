@@ -68,6 +68,12 @@ Images dataset in Google Drive:
 		sudo ln -s /usr/lib/libgtest.a /usr/local/lib/gtest/libgtest.a
 		sudo ln -s /usr/lib/libgtest_main.a /usr/local/lib/gtest/libgtest_main.a
 		
+		Edit CMakeLists.txt on flann/src/cpp/CMakeLists.txt and replace:
+		add_library(flann_cpp SHARED "") -> add_library(flann_cpp SHARED "main.cpp")
+		Create a main.cpp file at the samen directory
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")		
+		
+		
 		$ https://github.com/mariusmuja/flann -> compile and install
 
 - TinyXML2: https://github.com/leethomason/tinyxml2 -> compile and install
