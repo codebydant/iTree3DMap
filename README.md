@@ -44,6 +44,12 @@ Images dataset in Google Drive:
 
 		$ sudo apt-get install liblapack-dev && libblas-dev 
 		$ sudo apt-get install libgoogle-glog-dev
+		
+-GTK 3.0: 
+
+		$ sudo apt-get install build-essential libgtk-3-dev
+
+
 - Boost:
 
 		$ sudo apt-get install libboost-all-dev
