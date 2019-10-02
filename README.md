@@ -40,6 +40,11 @@ Images dataset in Google Drive:
 		$ sudo apt-get install freeglut3-dev
 		$ sudo apt-get install mesa-common-dev
 		
+		if(OpenGL not found):
+		 OPENGL_opengl_LIBRARY: /usr/lib/x86_64-linux-gnu/libOpenGL.so
+    		 OPENGL_glx_LIBRARY: /usr/lib/x86_64-linux-gnu/libGLX.so
+		 OPENGL_gl_LIBRARY: /usr/lib/x86_64-linux-gnu/libGL.so
+		
 - Blas and Lapack: 
 
 		$ sudo apt-get install liblapack-dev && libblas-dev 
