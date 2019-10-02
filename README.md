@@ -45,9 +45,9 @@ Images dataset in Google Drive:
 		$ sudo apt-get install liblapack-dev && libblas-dev 
 		$ sudo apt-get install libgoogle-glog-dev
 		
--GTK 3.0: 
-
-		$ sudo apt-get install build-essential libgtk-3-dev
+- OpenBLAS:
+		
+		$ sudo apt-get install libopenblas-dev
 
 
 - Boost:
@@ -87,6 +87,10 @@ Images dataset in Google Drive:
 - GTK2.0: 
 
 		$ sudo apt-get install libgtk2.0-dev
+				
+- GTK 3.0: 
+
+		$ sudo apt-get install build-essential libgtk-3-dev
 		
 - QT creator:
 
