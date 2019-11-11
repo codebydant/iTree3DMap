@@ -111,6 +111,7 @@ Images dataset in Google Drive:
 		$ sudo apt-get install xorg 
 		$ sudo apt-get install qhull-bin
 		$ sudo apt-get install libqhull-dev
+		$ sudo apt-get install libxt-dev 
 		https://github.com/Kitware/VTK
 
 - OpenMVG:https://github.com/openMVG/openMVG
