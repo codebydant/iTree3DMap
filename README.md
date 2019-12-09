@@ -108,6 +108,7 @@ Images dataset in Google Drive:
 		  
 - VTK: 
 
+   		$ sudo apt-get install libxt-dev 
 		$ sudo apt-get install xorg 
 		$ sudo apt-get install qhull-bin
 		$ sudo apt-get install libqhull-dev
