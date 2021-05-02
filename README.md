@@ -74,6 +74,7 @@ Images dataset in Google Drive:
 		cd /usr/src/gtest
 		sudo cmake CMakeLists.txt
 		sudo make
+		cd /usr/src/gtest/lib
 		sudo cp *.a /usr/lib
 		create a gtest folder in usr/local/lib
 		sudo ln -s /usr/lib/libgtest.a /usr/local/lib/gtest/libgtest.a
