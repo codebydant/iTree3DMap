@@ -1,8 +1,8 @@
 #include "include/Visualizer.h"
+
 #include "ui_Visualizer.h"
 
-Visualizer::Visualizer(int argc,char** argv,QWidget *parent) :
-  QWidget(parent),ui(new Ui::Visualizer){
+Visualizer::Visualizer(int argc, char** argv, QWidget* parent) : QWidget(parent), ui(new Ui::Visualizer) {
   ui->setupUi(this);
 
   std::string crownDefaultParameters = argv[1];
@@ -10,23 +10,18 @@ Visualizer::Visualizer(int argc,char** argv,QWidget *parent) :
   getDefaultParameters(crownDefaultParameters);
 
   init();
-
 }
 
-Visualizer::~Visualizer(){
-  delete ui;
+Visualizer::~Visualizer() { delete ui; }
+
+void Visualizer::init() {
+  ui->epsLine->setValidator(new QDoubleValidator(0, 100, 2, this));
+  ui->minPtsLine->setValidator(new QIntValidator(0, 900, this));
+  ui->minPtsAuxLine->setValidator(new QIntValidator(0, 900, this));
+  ui->octreeReLine->setValidator(new QIntValidator(0, 900, this));
 }
 
-void Visualizer::init(){
-
-  ui->epsLine->setValidator(new QDoubleValidator(0,100,2,this));
-  ui->minPtsLine->setValidator(new QIntValidator(0,900,this));
-  ui->minPtsAuxLine->setValidator(new QIntValidator(0,900,this));
-  ui->octreeReLine->setValidator(new QIntValidator(0,900,this));
-}
-
-void Visualizer::on_okButton_clicked(){
-
+void Visualizer::on_okButton_clicked() {
   eps = ui->epsLine->text().toStdString();
   octreeResolution = ui->octreeReLine->text().toStdString();
   minPts = ui->minPtsLine->text().toStdString();
@@ -37,18 +32,13 @@ void Visualizer::on_okButton_clicked(){
 
   std::ofstream ofs(out.c_str());
 
-  ofs << octreeResolution << std::endl
-      << eps << std::endl
-      << minPtsAux << std::endl
-      << minPts << std::endl;
+  ofs << octreeResolution << std::endl << eps << std::endl << minPtsAux << std::endl << minPts << std::endl;
   ofs.close();
 
   close();
 }
 
-
-void Visualizer::getDefaultParameters(std::string& inputPath){
-
+void Visualizer::getDefaultParameters(std::string& inputPath) {
   std::ifstream file(inputPath.c_str());
 
   std::string eps;
@@ -56,7 +46,7 @@ void Visualizer::getDefaultParameters(std::string& inputPath){
   std::string minPtsAux;
   std::string octreeR;
 
-  while(file >> octreeR >> eps >> minPtsAux >> minPts){
+  while (file >> octreeR >> eps >> minPtsAux >> minPts) {
   }
 
   ui->epsLine->setText(eps.c_str());
@@ -65,5 +55,4 @@ void Visualizer::getDefaultParameters(std::string& inputPath){
   ui->octreeReLine->setText(octreeR.c_str());
 
   file.close();
-
 }

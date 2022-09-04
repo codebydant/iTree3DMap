@@ -2,24 +2,23 @@
 #define VISUALIZER_H
 
 #include <QWidget>
-#include <string>
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <string>
 
 namespace Ui {
-  class Visualizer;
+class Visualizer;
 }
 
-class Visualizer : public QWidget{
+class Visualizer : public QWidget {
   Q_OBJECT
 
-public:
-  explicit Visualizer(int argc,char** argv,QWidget *parent = 0);
+ public:
+  explicit Visualizer(int argc, char** argv, QWidget* parent = 0);
   ~Visualizer();
 
-
-private:
-  Ui::Visualizer *ui;
+ private:
+  Ui::Visualizer* ui;
 
   std::string kSearch;
 
@@ -35,7 +34,7 @@ private:
 
   std::string output_dir;
 
-private slots:
+ private slots:
 
   void init();
   void on_okButton_clicked();
@@ -43,4 +42,4 @@ private slots:
   void getDefaultParameters(std::string& inputPath);
 };
 
-#endif // VISUALIZER_HPP
+#endif  // VISUALIZER_HPP

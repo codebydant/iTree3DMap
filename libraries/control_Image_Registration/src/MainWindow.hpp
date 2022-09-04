@@ -9,65 +9,63 @@
 #ifndef MAINWINDOW_HPP
 #define MAINWINDOW_HPP
 
-#include <QtGui>
-#include <QTreeView>
-#include <QTabWidget>
+#include <QGridLayout>
 #include <QLabel>
 #include <QLineEdit>
-#include <QGridLayout>
-#include <QPushButton>
-#include <QMessageBox>
 #include <QMainWindow>
+#include <QMessageBox>
+#include <QPushButton>
 #include <QSplitter>
 #include <QStatusBar>
+#include <QTabWidget>
+#include <QTreeView>
 #include <QWidget>
-
+#include <QtGui>
 #include <iostream>
 #include <string>
 
 #include "document.hpp"
 
-class MainWindow : public QMainWindow{
+class MainWindow : public QMainWindow {
   Q_OBJECT
 
-private:
-  QTabWidget * m_tabWidget;
-  QWidget * m_tab_1;
-  QLineEdit * dpLineEdit;
-  QLineEdit * minDistLineEdit;
-  QLineEdit * param1LineEdit;
-  QLineEdit * param2LineEdit;
-  QLineEdit * minRadiusLineEdit;
-  QLineEdit * maxRadiusLineEdit;
+ private:
+  QTabWidget* m_tabWidget;
+  QWidget* m_tab_1;
+  QLineEdit* dpLineEdit;
+  QLineEdit* minDistLineEdit;
+  QLineEdit* param1LineEdit;
+  QLineEdit* param2LineEdit;
+  QLineEdit* minRadiusLineEdit;
+  QLineEdit* maxRadiusLineEdit;
   std::string dp;
   std::string minDist;
   std::string param1;
   std::string param2;
   std::string minRadius;
   std::string maxRadius;
-  QWidget * houghParameters;
-  QTreeView * m_treeView_Images;   // Image list of the project
-  QLabel * myLabel;
-  QPushButton* button ;
+  QWidget* houghParameters;
+  QTreeView* m_treeView_Images;  // Image list of the project
+  QLabel* myLabel;
+  QPushButton* button;
   QPushButton* buttonOkParams;
 
-  QStatusBar *m_statusbar;         // Status bar
+  QStatusBar* m_statusbar;  // Status bar
 
   // -- DOCUMENT
   Document m_doc;
   std::string m_sfm_data_filename;
 
-private slots:
+ private slots:
 
   void doubleClickImageList();
   void openProject(char** argv);
   void setParameters(void);
   void getDefaultParameters(std::string& inputPath);
 
-public:
-
+ public:
   /// Constructor
-  MainWindow(int argc,char** argv,QWidget * parent = 0);
+  MainWindow(int argc, char** argv, QWidget* parent = 0);
 
   /* Create the Window layout (shape panels & co.)
   |____________________________

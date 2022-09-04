@@ -1,8 +1,8 @@
 #include "include/Visualizer.h"
+
 #include "ui_Visualizer.h"
 
-Visualizer::Visualizer(int argc,char** argv,QWidget *parent) :
-  QWidget(parent),ui(new Ui::Visualizer){
+Visualizer::Visualizer(int argc, char** argv, QWidget* parent) : QWidget(parent), ui(new Ui::Visualizer) {
   ui->setupUi(this);
 
   std::string trunkDefaultParameters = argv[1];
@@ -10,29 +10,25 @@ Visualizer::Visualizer(int argc,char** argv,QWidget *parent) :
   getDefaultParameters(trunkDefaultParameters);
 
   init();
-
 }
 
-Visualizer::~Visualizer(){
-  delete ui;
+Visualizer::~Visualizer() { delete ui; }
+
+void Visualizer::init() {
+  ui->kSearchLine->setValidator(new QIntValidator(0, 900, this));
+
+  ui->distanceWeightLine->setValidator(new QDoubleValidator(0, 900, 2, this));
+  ui->maxIterationsLine->setValidator(new QIntValidator(0, 900, this));
+  ui->distanceThresHoldLine->setValidator(new QDoubleValidator(0, 900, 2, this));
+
+  ui->distanceWeightCylinderLine->setValidator(new QDoubleValidator(0, 900, 2, this));
+  ui->maxIterationsCylinderLine->setValidator(new QIntValidator(0, 900, this));
+  ui->distanceThresholdCylinderLine->setValidator(new QDoubleValidator(0, 900, 2, this));
+  ui->minRadiusCylinderLine->setValidator(new QDoubleValidator(0, 900, 2, this));
+  ui->maxRadiusCylinderLine->setValidator(new QDoubleValidator(0, 900, 2, this));
 }
 
-void Visualizer::init(){
-  ui->kSearchLine->setValidator( new QIntValidator(0, 900, this));
-
-  ui->distanceWeightLine->setValidator(new QDoubleValidator(0,900,2,this));
-  ui->maxIterationsLine->setValidator(new QIntValidator(0,900,this));
-  ui->distanceThresHoldLine->setValidator(new QDoubleValidator(0,900,2,this));
-
-  ui->distanceWeightCylinderLine->setValidator(new QDoubleValidator(0,900,2,this));
-  ui->maxIterationsCylinderLine->setValidator(new QIntValidator(0,900,this));
-  ui->distanceThresholdCylinderLine->setValidator(new QDoubleValidator(0,900,2,this));
-  ui->minRadiusCylinderLine->setValidator(new QDoubleValidator(0,900,2,this));
-  ui->maxRadiusCylinderLine->setValidator(new QDoubleValidator(0,900,2,this));
-}
-
-void Visualizer::on_okButton_clicked(){
-
+void Visualizer::on_okButton_clicked() {
   kSearch = ui->kSearchLine->text().toStdString();
 
   distanceWeight = ui->distanceWeightLine->text().toStdString();
@@ -41,9 +37,9 @@ void Visualizer::on_okButton_clicked(){
 
   distanceWeightCylinder = ui->distanceWeightCylinderLine->text().toStdString();
   maxIterationsCylinder = ui->maxIterationsCylinderLine->text().toStdString();
-  distanceThresholdCylinder =  ui->distanceThresholdCylinderLine->text().toStdString();
-  minRadius =  ui->minRadiusCylinderLine->text().toStdString();
-  maxRadius =  ui->maxRadiusCylinderLine->text().toStdString();
+  distanceThresholdCylinder = ui->distanceThresholdCylinderLine->text().toStdString();
+  minRadius = ui->minRadiusCylinderLine->text().toStdString();
+  maxRadius = ui->maxRadiusCylinderLine->text().toStdString();
 
   std::string out = output_dir;
   out += "/trunk_parameters.txt";
@@ -66,8 +62,7 @@ void Visualizer::on_okButton_clicked(){
   close();
 }
 
-void Visualizer::on_clearButton_clicked(){
-
+void Visualizer::on_clearButton_clicked() {
   ui->kSearchLine->clear();
 
   ui->distanceWeightLine->clear();
@@ -79,11 +74,9 @@ void Visualizer::on_clearButton_clicked(){
   ui->distanceThresholdCylinderLine->clear();
   ui->minRadiusCylinderLine->clear();
   ui->maxRadiusCylinderLine->clear();
-
 }
 
-void Visualizer::getDefaultParameters(std::string& inputPath){
-
+void Visualizer::getDefaultParameters(std::string& inputPath) {
   std::ifstream file(inputPath.c_str());
 
   std::string kSearch;
@@ -98,9 +91,8 @@ void Visualizer::getDefaultParameters(std::string& inputPath){
   std::string minRadius;
   std::string maxRadius;
 
-  while(file >> kSearch >> distanceWeight >> maxIterations >> distanceThreshold
-        >> distanceWeightCylinder >> maxIterationsCylinder >> distanceThresholdCylinder
-        >> minRadius >> maxRadius){
+  while (file >> kSearch >> distanceWeight >> maxIterations >> distanceThreshold >> distanceWeightCylinder >> maxIterationsCylinder >> distanceThresholdCylinder >> minRadius >>
+         maxRadius) {
   }
 
   ui->kSearchLine->setText(kSearch.c_str());

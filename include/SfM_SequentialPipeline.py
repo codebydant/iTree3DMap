@@ -18,9 +18,11 @@
 #
 
 # Indicate the openMVG binary directory
-OPENMVG_SFM_BIN = "/opt/openMVG/build/Linux-x86_64-Release"
+# OPENMVG_SFM_BIN = "/opt/openMVG/build/Linux-x86_64-Release"
+OPENMVG_SFM_BIN = "/usr/bin"
 
 # Indicate the openMVG camera sensor width directory
+# CAMERA_SENSOR_WIDTH_DIRECTORY = "/opt/openMVG/src/software/SfM" + "/../../openMVG/exif/sensor_width_database"
 CAMERA_SENSOR_WIDTH_DIRECTORY = "/opt/openMVG/src/software/SfM" + "/../../openMVG/exif/sensor_width_database"
 
 import os
@@ -36,8 +38,8 @@ output_dir = sys.argv[2]
 focal_length = sys.argv[3]
 matches_dir = os.path.join(output_dir, "matches")
 reconstruction_dir = os.path.join(output_dir, "reconstruction_sequential")
-camera_file_params = os.path.join(CAMERA_SENSOR_WIDTH_DIRECTORY, "sensor_width_camera_database.txt")
-
+# camera_file_params = os.path.join(CAMERA_SENSOR_WIDTH_DIRECTORY, "sensor_width_camera_database.txt")
+camera_file_params = "sensor_width_camera_database.txt"
 print ("Using input dir  : ", input_dir)
 print ("      output_dir : ", output_dir)
 print ("      focal_length: ",focal_length) 
@@ -49,6 +51,7 @@ if not os.path.exists(matches_dir):
   os.mkdir(matches_dir)
 
 print ("1. Intrinsics analysis")
+# pIntrisics = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_SfMInit_ImageListing"),  "-i", input_dir, "-o", matches_dir, "-d", camera_file_params, "-f" , focal_length] )
 pIntrisics = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_SfMInit_ImageListing"),  "-i", input_dir, "-o", matches_dir, "-d", camera_file_params, "-f" , focal_length] )
 pIntrisics.wait()
 
@@ -57,15 +60,18 @@ pFeatures = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_Compu
 pFeatures.wait()
 
 print ("3. Compute matches")
-pMatches = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeMatches"),  "-i", matches_dir+"/sfm_data.json", "-o", matches_dir] )
+# pMatches = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeMatches"),  "-i", matches_dir+"/sfm_data.json", "-o", matches_dir] )
+pMatches = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeMatches"),  "-i", matches_dir+"/sfm_data.json", "-p", matches_dir+ "/pairs.bin", "-o", matches_dir + "/matches.putative.bin" ] )
 pMatches.wait()
 
 # Create the reconstruction if not present
 if not os.path.exists(reconstruction_dir):
     os.mkdir(reconstruction_dir)
 
+# see #https://github.com/openMVG/openMVG/issues/1959#issuecomment-962396514
 print ("4. Do Sequential/Incremental reconstruction")
-pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_IncrementalSfM"),  "-i", matches_dir+"/sfm_data.json", "-m", matches_dir, "-o", reconstruction_dir] )
+# pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_IncrementalSfM"),  "-i", matches_dir+"/sfm_data.json", "-m", matches_dir, "-o", reconstruction_dir] )
+pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_SfM"),  "-i", matches_dir+"/sfm_data.json", "-m", matches_dir, "-o", reconstruction_dir] )
 pRecons.wait()
 
 print ("5. Colorize Structure")

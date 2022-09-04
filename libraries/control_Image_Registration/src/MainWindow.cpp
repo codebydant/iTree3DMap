@@ -14,18 +14,18 @@ using namespace openMVG::sfm;
 
 std::string output_dir;
 
-void MainWindow::doubleClickImageList(){
+void MainWindow::doubleClickImageList() {
   const QModelIndex modelIndex = m_treeView_Images->currentIndex();
-  const QModelIndex res = modelIndex.sibling ( modelIndex.row(), 0 );
+  const QModelIndex res = modelIndex.sibling(modelIndex.row(), 0);
   const QString current_string_clicked = res.data().toString();
 
   std::istringstream is(current_string_clicked.toStdString());
   size_t id;
   is >> id;
-  const View * view = m_doc._sfm_data.GetViews().at(id).get();
+  const View* view = m_doc._sfm_data.GetViews().at(id).get();
   const std::string sView = stlplus::create_filespec(m_doc._sfm_data.s_root_path, view->s_Img_path);
- // m_widget->addImage(QString::fromStdString(sView), 0.0, 0.0, false);
- // m_widget->setCurrentViewId(view->id_view);
+  // m_widget->addImage(QString::fromStdString(sView), 0.0, 0.0, false);
+  // m_widget->setCurrentViewId(view->id_view);
 
   QImage myImage;
   myImage.load(sView.c_str());
@@ -40,40 +40,36 @@ void MainWindow::doubleClickImageList(){
 
   ofs << sView << std::endl;
   ofs << view->id_view << std::endl;
-  //ofs << view->s_Img_path << std::endl;
+  // ofs << view->s_Img_path << std::endl;
   ofs.close();
 
   button->setEnabled(true);
-
 }
 
-void MainWindow::openProject(char** argv){
+void MainWindow::openProject(char** argv) {
   const QString sfm_data_fileName = argv[1];
-      //QFileDialog::getOpenFileName(this, tr("Choose a sfm_data project file"),
-    //QString::null, tr("sfm_data (*.json *.xml *.bin)"));
-  if(sfm_data_fileName.isEmpty())
-    return;
+  // QFileDialog::getOpenFileName(this, tr("Choose a sfm_data project file"),
+  // QString::null, tr("sfm_data (*.json *.xml *.bin)"));
+  if (sfm_data_fileName.isEmpty()) return;
 
   m_sfm_data_filename = sfm_data_fileName.toStdString();
 
-  if(m_doc.loadData(sfm_data_fileName.toStdString())){
-    //Add image names in the QT tree view
+  if (m_doc.loadData(sfm_data_fileName.toStdString())) {
+    // Add image names in the QT tree view
     {
-      QStandardItemModel * model = new QStandardItemModel(0,1, this);
+      QStandardItemModel* model = new QStandardItemModel(0, 1, this);
       model->setHeaderData(0, Qt::Horizontal, QObject::tr("Views"));
       m_treeView_Images->setModel(model);
 
       std::vector<IndexT> view_ids;
       view_ids.reserve(m_doc._sfm_data.GetViews().size());
-      std::transform(m_doc._sfm_data.GetViews().begin(), m_doc._sfm_data.GetViews().end(),
-                     std::back_inserter(view_ids), stl::RetrieveKey());
+      std::transform(m_doc._sfm_data.GetViews().begin(), m_doc._sfm_data.GetViews().end(), std::back_inserter(view_ids), stl::RetrieveKey());
       std::sort(view_ids.begin(), view_ids.end());
 
       // Add view in reverse order to have them ordered by ID
-      for (std::vector<IndexT>::const_reverse_iterator iter = view_ids.rbegin();
-        iter != view_ids.rend(); ++iter){
+      for (std::vector<IndexT>::const_reverse_iterator iter = view_ids.rbegin(); iter != view_ids.rend(); ++iter) {
         Views::const_iterator iterV = m_doc._sfm_data.GetViews().find(*iter);
-        const View * view = iterV->second.get();
+        const View* view = iterV->second.get();
         if (m_doc._sfm_data.IsPoseAndIntrinsicDefined(view)) {
           std::ostringstream os;
           os << view->id_view << " " << view->s_Img_path;
@@ -82,32 +78,29 @@ void MainWindow::openProject(char** argv){
         }
       }
     }
-  }else{
+  } else {
     QMessageBox msgBox;
     msgBox.setText("Cannot open the provided sfm_data file.");
     msgBox.exec();
   }
 }
 
-MainWindow::MainWindow(int argc,char** argv,QWidget * parent): QMainWindow(){
-
-   output_dir = argv[2];
-   createPanel(argv);
-   createConnections();
+MainWindow::MainWindow(int argc, char** argv, QWidget* parent) : QMainWindow() {
+  output_dir = argv[2];
+  createPanel(argv);
+  createConnections();
 
   setWindowTitle(tr("Control_point_editor"));
 
   QMainWindow::statusBar()->showMessage("Choose an image pattern reference and then press [OK].");
-
 }
 
-void MainWindow::getDefaultParameters(std::string& inputPath){
-
+void MainWindow::getDefaultParameters(std::string& inputPath) {
   std::ifstream file(inputPath.c_str());
-  if(!file.is_open()){
-      std::cout << "Error: Hough file not found." << std::endl;
-      return std::exit(-1);
-    }
+  if (!file.is_open()) {
+    std::cout << "Error: Hough file not found." << std::endl;
+    return std::exit(-1);
+  }
 
   std::string dp;
   std::string minDist;
@@ -116,8 +109,7 @@ void MainWindow::getDefaultParameters(std::string& inputPath){
   std::string minRadius;
   std::string maxRadius;
 
-
-  while(file >> dp >> minDist >> param1 >> param2 >> minRadius >> maxRadius){
+  while (file >> dp >> minDist >> param1 >> param2 >> minRadius >> maxRadius) {
   }
 
   dpLineEdit->setText(dp.c_str());
@@ -128,8 +120,7 @@ void MainWindow::getDefaultParameters(std::string& inputPath){
   maxRadiusLineEdit->setText(maxRadius.c_str());
 }
 
-void MainWindow::setParameters(void){
-
+void MainWindow::setParameters(void) {
   dp = dpLineEdit->text().toStdString();
   minDist = minDistLineEdit->text().toStdString();
   param1 = param1LineEdit->text().toStdString();
@@ -141,25 +132,18 @@ void MainWindow::setParameters(void){
   out += "/hough_parameters.txt";
 
   std::ofstream ofs(out.c_str());
-  ofs << dp << std::endl
-      << minDist << std::endl
-      << param1 << std::endl
-      << param2 << std::endl
-      << minRadius << std::endl
-      << maxRadius << std::endl;
+  ofs << dp << std::endl << minDist << std::endl << param1 << std::endl << param2 << std::endl << minRadius << std::endl << maxRadius << std::endl;
   ofs.close();
 
   this->close();
-
 }
 
-void MainWindow::createPanel(char** argv){
-
-  QSplitter *splitter = new QSplitter;  
+void MainWindow::createPanel(char** argv) {
+  QSplitter* splitter = new QSplitter;
   //-- Create left panel
   m_tabWidget = new QTabWidget;
   //-- Create right panel
-  //m_widget = new control_point_GUI::GraphicsView(m_doc, this);
+  // m_widget = new control_point_GUI::GraphicsView(m_doc, this);
 
   button = new QPushButton();
   buttonOkParams = new QPushButton();
@@ -172,7 +156,7 @@ void MainWindow::createPanel(char** argv){
   splitter->addWidget(m_tabWidget);
   splitter->addWidget(myLabel);
 
-  //splitter->setStretchFactor(0, 0);
+  // splitter->setStretchFactor(0, 0);
   splitter->setStretchFactor(1, 1);
 
   setCentralWidget(splitter);
@@ -199,12 +183,12 @@ void MainWindow::createPanel(char** argv){
   minRadiusLineEdit->setFixedWidth(50);
   maxRadiusLineEdit->setFixedWidth(50);
 
-  dpLineEdit->setValidator(new QDoubleValidator(0,900,2,this));
-  minDistLineEdit->setValidator(new QDoubleValidator(0,900,2,this));
-  param1LineEdit->setValidator(new QDoubleValidator(0,900,2,this));
-  param2LineEdit->setValidator(new QDoubleValidator(0,900,2,this));
-  minRadiusLineEdit->setValidator( new QIntValidator(0, 900, this));
-  maxRadiusLineEdit->setValidator( new QIntValidator(0, 900, this));
+  dpLineEdit->setValidator(new QDoubleValidator(0, 900, 2, this));
+  minDistLineEdit->setValidator(new QDoubleValidator(0, 900, 2, this));
+  param1LineEdit->setValidator(new QDoubleValidator(0, 900, 2, this));
+  param2LineEdit->setValidator(new QDoubleValidator(0, 900, 2, this));
+  minRadiusLineEdit->setValidator(new QIntValidator(0, 900, this));
+  maxRadiusLineEdit->setValidator(new QIntValidator(0, 900, this));
 
   //-- Configure tab widgets
   m_treeView_Images = new QTreeView(m_tab_1);
@@ -213,12 +197,12 @@ void MainWindow::createPanel(char** argv){
   m_treeView_Images->setObjectName(QString::fromUtf8("m_treeView_Images"));
   m_treeView_Images->setSortingEnabled(true);
 
-  QLabel * dpLabel = new QLabel;
-  QLabel * minDistLabel = new QLabel;
-  QLabel * param1Label = new QLabel;
-  QLabel * param2Label = new QLabel;
-  QLabel * minRadiusLabel = new QLabel;
-  QLabel * maxRadiusLabel = new QLabel;
+  QLabel* dpLabel = new QLabel;
+  QLabel* minDistLabel = new QLabel;
+  QLabel* param1Label = new QLabel;
+  QLabel* param2Label = new QLabel;
+  QLabel* minRadiusLabel = new QLabel;
+  QLabel* maxRadiusLabel = new QLabel;
 
   dpLabel->setText("DP");
   minDistLabel->setText("Min distance");
@@ -233,33 +217,32 @@ void MainWindow::createPanel(char** argv){
 
   button->setEnabled(false);
 
-  QGridLayout * gridLayout1 = new QGridLayout(m_tab_1);
+  QGridLayout* gridLayout1 = new QGridLayout(m_tab_1);
   gridLayout1->addWidget(m_treeView_Images, 0, 0, 1, 1);
   gridLayout1->addWidget(button);
 
-  QGridLayout * gridLayout2 = new QGridLayout(houghParameters);
-  gridLayout2->addWidget(dpLineEdit,0,1);
-  gridLayout2->addWidget(minDistLineEdit,1,1);
-  gridLayout2->addWidget(param1LineEdit,2,1);
-  gridLayout2->addWidget(param2LineEdit,3,1);
-  gridLayout2->addWidget(minRadiusLineEdit,4,1);
-  gridLayout2->addWidget(maxRadiusLineEdit,5,1);
+  QGridLayout* gridLayout2 = new QGridLayout(houghParameters);
+  gridLayout2->addWidget(dpLineEdit, 0, 1);
+  gridLayout2->addWidget(minDistLineEdit, 1, 1);
+  gridLayout2->addWidget(param1LineEdit, 2, 1);
+  gridLayout2->addWidget(param2LineEdit, 3, 1);
+  gridLayout2->addWidget(minRadiusLineEdit, 4, 1);
+  gridLayout2->addWidget(maxRadiusLineEdit, 5, 1);
 
-  gridLayout2->addWidget(dpLabel,0,0);
-  gridLayout2->addWidget(minDistLabel,1,0);
-  gridLayout2->addWidget(param1Label,2,0);
-  gridLayout2->addWidget(param2Label,3,0);
-  gridLayout2->addWidget(minRadiusLabel,4,0);
-  gridLayout2->addWidget(maxRadiusLabel,5,0,1,1);
+  gridLayout2->addWidget(dpLabel, 0, 0);
+  gridLayout2->addWidget(minDistLabel, 1, 0);
+  gridLayout2->addWidget(param1Label, 2, 0);
+  gridLayout2->addWidget(param2Label, 3, 0);
+  gridLayout2->addWidget(minRadiusLabel, 4, 0);
+  gridLayout2->addWidget(maxRadiusLabel, 5, 0, 1, 1);
   gridLayout2->setAlignment(Qt::AlignHCenter);
   gridLayout2->setAlignment(Qt::AlignTop);
   buttonOkParams->setFixedWidth(200);
-  gridLayout2->addWidget(buttonOkParams,6,0,1,1,Qt::AlignCenter);
-
+  gridLayout2->addWidget(buttonOkParams, 6, 0, 1, 1, Qt::AlignCenter);
 }
 
-void MainWindow::createConnections(){
-  connect(m_treeView_Images,SIGNAL(activated(const QModelIndex &)),this,SLOT(doubleClickImageList()));
+void MainWindow::createConnections() {
+  connect(m_treeView_Images, SIGNAL(activated(const QModelIndex&)), this, SLOT(doubleClickImageList()));
   connect(button, SIGNAL(clicked()), this, SLOT(close()));
   connect(buttonOkParams, SIGNAL(clicked()), this, SLOT(setParameters()));
 }
